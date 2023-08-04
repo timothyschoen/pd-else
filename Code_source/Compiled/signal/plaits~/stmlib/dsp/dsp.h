@@ -26,13 +26,15 @@
 //
 // DSP utility routines.
 
+#define TEST
+
 #ifndef STMLIB_UTILS_DSP_DSP_H_
 #define STMLIB_UTILS_DSP_DSP_H_
 
 #include "stmlib/stmlib.h"
 
-#include <cmath>
 #include <math.h>
+#include <cstdint>
 
 namespace stmlib {
 
@@ -140,17 +142,9 @@ inline float SoftClip(float x) {
   }
 #endif
   
-#ifdef TEST
   inline float Sqrt(float x) {
     return sqrtf(x);
   }
-#else
-  inline float Sqrt(float x) {
-    float result;
-    __asm ("vsqrt.f32 %0, %1" : "=w" (result) : "w" (x) );
-    return result;
-  }
-#endif
 
 inline int16_t SoftConvert(float x) {
   return Clip16(static_cast<int32_t>(SoftLimit(x * 0.5f) * 32768.0f));
