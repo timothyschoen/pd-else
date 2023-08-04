@@ -4,9 +4,9 @@
 
 ### for the Pure Data programming language
 
-### Version: 1.0-0 RC-8 (release candidate #7) With Live Electronics Tutorial. 
+### Version: 1.0-0 RC-9 (release candidate #9) With Live Electronics Tutorial. This is a pre/test release!!!!!!!!!!
 
-### Released: May 10th 2023
+### Released August 1st 2023
 
 
 Copyright © 2017-2023 Alexandre Torres Porres
@@ -15,7 +15,7 @@ Copyright © 2017-2023 Alexandre Torres Porres
 
 This work is free. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2, as published by Sam Hocevar. See License.txt <https://github.com/porres/pd-else/blob/master/License.txt> and <http://www.wtfpl.net/> for more details
 
-Other licenses may apply for specific objects and this is informed in the source code (examples: [giga.rev~], [sfont~], [plaits~], etc...).
+Other licenses may apply for specific objects and this is informed in the source code (examples: [giga.rev~], [sfont~], [sfz~], [plaits~], etc...).
 
 
 
@@ -23,7 +23,7 @@ Other licenses may apply for specific objects and this is informed in the source
 
 ###   About ELSE
 
-This version of ELSE needs **Pd 0.53-2** or above.
+This version of ELSE needs **Pd 0.54-0** or above.
 
 ELSE is a big library of externals that extends the performance Pure Data (Pd) - Miller S. Puckette's realtime computer music environment (download Pd from: http://msp.ucsd.edu/software.html).
 
@@ -45,15 +45,17 @@ You can get ELSE from https://github.com/porres/pd-else/releases - where all rel
 
 ELSE comes as a set of separate binaries and abstractions, so it works if you just add its folder to the path or use **[declare -path else]**. ELSE comes with a binary that you can use load via "Preferences => Startup" or with [declare -lib else], but all that this does is print information of what version of ELSE you have when you open Pd. You can also just load the 'else' external for that same purpose, check its help file. 
 
-It is important to stress this library runs in Pd Vanilla 0.52-1 or above and is not compatible to forks like the long dead "Pd Extended" and its new reincarnations "Pd-L2ork/Purr Data". Nevertheless, ELSE is included in the PlugData fork --> <https://github.com/timothyschoen/PlugData>, and a port of ELSE to Purr Data is currently underway --> https://github.com/agraef/purr-data/tree/pd-else.
+But it's important that you add ELSE's path in Preferences ==> Path, so it loads an object browser plugin!
+
+It might still be important to stress this library runs in Pd Vanilla and is not compatible to forks like the long dead "Pd Extended" and its new reincarnations "Pd-L2ork/Purr Data". Nevertheless, ELSE is included in the PlugData fork --> <https://github.com/timothyschoen/PlugData>, and a port of ELSE to Purr Data was started aome time ago and there's a chance it might evolve into full support, see --> https://github.com/agraef/purr-data/tree/pd-else.
 
 --------------------------------------------------------------------------
 
 #### Building ELSE for Pd Vanilla:
 
-ELSE relies on the build system called "pd-lib-builder" by Katja Vetter (check the project in: <https://github.com/pure-data/pd-lib-builder>). PdLibBuilder tries to find the Pd source directory at several common locations, but when this fails, you have to specify the path yourself using the pdincludepath variable. Example (assuming the unpacked Pd package is in ~/pd-0.53-1; for Windows/MinGW add `pdbinpath=~/pd-0.53-1/bin/`):
+ELSE relies on the build system called "pd-lib-builder" by Katja Vetter (check the project in: <https://github.com/pure-data/pd-lib-builder>). PdLibBuilder tries to find the Pd source directory at several common locations, but when this fails, you have to specify the path yourself using the pdincludepath variable. Example (assuming the unpacked Pd package is in ~/pd-0.54-0; for Windows/MinGW add `pdbinpath=~/pd-0.54-0/bin/`):
 
-<pre>make pdincludepath=~/pd-0.53-2/src/</pre>
+<pre>make pdincludepath=~/pd-0.54-0/src/</pre>
 
 ##### Installing with pdlibbuilder
 
@@ -66,16 +68,16 @@ Cross compiling is also possible with something like this
 
 <pre>make CC=arm-linux-gnueabihf-gcc target.arch=arm7l install objectsdir=~/else-build</pre>
 
-##### Installing sfont~ and plaits~
+##### Installing sfont~, sfz~ and plaits~
 
-For technical reasons these objects reside in their own subdirectories of the ELSE source directory, so a normal build as described above will skip them. If you want to build and install these separately, check the "sfont~" and "plaits~" folders and their READMEs with instructions.
+For technical reasons these objects reside in their own subdirectories of the ELSE source directory, so a normal build as described above will skip them. You cam install these separately and you can also check their subfolders for their own READMEs and instructions.
 
-But the easiest (and recommended) way is to build and install those objects from the toplevel source directory using the special 'sfont' and 'plaits' targets:
+To install them with the rest of ELSE you can build from the toplevel source directory using the special 'sfont', 'sfz' and 'plaits' targets:
 
-<pre>make sfont plaits pdincludepath=~/pd-0.53-1/src/</pre>
-<pre>make sfont-install plaits-install objectsdir=~/else-build</pre>
+<pre>make sfont sfz plaits pdincludepath=~/pd-0.54-0/src/</pre>
+<pre>make sfont-install sfz-install plaits-install objectsdir=~/else-build</pre>
 
-This also makes sure that [sfont~] and [plaits~] get added to the else library directory instead of their own subdirectories, so that the included help patches work without further ado.
+This also makes sure that [sfont~], [sfz~] and [plaits~] get added to the chosen else library directory instead of their own subdirectories.
 
 --------------------------------------------------------------------------
 
@@ -101,600 +103,90 @@ I'd also like to thank my Cyclone buddies Derek Kwan and Matt Barber, cause I st
 
 Lucarda is always helpful testing stuff for Windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object.
 
-Albert Graef from Purr Data is doing a great job helping port ELSE so it builds and runs on Purr Data (still experimental and a long way to go). He's also doing several valuable contributions to the code and being helpful in general in this process - check <https://github.com/agraef/purr-data/releases/tag/2.19.2+ELSE>.
+Albert Graef from Purr Data is working on a port of ELSE so it builds and runs on Purr Data (still experimental and a long way to go). He's also doing several valuable contributions to the code and being helpful in general in this process - check <https://github.com/agraef/purr-data/releases/tag/2.19.2+ELSE>.
 
 Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of ELSE for other systems as well as ELSE for Camomile and libpd projects, which opened the way for PlugData by Timothy Schoen, who's doing an amazing jaw dropping job with this project based on camomile that includes ELSE. Timothy has also helped me fix many ELSE related issues and coded first versions of compiled band limited oscillators. PlugData is also a fork of Pd with a revamped GUI. See: <https://github.com/timothyschoen/PlugData>.
 
 --------------------------------------------------------------------------
 
-## Current Object list (477 objects):
-
-**ASSORTED: [03]**
-
-- [else]
-- [chrono]
-- [datetime]
-
-**TABLE: [03]**
-
-- [tabgen]
-- [tabreader]
-- [tabreader~]
-
-**FFT: [02]**
-
-- [hann~]
-- [bin.shift~]
-
-**TUNING/NOTES: [19]**
-
-- [scales]
-- [scale2freq]
-- [scala]
-- [autotune]
-- [autotune2]
-- [makenote2]
-- [retune]
-- [eqdiv]
-- [cents2scale]
-- [scale2cents]
-- [frac2cents]
-- [cents2frac]
-- [frac2dec]
-- [dec2frac]
-- [midi2freq]
-- [freq2midi]
-- [pitch2note]
-- [note2pitch]
-- [note2dur]
-
-**PATCH/SUBPATCH MANAGEMENT: [20]**
-
-- [args]
-- [meter]
-- [presets]
-- [dollsym]
-- [receiver]
-- [retrieve]
-- [blocksize~]
-- [click]
-- [properties]
-- [fontsize]
-- [canvas.active]
-- [canvas.bounds]
-- [canvas.gop]
-- [canvas.pos]
-- [canvas.edit]
-- [canvas.file]
-- [canvas.vis]
-- [canvas.name]
-- [canvas.setname]
-- [canvas.zoom]
-- [loadbanger] / [lb]
-
-**GENERAL MESSAGE MANAGEMENT: [29]**
-
-- [format]
-- [swap2]
-- [nmess]
-- [unite]
-- [separate]
-- [symbol2any]
-- [any2symbol]
-- [buffer]
-- [changed]
-- [hot]
-- [initmess]
-- [message]
-- [default]
-- [pack2]
-- [pick]
-- [limit]
-- [spread]
-- [router]
-- [route2]
-- [routeall]
-- [routetype]
-- [selector]
-- [stack] 
-- [store] 
-- [morph]
-- [interpolate]  
-- [sig2float~] / [s2f~]
-- [float2sig~] / [f2s~]
-- [pipe2]
-
-**LIST/MESSAGE MANAGEMENT: [19]**
-
-- [break] 
-- [order]
-- [combine]
-- [delete]
-- [group] 
-- [iterate]
-- [insert]
-- [scramble]
-- [sort]
-- [reverse]
-- [rotate]
-- [replace]
-- [sum]
-- [stream]
-- [slice] 
-- [merge]
-- [unmerge]
-- [amean]
-- [gmean]
-
-**FILE MANAGEMENT: [01]**
-
-- [dir]
-
-**MIDI: [20]**
-
-- [midi]
-- [midi.learn]
-- [sysrt.in]
-- [sysrt.out]
-- [ctl.in]
-- [ctl.out]
-- [touch.in]
-- [touch.out]
-- [pgm.in]
-- [pgm.out]
-- [bend.in]
-- [bend.out]
-- [note.in]
-- [note.out]
-- [midi.clock]
-- [noteinfo]
-- [panic]
-- [mono]
-- [voices]
-- [suspedal]
-
-**OSC: [05]**
-
-- [osc.route]
-- [osc.format]
-- [osc.parse]
-- [osc.send]
-- [osc.receive]
-
-**MATH: FUNCTIONS: [32]**
-
-- [add~]
-- [add]
-- [median]
-- [avg]
-- [mov.avg]
-- [count]
-- [gcd]
-- [lcm]
-- [frac.add]
-- [frac.mul]
-- [ceil]
-- [ceil~]
-- [factor]
-- [floor]
-- [floor~]
-- [trunc]
-- [trunc~]
-- [rint~]
-- [rint]
-- [quantizer~]
-- [quantizer]
-- [fold]
-- [fold~]
-- [lastvalue]
-- [mag]
-- [mag~]
-- [sin~]
-- [wrap2]
-- [wrap2~]
-- [op~]
-- [op]
-- [cmul~]
-
-**MATH: CONVERSION: [28]**
-
-- [hex2dec]
-- [bpm]
-- [dec2hex]
-- [car2pol]
-- [car2pol~]
-- [cents2ratio]
-- [cents2ratio~]
-- [ms2samps]
-- [ms2samps~]
-- [db2lin]
-- [db2lin~]
-- [float2bits]
-- [hz2rad]
-- [lin2db]
-- [lin2db~]
-- [deg2rad]
-- [rad2deg]
-- [pz2coeff]
-- [coeff2pz]
-- [rad2hz]
-- [ratio2cents]
-- [ratio2cents~]
-- [samps2ms]
-- [samps2ms~]
-- [pol2car]
-- [pol2car~]
-- [rescale]
-- [rescale~]
-
-**MATH: CONSTANT VALUES: [04]**
-
-- [sr~]
-- [nyquist~]
-- [pi]
-- [e]
-
-
-**LOGIC: [01]**
-
-- [loop]
-
-**AUDIO PROCESSING: ASSORTED [20]**
-
-- [downsample~]
-- [conv~]
-- [chorus~]
-- [shaper~]
-- [crusher~]
-- [drive~]
-- [power~]
-- [flanger~]
-- [freq.shift~]
-- [pitch.shift~]
-- [stretch.shift~]
-- [ping.pong~]
-- [rm~]
-- [tremolo~]
-- [vibrato~]
-- [vocoder~]
-- [morph~]
-- [freeze~]
-- [pvoc.freeze~]
-- [phaser~]
-
-**AUDIO PROCESSING: DELAY [5]**
-
-- [del~ in] / [del~ out]
-- [fbdelay~]
-- [ffdelay~]
-- [revdelay~]
-- [filterdelay~]
-
-**AUDIO PROCESSING: DYNAMICS [05]**
-
-- [compress~]
-- [duck~]
-- [expand~]
-- [noisegate~]
-- [norm~]
-
-**AUDIO PROCESSING: REVERBERATION: [09]**
-
-- [allpass.rev~]
-- [comb.rev~]
-- [echo.rev~]
-- [mono.rev~]
-- [stereo.rev~]
-- [free.rev~]
-- [giga.rev~]
-- [plate.rev~]
-- [fdn.rev~]
-
-**AUDIO PROCESSING: FILTERS [25]:**
-
-- [allpass.2nd~]
-- [allpass.filt~]
-- [bitnormal~]
-- [comb.filt~]
-- [lop.bw~]
-- [hip.bw~]
-- [biquads~]
-- [bandpass~]
-- [bandstop~]
-- [crossover~]
-- [bpbank~]
-- [bicoeff2]
-- [brickwall~]
-- [eq~]
-- [highpass~]
-- [highshelf~]
-- [lop2~]
-- [lowpass~]
-- [lowshelf~]
-- [mov.avg~]
-- [resonbank~]
-- [resonbank2~]
-- [resonant~]
-- [resonant2~]
-- [svfilter~]
-
-**BUFFER/SAMPLING/PLAYING/GRANULATION: [13]**
-
-- [player~]
-- [gran.player~]
-- [pvoc.player~]
-- [pvoc.live~]
-- [grain.sampler~]
-- [grain.live~]
-- [batch.rec~]
-- [batch.write~]
-- [rec.file~]
-- [play.file~]
-- [tabplayer~]
-- [tabwriter~]
-- [sample~]
-
-**SYNTHESIS: SINTHESIZERS: [02]**
-
-- [sfont~]
-- [plaits~]
-
-**SYNTHESIS: GRANULAR SYNTHESIS: [01]**
-
-- [grain.synth~]
-
-**SYNTHESIS: PHYSICAL MODELLING: [01]**
-
-- [pluck~]
-
-**SYNTHESIS: OSCILLATORS (DETERMINISTIC GENERATORS): [26]**
-
-- [cosine~]
-- [impulse~] / [imp~]
-- [impulse2~] / [imp2~]
-- [parabolic~]
-- [pulse~]
-- [saw~]
-- [saw2~]
-- [oscbank~]
-- [oscbank2~]
-- [sine~]
-- [square~]
-- [tri~]
-- [gaussian~]
-- [vsaw~]
-- [pmosc~]
-- [wavetable~] / [wt~]
-- [blip~]
-- [bl.osc~]
-- [bl.imp~]
-- [bl.imp2~]
-- [bl.saw~]
-- [bl.saw2~]
-- [bl.square~]
-- [bl.tri~]
-- [bl.vsaw~]
-- [bl.wavetable~]
-
-**SYNTHESIS: CHAOTIC/STOCHASTIC/NOISE GENERATORS: [26]**
-
-- [white~] 
-- [brown~] 
-- [perlin~] 
-- [crackle~] 
-- [cusp~] 
-- [fbsine~] 
-- [fbsine2~] 
-- [gbman~] 
-- [gray~] 
-- [henon~]
-- [ikeda~]
-- [latoocarfian~]
-- [lorenz~]
-- [lfnoise~]
-- [lincong~]
-- [logistic~]
-- [quad~]
-- [rampnoise~]
-- [randpulse~]
-- [randpulse2~]
-- [standard~]
-- [stepnoise~]
-- [pink~]
-- [xmod~]
-- [xmod2~]
-- [gendyn~] 
-
-**CONTROL: MOUSE/KEYBOARD INTERACTION [4]**
-
-- [mouse]
-- [canvas.mouse]
-- [keycode]
-- [keymap]
-
-**CONTROL: FADER/PANNING/ROUTING: [15]**
-
-- [fader~]
-- [autofade~]
-- [autofade2~]
-- [balance~]
-- [pan2~]
-- [pan4~]
-- [pan8~]
-- [spread~]
-- [rotate~]
-- [xfade~]
-- [xgate~]
-- [xgate2~]
-- [xselect~]
-- [xselect2~]
-- [mtx~]
-
-**CONTROL: SEQUENCERS: [9]**
-
-- [euclid]
-- [score]
-- [score2]
-- [pattern]
-- [sequencer]
-- [sequencer~]
-- [impseq~]
-- [rec]
-- [rec2]
-
-**CONTROL: ENVELOPES [6]**
-
-- [adsr~]
-- [asr~]
-- [decay~]
-- [decay2~]
-- [envelope~]
-- [envgen~]
-
-**CONTROL: RAMP, LINE GENERATORS / LINE SMOOTHENING [13]**
-
-- [ramp~] 
-- [susloop~]
-- [function~]
-- [slew]
-- [slew2]
-- [slew~]
-- [slew2~]
-- [lag~]
-- [lag2~]
-- [glide]
-- [glide2]
-- [glide~]
-- [glide2~]
-
-**CONTROL: RANDOM/STOCHASTIC: [18]**
-
-- [rand.f]
-- [rand.f~]
-- [rand.i]
-- [rand.i~]
-- [rand.list]
-- [rand.u]
-- [rand.dist]
-- [histogram]
-- [rand.hist]
-- [markov]
-- [drunkard~]
-- [drunkard]
-- [brown]
-- [randpulse]
-- [randpulse2]
-- [lfnoise]
-- [stepnoise]
-- [rampnoise]
-
-**CONTROL: CONTROL RATE LFOs [5]**
-
-- [lfo]
-- [phasor]
-- [pimp]
-- [impulse]
-- [pulse]
-
-**CONTROL: TRIGGERS: [27]**
-
-- [above]
-- [above~]
-- [bangdiv]
-- [chance]
-- [chance~]
-- [dust~]
-- [dust2~]
-- [gatehold~]
-- [gate2imp~]
-- [pimp~]
-- [pimpmul~]
-- [pulsecount~]
-- [pulsediv~]
-- [sh~]
-- [schmitt]
-- [schmitt~]
-- [status]
-- [status~]
-- [trig.delay~]
-- [trig.delay2~]
-- [toggleff~]
-- [timed.gate]
-- [timed.gate~]
-- [match~]
-- [trig2bang]
-- [trig2bang~]
-- [trighold~]
-
-**CONTROL: TRIGGERS: CLOCK [8]**
-
-- [clock]
-- [metronome]
-- [metronome~]
-- [polymetro]
-- [polymetro~]
-- [speed]
-- [tempo]
-- [tempo~]
-
-**ANALYSIS: [15]**
-
-- [changed~]
-- [changed2~]
-- [detect~]
-- [lastvalue~]
-- [median~]
-- [peak~]
-- [tap]
-- [range]
-- [range~]
-- [maxpeak~]
-- [rms~]
-- [mov.rms~]
-- [vu~]
-- [zerocross~]
-- [beat~]
-
-**GUI: [37]**
-
-- [knob]
-- [numbox~]
-- [drum.seq]
-- [bicoeff]
-- [pad]
-- [messbox]
-- [mtx.ctl]
-- [biplot]
-- [zbiplot]
-- [pic]
-- [colors]
-- [function]
-- [circle]
-- [slider2d]
-- [display]
-- [out1~]
-- [out~]
-- [out4~]
-- [out8~]
-- [gain~]
-- [gain2~]
-- [button]
-- [keyboard]
-- [graph~]
-- [range.hsl]
-- [multi.vsl]
-- [spectrograph~]
-- [meter~]
-- [meter2~]
-- [meter4~]
-- [meter8~]
-- [note]
-- [mix2~]
-- [mix4~]
-- [setdsp~]
-- [openfile]
-- [oscope~]
-
+## Current Object list (495 objects):
+
+#assorted
+    else
+#gui
+    knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile oscope~
+#time
+    chrono datetime
+#fft
+    hann~ bin.shift~
+#table
+    buffer tabgen tabreader tabreader~
+#tuning/notes
+    scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2pitch pitch2note note2dur
+#patch/subpatch management
+    loadbanger args meter presets dollsym receiver retrieve blocksize~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.file canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom
+#message management
+    format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2
+#list management
+    break order combine delete group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean
+#file management
+    dir
+#midi
+    midi midi.learn sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out pgm.in pgm.out nemd.in bend.out note.in note.out midi.clock noteinfo panic mono voices suspedal
+#osc
+    osc.route osc.format osc.parse osc.send osc.receive
+#math functions
+    add add~ median avg mov.avg count gcd lcm frac.add frac.mul ceil ceil~ factor floor floor~ trun trunc~ rint rint~ quantizer quantizer~ fold fold~ lastvalue mag mag~ sin~ wrap2 wrap2~ op op~ cmul~
+#math conversion
+    hex2dec dec2hex bpm car2pol car2pol~ cents2ratio cents2ratio~ ms2samps ms2samps~ db2lin db2lin~ float2bits hz2rad lin2db lin2db~ deg2rad rad2deg pz2coeff coeff2pz rad2hz ratio2cents ratio2cents~ samps2ms samps2ms~ pol2car pol2car~ rescale recale~
+#math: constant values
+    sr~ nyquist~ pi e
+#logic
+    loop
+#audio multichannel tools
+    nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~
+#fx: assorted
+    downsample~ conv~ chorus~ shaper~ crusher~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
+#fx: delay
+    del\ in~ del\ out~ fbdelay~ ffdelay~ revdelay~ filterdelay~
+#fx: dynamics
+    compress~ duck~ expand~ noisegate~ norm~
+#fx: reverberation
+    allpass.rev~ comb.rev~ echo.rev~ mono.rev~ stereo.rev~ free.rev~ giga.rev~ plate.rev~ fdn.rev~
+#fx: filters
+    allpass.2nd~ allpass.filt~ bitnormal~ comb.filt~ lop.bw~ hip.bw~ biquads~ bandpass~ bandstop~ crossover~ bpbank~ bicoeff2 brickwall~ eq~ highpass~ highshelf~ lop2~ lowpass~ lowshelf~ mov.avg~ resonbank~ resonbank2~ resonant~ resonant2~ svfilter~
+#sampling, playing, granulation
+    player~ gran.player~ pvoc.player~ pvoc.live~ batch.rec~ bach.write~ rec.file~ play.file~ tabplayer~ tabwriter~ sample~
+#synthesis: synthesizers
+    sfont~ sfz~ plaits~
+#synthesis: granular
+    grain.synth~
+#synthesis: physical modelling
+    pluck~
+#synthesis: oscillators
+    cosine~ impulse~ imp.mc~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ oscbank2~ osc.mc~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ pmosc~ wavetable~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~
+#synthesis: chaotic, stochastic, noise
+    white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ stepnoise.mc~ rampnoise~ rampnoise.mc~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~
+#control: mouse/keyboard
+    mouse canvas.mouse keycode keymap
+#control: fade/pan/routing
+    fader~ autofade~ autofade2~ balance~ pan2~ pan4~ pan8~ spread~ rotate~ xfade~ xgate~ xgate2~ xselect~ xselect2~ xselect.mc~ mtx~
+#control: sequencers
+    euclid score score2 pattern sequencer sequencer~ phaseseq~ impseq~ rec rec2
+#control: envelopes
+    adsr~ asr~ decay~ decay2~ envelope~ envgen~
+#control: ramp/line/curve generators
+    {amp~ susloop~ function~ slew slew~ slew2 slew2~ lag~ lag2~ glide glide~ glide2 glide2~
+#control: random/stochastic
+    rand.f rand.f~ rand.i rand.i~ rand.list rand.u rand.dist rand.hist histogram markov drunkard drunkard~ brown randpulse randpulse2 lfnoise stepnoise rampnoise
+#control: control rate lfo
+    lfo phasor pimp impulse pulse
+#control: triggers
+    above above~ bangdiv chance chance~ dust~ dust2~ gatehold~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ trig.delay2~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
+#control: triggers, clock
+    clock metronome metronome~ polymetro polymetro~ speed tempo tempo~
+#analysis
+    changed~ changed2~ detect~ lastvalue~ median~ peak~ tap range range~ maxpeak~ rms~ mov.rms~ vu~ zerocross~ beat~
 
 --------------------------------------------------------------------------
 
