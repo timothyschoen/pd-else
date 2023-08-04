@@ -20,12 +20,12 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 #include "m_pd.h"
-#include "../../../shared/elsefile.h"
+#include "../shared/elsefile.h"
 
 #include <stdlib.h>
-#include <fluidsynth.h>
+#include "FluidLite/include/fluidlite.h"
+#include "FluidLite/src/fluid_sfont.h"
 #include <string.h>
-
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -46,6 +46,8 @@ typedef struct _sfont{
     fluid_sfont_t      *x_sfont;
     fluid_preset_t     *x_preset;
     t_elsefile         *x_elsefilehandle;
+    t_outlet           *x_out_left;
+    t_outlet           *x_out_right;
     t_canvas           *x_canvas;
     t_symbol           *x_sfname;
     t_symbol           *x_tune_name;
@@ -68,10 +70,8 @@ typedef struct _sfont{
     unsigned char       x_channel;
 }t_sfont;
 
-static void sfont_float(t_sfont *x, t_float f);
-
 static void sfont_getversion(void){
-    post("[sfont~] version 1.0-rc6 (using fluidsynth %s)", FLUIDSYNTH_VERSION);
+    //post("[sfont~] version 1.0-rc2 (using fluidsynth %s)", FLUIDSYNTH_VERSION);
 }
 
 static void sfont_verbose(t_sfont *x, t_floatarg f){
@@ -102,9 +102,7 @@ static void sfont_pan(t_sfont *x, t_symbol *s, int ac, t_atom *av){
 
 static void sfont_note(t_sfont *x, t_symbol *s, int ac, t_atom *av){
     s = NULL;
-    if(ac == 1)
-        sfont_float(x, atom_getfloatarg(0, ac, av));
-    else if(ac == 2 || ac == 3){
+    if(ac == 2 || ac == 3){
         int key = atom_getintarg(0, ac, av);
         int vel = atom_getintarg(1, ac, av);
         int chan = ac > 2 ? atom_getintarg(2, ac, av) : 1; // channel starts at zero???
@@ -147,7 +145,7 @@ static void sfont_program_change(t_sfont *x, t_symbol *s, int ac, t_atom *av){
                 outlet_anything(x->x_info_out, gensym("preset"), 1, at);
             }
         }
-        else 
+        else
             post("[sfont~]: couldn't load progam %d from bank %d into channel %d",
                  x->x_pgm, x->x_bank, ch+1);
     }
@@ -226,10 +224,11 @@ static void sfont_unsel_tuning(t_sfont *x,  t_symbol *s, int ac, t_atom *av){
     s = NULL;
     if(ac){
         int ch = atom_getfloatarg(0, ac, av);
-        fluid_synth_deactivate_tuning(x->x_synth, ch-1, 1);
+        fluid_synth_reset_tuning(x->x_synth, ch-1);
     }
-    else for(int i = 0; i < x->x_ch; i++)
-        fluid_synth_deactivate_tuning(x->x_synth, i, 1);
+    else for(int i = 0; i < x->x_ch; i++) {
+        fluid_synth_reset_tuning(x->x_synth, i);
+    }
 }
 
 static void sfont_sel_tuning(t_sfont *x, t_float bank, t_float pgm, t_float ch){
@@ -244,7 +243,12 @@ static void sfont_sel_tuning(t_sfont *x, t_float bank, t_float pgm, t_float ch){
 static void set_key_tuning(t_sfont *x, double *pitches){
     int ch = x->x_tune_ch, bank = x->x_tune_bank, pgm = x->x_tune_prog;
     const char* name = x->x_tune_name->s_name;
-    fluid_synth_activate_key_tuning(x->x_synth, bank, pgm, name, pitches, 1);
+    
+    int key[128];
+    for(int i = 0; i < 128; i++) key[i] = i;
+    
+    fluid_synth_tune_notes(x->x_synth, bank, pgm, 128, key, pitches, 1, name);
+    
     if(ch > 0)
         fluid_synth_activate_tuning(x->x_synth, ch-1, bank, pgm, 1);
     else if(!ch) for(int i = 0; i < x->x_ch; i++)
@@ -468,11 +472,12 @@ static void sfont_info(t_sfont *x){
     int i = 1;
     fluid_preset_t* preset;
     fluid_sfont_iteration_start(x->x_sfont);
+    /*
     while((preset = fluid_sfont_iteration_next(x->x_sfont))){
         int bank = fluid_preset_get_banknum(preset), pgm = fluid_preset_get_num(preset);
         const char* name = fluid_preset_get_name(preset);
         post("%03d - bank (%d) pgm (%d) name (%s)", i++, bank, pgm, name);
-    }
+    } */
     post("\n");
 }
 
@@ -575,8 +580,8 @@ static void *sfont_new(t_symbol *s, int ac, t_atom *av){
     x->x_canvas = canvas_getcurrent();
     x->x_sysex = x->x_ready = x->x_count = 0;
     x->x_data = x->x_channel = x->x_type = 0;
-    outlet_new(&x->x_obj, &s_signal);
-    outlet_new(&x->x_obj, &s_signal);
+    x->x_out_left = outlet_new(&x->x_obj, &s_signal);
+    x->x_out_right = outlet_new(&x->x_obj, &s_signal);
     x->x_info_out = outlet_new((t_object *)x, gensym("list"));
     x->x_settings = new_fluid_settings();
     if(x->x_settings == NULL){
