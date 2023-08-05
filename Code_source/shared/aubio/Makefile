@@ -151,7 +151,7 @@ check_clean_python:
 	make clean_python
 
 clean: checkwaf
-	# optionally clean before build
+	# optionnaly clean before build
 	-$(WAFCMD) clean
 	# remove possible left overs
 	-rm -rf doc/_build

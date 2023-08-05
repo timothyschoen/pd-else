@@ -18,13 +18,13 @@
 
 */
 
-#include "aubio_priv.h"
+#include "../shared/aubio/src/aubio_priv.h"
 #include <stddef.h>
 
 #ifndef HAVE_RUBBERBAND
 
-#include "fvec.h"
-#include "effects/timestretch.h"
+#include "../shared/aubio/src/fvec.h"
+#include "../shared/aubio/src/effects/timestretch.h"
 
 // TODO fallback time stretching implementation
 

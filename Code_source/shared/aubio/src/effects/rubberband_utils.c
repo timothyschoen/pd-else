@@ -1,6 +1,5 @@
 
-
-#include "aubio_priv.h"
+#include "../shared/aubio/src/aubio_priv.h"
 
 #ifdef HAVE_RUBBERBAND
 
