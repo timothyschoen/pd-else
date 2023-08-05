@@ -1,5 +1,6 @@
 #include "m_pd.h"
 
+#include <stdlib.h>
 static t_class *order_class;
 
 typedef struct _order{
@@ -23,9 +24,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
     int i = x->x_offset;
     while(ac){
         if(ac >= x->x_n){
-            t_atom *at;
-            int atc = x->x_n+1;
-            ALLOCA(t_atom, at, atc, LIST_NGETBYTE);
+            t_atom* at = calloc(sizeof(t_atom), x->x_n+1);
             SETFLOAT(at, i);
             for(int n = 0; n < x->x_n; n++){
                 if(av->a_type == A_FLOAT)
@@ -37,11 +36,11 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
                 ac--;
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n+1, at);
+            free(at);
         }
         else{
-            t_atom *at;
-            int atc = size+1;
-            ALLOCA(t_atom, at, atc, LIST_NGETBYTE);
+            int size = ac;
+            t_atom* at = calloc(sizeof(t_atom), size+1);
             SETFLOAT(at, i);
             for(int n = 0; n < size; n++){
                 if(av->a_type == A_FLOAT)
@@ -53,6 +52,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
                 ac--;
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, size+1, at);
+            free(at);
         }
         i++;
     }
