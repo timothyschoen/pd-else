@@ -23,7 +23,9 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
     int i = x->x_offset;
     while(ac){
         if(ac >= x->x_n){
-            t_atom at[x->x_n+1];
+            t_atom *at;
+            int atc = x->x_n+1;
+            ALLOCA(t_atom, at, atc, LIST_NGETBYTE);
             SETFLOAT(at, i);
             for(int n = 0; n < x->x_n; n++){
                 if(av->a_type == A_FLOAT)
@@ -37,8 +39,9 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
             outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n+1, at);
         }
         else{
-            int size = ac;
-            t_atom at[size+1];
+            t_atom *at;
+            int atc = size+1;
+            ALLOCA(t_atom, at, atc, LIST_NGETBYTE);
             SETFLOAT(at, i);
             for(int n = 0; n < size; n++){
                 if(av->a_type == A_FLOAT)

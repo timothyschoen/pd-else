@@ -1,6 +1,10 @@
 
 #include "m_pd.h"
 #include "buffer.h"
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <string.h>
 #include <stdarg.h>
 
