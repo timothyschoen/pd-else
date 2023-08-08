@@ -2,6 +2,7 @@
 
 #include "m_pd.h"
 #include "random.h"
+#include <stdlib.h>
 
 static t_class *randi_class;
 
@@ -31,7 +32,7 @@ static void randi_bang(t_randi *x){
     }
     int range = (max - min);
     int random = min;
-    t_atom at[x->x_n];
+    t_atom* at = (t_atom*)calloc(x->x_n, sizeof(t_atom));
     for(int i = 0; i < x->x_n; i++){
         if(range){
             uint32_t *s1 = &x->x_rstate.s1;
@@ -46,6 +47,7 @@ static void randi_bang(t_randi *x){
         outlet_float(x->x_obj.ob_outlet, atom_getfloat(at));
     else
         outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n, at);
+    free(at);
 }
 
 static void *randi_new(t_symbol *s, int ac, t_atom *av){

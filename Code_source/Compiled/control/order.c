@@ -24,7 +24,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
     int i = x->x_offset;
     while(ac){
         if(ac >= x->x_n){
-            t_atom* at = calloc(sizeof(t_atom), x->x_n+1);
+            t_atom* at = calloc(x->x_n+1, sizeof(t_atom));
             SETFLOAT(at, i);
             for(int n = 0; n < x->x_n; n++){
                 if(av->a_type == A_FLOAT)
@@ -40,7 +40,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
         }
         else{
             int size = ac;
-            t_atom* at = calloc(sizeof(t_atom), size+1);
+            t_atom* at = calloc(size+1, sizeof(t_atom));
             SETFLOAT(at, i);
             for(int n = 0; n < size; n++){
                 if(av->a_type == A_FLOAT)

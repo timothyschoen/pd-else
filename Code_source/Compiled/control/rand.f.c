@@ -2,6 +2,7 @@
 
 #include "m_pd.h"
 #include "random.h"
+#include <stdlib.h>
 
 static t_class *randf_class;
 
@@ -32,7 +33,7 @@ static void randf_bang(t_randf *x){
     }
     float range = max - min; // range
     float random = min;
-    t_atom at[x->x_n];
+    t_atom* at = (t_atom*)calloc(x->x_n, sizeof(t_atom));
     for(int i = 0; i < x->x_n; i++){
         if(range != 0){
             uint32_t *s1 = &x->x_rstate.s1;
@@ -47,6 +48,7 @@ static void randf_bang(t_randf *x){
         outlet_float(x->x_obj.ob_outlet, atom_getfloat(at));
     else
         outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n, at);
+    free(at);
 }
 
 static void *randf_new(t_symbol *s, int ac, t_atom *av){
