@@ -129,12 +129,12 @@ static void sfont_program_change(t_sfont *x, t_symbol *s, int ac, t_atom *av){
         int fail = fluid_synth_program_change(x->x_synth, ch, x->x_pgm);
         if(!fail){
             fluid_preset_t* preset = fluid_synth_get_channel_preset(x->x_synth, ch);
-            int bank = fluid_preset_get_banknum(preset);
             if(preset == NULL){
                 if(x->x_verbosity)
-                    post("[sfont~]: couldn't load progam %d from bank %d", x->x_pgm, bank);
+                    post("[sfont~]: couldn't load progam %d from bank", x->x_pgm);
             }
             else{
+                int bank = fluid_preset_get_banknum(preset);
                 x->x_bank = bank;
                 const char* pname = fluid_preset_get_name(preset);
                 if(x->x_verbosity)
