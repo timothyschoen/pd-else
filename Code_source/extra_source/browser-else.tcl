@@ -32,7 +32,7 @@ proc category_else_menu::load_menutree {} {
             {tuning/notes
                 {scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2pitch pitch2note note2dur}}
             {patch/subpatch\ management
-                {loadbanger args meter presets dollsym receiver retrieve blocksize~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.file canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom}}
+                {loadbanger args meter presets dollsym sender receiver retrieve blocksize~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.file canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom}}
             {message\ management
                 {format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2}}
             {list\ management
@@ -66,7 +66,7 @@ proc category_else_menu::load_menutree {} {
             {sampling\ playing\ granulation
                 {player~ gran.player~ pvoc.player~ pvoc.live~ batch.rec~ bach.write~ rec.file~ play.file~ tabplayer~ tabwriter~ sample~}}
             {synthesis:\ synthesizers
-                {sfont~ sfz~ plaits~}}
+                {sfont~ sfz~ plaits~ synth~}}
             {synthesis:\ granular
                 {grain.synth~}}
             {synthesis:\ physical\ modelling
@@ -78,7 +78,7 @@ proc category_else_menu::load_menutree {} {
             {control:\ mouse\ keyboard
                 {mouse canvas.mouse keycode keymap}}
             {control:\ fade\ pan\ routing
-                {fader~ autofade~ autofade2~ balance~ pan2~ pan4~ pan8~ spread~ rotate~ xfade~ xgate~ xgate2~ xselect~ xselect2~ xselect.mc~ mtx~}}
+                {fader~ autofade~ autofade2~ balance~ pan2~ pan4~ pan8~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~ xfade.mc~ xgate~ xgate.mc~ xgate2~ xselect~ xselect2~ xselect.mc~ mtx~}}
             {control:\ sequencers
                 {euclid score score2 pattern sequencer sequencer~ phaseseq~ impseq~ rec rec2}}
             {control:\ envelopes
