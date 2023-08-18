@@ -55,6 +55,23 @@ endif()
 
 if(MSVC)
 set(SFIZZ_LIBS
+    ${SFIZZ_LIB_DIR}/sfizz_static.lib
+    ${SFIZZ_LIB_DIR}/sfizz_internal.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cephes.lib
+    ${SFIZZ_LIB_DIR}/sfizz_filesystem_impl.lib
+    ${SFIZZ_LIB_DIR}/sfizz_fmidi.lib
+    ${SFIZZ_LIB_DIR}/sfizz_hiir_polyphase_iir2designer.lib
+    ${SFIZZ_LIB_DIR}/sfizz_import.lib
+    ${SFIZZ_LIB_DIR}/sfizz_kissfft.lib
+    ${SFIZZ_LIB_DIR}/sfizz_messaging.lib
+    ${SFIZZ_LIB_DIR}/sfizz_parser.lib
+    ${SFIZZ_LIB_DIR}/sfizz_pugixml.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spin_mutex.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spline.lib
+    ${SFIZZ_LIB_DIR}/sfizz_tunings.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cpuid.lib
+    ${SFIZZ_LIB_DIR}/absl_hash.lib
+    ${SFIZZ_LIB_DIR}/absl_strings.lib
     ${SFIZZ_LIB_DIR}/absl_bad_optional_access.lib
     ${SFIZZ_LIB_DIR}/absl_bad_variant_access.lib
     ${SFIZZ_LIB_DIR}/absl_base.lib
@@ -73,7 +90,6 @@ set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/absl_demangle_internal.lib
     ${SFIZZ_LIB_DIR}/absl_exponential_biased.lib
     ${SFIZZ_LIB_DIR}/absl_graphcycles_internal.lib
-    ${SFIZZ_LIB_DIR}/absl_hash.lib
     ${SFIZZ_LIB_DIR}/absl_hashtablez_sampler.lib
     ${SFIZZ_LIB_DIR}/absl_int128.lib
     ${SFIZZ_LIB_DIR}/absl_log_severity.lib
@@ -83,31 +99,15 @@ set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/absl_raw_logging_internal.lib
     ${SFIZZ_LIB_DIR}/absl_spinlock_wait.lib
     ${SFIZZ_LIB_DIR}/absl_stacktrace.lib
-    ${SFIZZ_LIB_DIR}/absl_strings.lib
     ${SFIZZ_LIB_DIR}/absl_strings_internal.lib
     ${SFIZZ_LIB_DIR}/absl_symbolize.lib
     ${SFIZZ_LIB_DIR}/absl_synchronization.lib
     ${SFIZZ_LIB_DIR}/absl_throw_delegate.lib
     ${SFIZZ_LIB_DIR}/absl_time.lib
     ${SFIZZ_LIB_DIR}/absl_time_zone.lib
-    ${SFIZZ_LIB_DIR}/aiff.lib
-    ${SFIZZ_LIB_DIR}/sfizz_cephes.lib
-    ${SFIZZ_LIB_DIR}/sfizz_cpuid.lib
-    ${SFIZZ_LIB_DIR}/sfizz_filesystem_impl.lib
-    ${SFIZZ_LIB_DIR}/sfizz_fmidi.lib
-    ${SFIZZ_LIB_DIR}/sfizz_hiir_polyphase_iir2designer.lib
-    ${SFIZZ_LIB_DIR}/sfizz_import.lib
-    ${SFIZZ_LIB_DIR}/sfizz_internal.lib
-    ${SFIZZ_LIB_DIR}/sfizz_kissfft.lib
-    ${SFIZZ_LIB_DIR}/sfizz_messaging.lib
-    ${SFIZZ_LIB_DIR}/sfizz_parser.lib
-    ${SFIZZ_LIB_DIR}/sfizz_pugixml.lib
-    ${SFIZZ_LIB_DIR}/sfizz_spin_mutex.lib
-    ${SFIZZ_LIB_DIR}/sfizz_spline.lib
-    ${SFIZZ_LIB_DIR}/sfizz_static.lib
-    ${SFIZZ_LIB_DIR}/sfizz_tunings.lib
     ${SFIZZ_LIB_DIR}/st_audiofile.lib
     ${SFIZZ_LIB_DIR}/st_audiofile_formats.lib
+    ${SFIZZ_LIB_DIR}/aiff.lib
 )
 else()
 set(SFIZZ_LIBS
