@@ -126,7 +126,6 @@ set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZZ_LIB_DIR}/libaiff.a
 )
-)
 endif()
 
 # Create an interface target for the external libraries
