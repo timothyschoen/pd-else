@@ -72,59 +72,60 @@ set(SFIZZ_LIBS
 )
 else()
 set(SFIZZ_LIBS
-    ${SFIZZ_LIB_DIR}/libabsl_bad_optional_access.a
-    ${SFIZZ_LIB_DIR}/libabsl_hash.a
     ${SFIZZ_LIB_DIR}/libsfizz.a
-    ${SFIZZ_LIB_DIR}/libabsl_bad_variant_access.a
-    ${SFIZZ_LIB_DIR}/libabsl_hashtablez_sampler.a
-    ${SFIZZ_LIB_DIR}/libsfizz_cephes.a
-    ${SFIZZ_LIB_DIR}/libabsl_base.a
-    ${SFIZZ_LIB_DIR}/libabsl_int128.a
-    ${SFIZZ_LIB_DIR}/libsfizz_cpuid.a
-    ${SFIZZ_LIB_DIR}/libabsl_city.a
-    ${SFIZZ_LIB_DIR}/libabsl_log_severity.a
-    ${SFIZZ_LIB_DIR}/libsfizz_filesystem_impl.a
-    ${SFIZZ_LIB_DIR}/libabsl_civil_time.a
-    ${SFIZZ_LIB_DIR}/libabsl_low_level_hash.a
-    ${SFIZZ_LIB_DIR}/libsfizz_fmidi.a
-    ${SFIZZ_LIB_DIR}/libabsl_cord.a
-    ${SFIZZ_LIB_DIR}/libabsl_malloc_internal.a
-    ${SFIZZ_LIB_DIR}/libsfizz_hiir_polyphase_iir2designer.a
-    ${SFIZZ_LIB_DIR}/libabsl_cord_internal.a
-    ${SFIZZ_LIB_DIR}/libabsl_raw_hash_set.a
-    ${SFIZZ_LIB_DIR}/libsfizz_import.a
-    ${SFIZZ_LIB_DIR}/libabsl_cordz_functions.a
-    ${SFIZZ_LIB_DIR}/libabsl_raw_logging_internal.a
     ${SFIZZ_LIB_DIR}/libsfizz_internal.a
-    ${SFIZZ_LIB_DIR}/libabsl_cordz_handle.a
-    ${SFIZZ_LIB_DIR}/libabsl_spinlock_wait.a
+    ${SFIZZ_LIB_DIR}/libsfizz_cephes.a
+    ${SFIZZ_LIB_DIR}/libsfizz_filesystem_impl.a
+    ${SFIZZ_LIB_DIR}/libsfizz_fmidi.a
+    ${SFIZZ_LIB_DIR}/libsfizz_hiir_polyphase_iir2designer.a
+    ${SFIZZ_LIB_DIR}/libsfizz_import.a
     ${SFIZZ_LIB_DIR}/libsfizz_kissfft.a
-    ${SFIZZ_LIB_DIR}/libabsl_cordz_info.a
-    ${SFIZZ_LIB_DIR}/libabsl_stacktrace.a
     ${SFIZZ_LIB_DIR}/libsfizz_messaging.a
-    ${SFIZZ_LIB_DIR}/libabsl_crc32c.a
-    ${SFIZZ_LIB_DIR}/libabsl_strings.a
     ${SFIZZ_LIB_DIR}/libsfizz_parser.a
-    ${SFIZZ_LIB_DIR}/libabsl_crc_cord_state.a
-    ${SFIZZ_LIB_DIR}/libabsl_strings_internal.a
     ${SFIZZ_LIB_DIR}/libsfizz_pugixml.a
-    ${SFIZZ_LIB_DIR}/libabsl_crc_cpu_detect.a
-    ${SFIZZ_LIB_DIR}/libabsl_symbolize.a
     ${SFIZZ_LIB_DIR}/libsfizz_spin_mutex.a
-    ${SFIZZ_LIB_DIR}/libabsl_crc_internal.a
-    ${SFIZZ_LIB_DIR}/libabsl_synchronization.a
     ${SFIZZ_LIB_DIR}/libsfizz_spline.a
-    ${SFIZZ_LIB_DIR}/libabsl_debugging_internal.a
-    ${SFIZZ_LIB_DIR}/libabsl_throw_delegate.a
     ${SFIZZ_LIB_DIR}/libsfizz_tunings.a
+    ${SFIZZ_LIB_DIR}/libsfizz_cpuid.a
+    ${SFIZZ_LIB_DIR}/libabsl_hash.a
+    ${SFIZZ_LIB_DIR}/libabsl_strings.a
+    ${SFIZZ_LIB_DIR}/libabsl_bad_optional_access.a
+    ${SFIZZ_LIB_DIR}/libabsl_bad_variant_access.a
+    ${SFIZZ_LIB_DIR}/libabsl_base.a
+    ${SFIZZ_LIB_DIR}/libabsl_city.a
+    ${SFIZZ_LIB_DIR}/libabsl_civil_time.a
+    ${SFIZZ_LIB_DIR}/libabsl_cord.a
+    ${SFIZZ_LIB_DIR}/libabsl_cord_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_cordz_functions.a
+    ${SFIZZ_LIB_DIR}/libabsl_cordz_handle.a
+    ${SFIZZ_LIB_DIR}/libabsl_cordz_info.a
+    ${SFIZZ_LIB_DIR}/libabsl_crc32c.a
+    ${SFIZZ_LIB_DIR}/libabsl_crc_cord_state.a
+    ${SFIZZ_LIB_DIR}/libabsl_crc_cpu_detect.a
+    ${SFIZZ_LIB_DIR}/libabsl_crc_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_debugging_internal.a
     ${SFIZZ_LIB_DIR}/libabsl_demangle_internal.a
-    ${SFIZZ_LIB_DIR}/libabsl_time.a
-    ${SFIZZ_LIB_DIR}/libst_audiofile.a
     ${SFIZZ_LIB_DIR}/libabsl_exponential_biased.a
-    ${SFIZZ_LIB_DIR}/libabsl_time_zone.a
-    ${SFIZZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZZ_LIB_DIR}/libabsl_graphcycles_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_hashtablez_sampler.a
+    ${SFIZZ_LIB_DIR}/libabsl_int128.a
+    ${SFIZZ_LIB_DIR}/libabsl_log_severity.a
+    ${SFIZZ_LIB_DIR}/libabsl_low_level_hash.a
+    ${SFIZZ_LIB_DIR}/libabsl_malloc_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_raw_hash_set.a
+    ${SFIZZ_LIB_DIR}/libabsl_raw_logging_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_spinlock_wait.a
+    ${SFIZZ_LIB_DIR}/libabsl_stacktrace.a
+    ${SFIZZ_LIB_DIR}/libabsl_strings_internal.a
+    ${SFIZZ_LIB_DIR}/libabsl_symbolize.a
+    ${SFIZZ_LIB_DIR}/libabsl_synchronization.a
+    ${SFIZZ_LIB_DIR}/libabsl_throw_delegate.a
+    ${SFIZZ_LIB_DIR}/libabsl_time.a
+    ${SFIZZ_LIB_DIR}/libabsl_time_zone.a
+    ${SFIZZ_LIB_DIR}/libst_audiofile.a
+    ${SFIZZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZZ_LIB_DIR}/libaiff.a
+)
 )
 endif()
 
