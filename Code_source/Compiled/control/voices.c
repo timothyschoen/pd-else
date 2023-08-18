@@ -281,7 +281,7 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){
     }
     if(prev){ // found in a voice allocation
         if(x->x_list_mode){
-            t_atom at[ac+2];
+            t_atom* at = calloc(ac+2, sizeof(t_atom));
             SETFLOAT(at, prev_idx + x->x_offset);       // voice number
             SETSYMBOL(at+1, s);       // message type
             for(i = 0; i < ac; i++){
@@ -291,6 +291,7 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){
                     SETSYMBOL(at+i+2, atom_getsymbol(av+i));
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, ac+2, at);
+            free(at);
         }
         else
             outlet_list(x->x_outs[prev_idx], s, ac, av);
