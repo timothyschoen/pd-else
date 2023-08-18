@@ -15,7 +15,11 @@ __attribute__((visibility("default")))
 //#include "../shared/elsefile.h"
 #include <sfizz.h>
 #include <sfizz/import/sfizz_import.h>
+
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
