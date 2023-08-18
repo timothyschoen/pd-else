@@ -46,7 +46,7 @@ add_custom_target(sfizz_build
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/$<0:>)
 
 if(MSVC)
 set(SFIZZ_LIBS
