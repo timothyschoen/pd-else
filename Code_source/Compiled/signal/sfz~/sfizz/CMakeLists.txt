@@ -40,6 +40,9 @@ option_ex(PLUGIN_VST3              "Enable VST3 plug-in build" ON)
 option_ex(SFIZZ_USE_SYSTEM_LV2     "Use LV2 headers preinstalled on system" OFF)
 option_ex(SFIZZ_USE_SYSTEM_VST3SDK "Use VST3SDK source files preinstalled on system" OFF)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
+
 set(MIDI_CC_COUNT 512 CACHE STRING "Maximum amount of Control Change Messages")
 
 if(PLUGIN_LV2 AND SFIZZ_SNDFILE_STATIC)

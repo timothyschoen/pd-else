@@ -1,19 +1,14 @@
 #!/bin/sh
 
-if [ $1 = "Windows" ]
-    then
-        GENERATOR="-G MSYS Makefiles"
-fi	
-    
 BASEFLAGS='
 -DENABLE_LTO=OFF
 -DSFIZZ_JACK=OFF
 -DSFIZZ_RENDER=OFF
--DSFIZZ_SHARED=ON
+-DSFIZZ_SHARED=OFF
 -DPLUGIN_AU=OFF
 -DPLUGIN_LV2=OFF
 -DPLUGIN_LV2_UI=OFF
--DPLUGIN_PUREDATA=ON
+-DPLUGIN_PUREDATA=OFF
 -DPLUGIN_VST2=OFF
 -DPLUGIN_VST3=OFF
 -DSFIZZ_BENCHMARKS=OFF
@@ -34,8 +29,9 @@ BASEFLAGS='
 -DSFIZZ_PROFILE_BUILD=OFF
 -DSFIZZ_RELEASE_ASSERTS=OFF
 ' 
-cp ./sfz~.c ./sfizz/plugins/puredata/sfizz_puredata.c
+
 mkdir -p sfizz/build
 cd sfizz/build
-cmake "$GENERATOR" .. $BASEFLAGS
-make
+cmake .. $BASEFLAGS
+cd sfizz/build
+cmake --build .
