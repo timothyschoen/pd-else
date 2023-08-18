@@ -72,58 +72,58 @@ set(SFIZZ_LIBS
 )
 else()
 set(SFIZZ_LIBS
-    ${SFIZ_LIB_DIR}/libabsl_bad_optional_access.a
-    ${SFIZ_LIB_DIR}/libabsl_hash.a
     ${SFIZ_LIB_DIR}/libsfizz.a
-    ${SFIZ_LIB_DIR}/libabsl_bad_variant_access.a
-    ${SFIZ_LIB_DIR}/libabsl_hashtablez_sampler.a
-    ${SFIZ_LIB_DIR}/libsfizz_cephes.a
-    ${SFIZ_LIB_DIR}/libabsl_base.a
-    ${SFIZ_LIB_DIR}/libabsl_int128.a
-    ${SFIZ_LIB_DIR}/libsfizz_cpuid.a
-    ${SFIZ_LIB_DIR}/libabsl_city.a
-    ${SFIZ_LIB_DIR}/libabsl_log_severity.a
-    ${SFIZ_LIB_DIR}/libsfizz_filesystem_impl.a
-    ${SFIZ_LIB_DIR}/libabsl_civil_time.a
-    ${SFIZ_LIB_DIR}/libabsl_low_level_hash.a
-    ${SFIZ_LIB_DIR}/libsfizz_fmidi.a
-    ${SFIZ_LIB_DIR}/libabsl_cord.a
-    ${SFIZ_LIB_DIR}/libabsl_malloc_internal.a
-    ${SFIZ_LIB_DIR}/libsfizz_hiir_polyphase_iir2designer.a
-    ${SFIZ_LIB_DIR}/libabsl_cord_internal.a
-    ${SFIZ_LIB_DIR}/libabsl_raw_hash_set.a
-    ${SFIZ_LIB_DIR}/libsfizz_import.a
-    ${SFIZ_LIB_DIR}/libabsl_cordz_functions.a
-    ${SFIZ_LIB_DIR}/libabsl_raw_logging_internal.a
     ${SFIZ_LIB_DIR}/libsfizz_internal.a
-    ${SFIZ_LIB_DIR}/libabsl_cordz_handle.a
-    ${SFIZ_LIB_DIR}/libabsl_spinlock_wait.a
+    ${SFIZ_LIB_DIR}/libsfizz_cephes.a
+    ${SFIZ_LIB_DIR}/libsfizz_filesystem_impl.a
+    ${SFIZ_LIB_DIR}/libsfizz_fmidi.a
+    ${SFIZ_LIB_DIR}/libsfizz_hiir_polyphase_iir2designer.a
+    ${SFIZ_LIB_DIR}/libsfizz_import.a
     ${SFIZ_LIB_DIR}/libsfizz_kissfft.a
-    ${SFIZ_LIB_DIR}/libabsl_cordz_info.a
-    ${SFIZ_LIB_DIR}/libabsl_stacktrace.a
     ${SFIZ_LIB_DIR}/libsfizz_messaging.a
-    ${SFIZ_LIB_DIR}/libabsl_crc32c.a
-    ${SFIZ_LIB_DIR}/libabsl_strings.a
     ${SFIZ_LIB_DIR}/libsfizz_parser.a
-    ${SFIZ_LIB_DIR}/libabsl_crc_cord_state.a
-    ${SFIZ_LIB_DIR}/libabsl_strings_internal.a
     ${SFIZ_LIB_DIR}/libsfizz_pugixml.a
-    ${SFIZ_LIB_DIR}/libabsl_crc_cpu_detect.a
-    ${SFIZ_LIB_DIR}/libabsl_symbolize.a
     ${SFIZ_LIB_DIR}/libsfizz_spin_mutex.a
-    ${SFIZ_LIB_DIR}/libabsl_crc_internal.a
-    ${SFIZ_LIB_DIR}/libabsl_synchronization.a
     ${SFIZ_LIB_DIR}/libsfizz_spline.a
-    ${SFIZ_LIB_DIR}/libabsl_debugging_internal.a
-    ${SFIZ_LIB_DIR}/libabsl_throw_delegate.a
     ${SFIZ_LIB_DIR}/libsfizz_tunings.a
+    ${SFIZ_LIB_DIR}/libsfizz_cpuid.a
+    ${SFIZ_LIB_DIR}/libabsl_hash.a
+    ${SFIZ_LIB_DIR}/libabsl_strings.a
+    ${SFIZ_LIB_DIR}/libabsl_bad_optional_access.a
+    ${SFIZ_LIB_DIR}/libabsl_bad_variant_access.a
+    ${SFIZ_LIB_DIR}/libabsl_base.a
+    ${SFIZ_LIB_DIR}/libabsl_city.a
+    ${SFIZ_LIB_DIR}/libabsl_civil_time.a
+    ${SFIZ_LIB_DIR}/libabsl_cord.a
+    ${SFIZ_LIB_DIR}/libabsl_cord_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_cordz_functions.a
+    ${SFIZ_LIB_DIR}/libabsl_cordz_handle.a
+    ${SFIZ_LIB_DIR}/libabsl_cordz_info.a
+    ${SFIZ_LIB_DIR}/libabsl_crc32c.a
+    ${SFIZ_LIB_DIR}/libabsl_crc_cord_state.a
+    ${SFIZ_LIB_DIR}/libabsl_crc_cpu_detect.a
+    ${SFIZ_LIB_DIR}/libabsl_crc_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_debugging_internal.a
     ${SFIZ_LIB_DIR}/libabsl_demangle_internal.a
-    ${SFIZ_LIB_DIR}/libabsl_time.a
-    ${SFIZ_LIB_DIR}/libst_audiofile.a
     ${SFIZ_LIB_DIR}/libabsl_exponential_biased.a
-    ${SFIZ_LIB_DIR}/libabsl_time_zone.a
-    ${SFIZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZ_LIB_DIR}/libabsl_graphcycles_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_hashtablez_sampler.a
+    ${SFIZ_LIB_DIR}/libabsl_int128.a
+    ${SFIZ_LIB_DIR}/libabsl_log_severity.a
+    ${SFIZ_LIB_DIR}/libabsl_low_level_hash.a
+    ${SFIZ_LIB_DIR}/libabsl_malloc_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_raw_hash_set.a
+    ${SFIZ_LIB_DIR}/libabsl_raw_logging_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_spinlock_wait.a
+    ${SFIZ_LIB_DIR}/libabsl_stacktrace.a
+    ${SFIZ_LIB_DIR}/libabsl_strings_internal.a
+    ${SFIZ_LIB_DIR}/libabsl_symbolize.a
+    ${SFIZ_LIB_DIR}/libabsl_synchronization.a
+    ${SFIZ_LIB_DIR}/libabsl_throw_delegate.a
+    ${SFIZ_LIB_DIR}/libabsl_time.a
+    ${SFIZ_LIB_DIR}/libabsl_time_zone.a
+    ${SFIZ_LIB_DIR}/libst_audiofile.a
+    ${SFIZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZ_LIB_DIR}/libaiff.a
 )
 endif()
