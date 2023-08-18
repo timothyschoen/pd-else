@@ -50,7 +50,6 @@ set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/$<0:>)
 
 if(MSVC)
 set(SFIZZ_LIBS
-    ${SFIZZ_LIB_DIR}/libabsl_bad_optional_access.lib
     ${SFIZZ_LIB_DIR}/libabsl_hash.lib
     ${SFIZZ_LIB_DIR}/libsfizz.lib
     ${SFIZZ_LIB_DIR}/libabsl_bad_variant_access.lib
