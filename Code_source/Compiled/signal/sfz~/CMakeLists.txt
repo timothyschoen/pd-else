@@ -37,10 +37,15 @@ set(BASEFLAGS
     "-DCMAKE_BUILD_TYPE=Release"
 )
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build")
-execute_process(COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build" ${CMAKE_COMMAND} .. ${BASEFLAGS} OUTPUT_QUIET ERROR_QUIET)
+if (CMAKE_GENERATOR MATCHES "Visual Studio.*Win64")
+    set(MSVC_TARGET_ARCH "-A x64")
+elseif (CMAKE_GENERATOR MATCHES "Visual Studio.*Win32")
+    set(MSVC_TARGET_ARCH "-A Win32")
+endif()
 
-# Custom command for running the sfizz build script at compilation time
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build")
+execute_process(COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build" ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} OUTPUT_QUIET ERROR_QUIET)
+
 add_custom_target(sfizz_build
     COMMAND ${CMAKE_COMMAND} --build "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build" --config $<CONFIG>
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
