@@ -48,7 +48,7 @@ add_custom_target(sfizz_build
 
 if(MSVC)
 # For some reason, it appears in the Debug folder, even when building in release mode...
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/Debug)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/$<CONFIG>)
 else()
 set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib)
 endif()
