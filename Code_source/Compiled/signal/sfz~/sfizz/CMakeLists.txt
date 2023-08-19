@@ -23,8 +23,6 @@ set(PROJECT_EMAIL      "paul@ferrand.cc")
 set(LV2_PLUGIN_VERSION_MINOR 10)
 set(LV2_PLUGIN_VERSION_MICRO 3)
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
 # External configuration CMake scripts
 set (CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};"
     "${CMAKE_CURRENT_SOURCE_DIR}/library/cmake;"

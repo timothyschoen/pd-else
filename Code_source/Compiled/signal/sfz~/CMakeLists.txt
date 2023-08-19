@@ -42,7 +42,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_SOURCE_DIR}/s
 
 # Custom command for running the sfizz build script at compilation time
 add_custom_target(sfizz_build
-    COMMAND ${CMAKE_COMMAND} --build "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build"
+    COMMAND ${CMAKE_COMMAND} --build "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build" --config $<CONFIG>
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
