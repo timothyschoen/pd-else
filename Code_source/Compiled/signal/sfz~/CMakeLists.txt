@@ -37,10 +37,12 @@ set(BASEFLAGS
     "-DCMAKE_BUILD_TYPE=Release"
 )
 
-if (CMAKE_GENERATOR MATCHES "Visual Studio.*Win64")
+if(MSVC)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(MSVC_TARGET_ARCH "-A x64")
-elseif (CMAKE_GENERATOR MATCHES "Visual Studio.*Win32")
+else()
     set(MSVC_TARGET_ARCH "-A Win32")
+endif()
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build")
