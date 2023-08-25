@@ -432,7 +432,7 @@
 #X obj 387 148 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000 #000000;
 #X obj 507 224 s pd-\$0-cnv;
 #X msg 507 199 clear;
-#X msg 387 261 \; pd-\$2-cnv clear \, obj 101 101 cnv 10 12 20 empty \$2-display \$1 2 10 0 12 -233017 -66577 0 \, coords 0 1 1 -1 14 22 2 100 100 1 \; \$2-canvas coords 0 1 1 -1 14 22 2 100 100 1;
+#X msg 387 261 \; pd-\$2-cnv clear \, obj 101 101 cnv 10 12 20 empty \$2-display \$1 2 10 0 12 -233017 -66577 0 \, coords 0 1 1 -1 500 22 2 100 100 1 \; \$2-canvas coords 0 1 1 -1 14 22 2 100 100 1;
 #X obj 387 219 pack symbol \$0;
 #X obj 268 388 t f b;
 #X obj 95 272 t b f;
