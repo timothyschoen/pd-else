@@ -1001,12 +1001,12 @@
 #X text 85 82 Alexandre Torres Porres (2019);
 #X obj 126 169 r \$0-slider.r;
 #X obj 127 202 cnv 1 1 13 empty \$0-cnv empty 20 12 0 14 #606060 #404040 0;
-#X obj 126 271 gate;
-#X obj 142 233 else/canvas.mouse 1;
-#X connect 0 0 8 0 empty;
+#X obj 180 224 else/canvas.mouse 1;
+#X obj 127 253 else/router;
+#X connect 0 0 9 0 empty;
 #X connect 1 0 2 0 empty;
 #X connect 2 0 3 0 empty;
 #X connect 6 0 0 0 empty;
-#X connect 8 0 2 1 empty;
-#X connect 9 0 8 1 empty;
+#X connect 8 0 9 1 empty;
+#X connect 9 1 2 1 empty;
 #X coords 0 -1 135 17 135 17 2 125 200;
