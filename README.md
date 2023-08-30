@@ -4,19 +4,25 @@
 
 ### for the Pure Data programming language
 
-### Version: 1.0-0 RC-9 (release candidate #9) With Live Electronics Tutorial. This is a pre/test release!!!!!!!!!!
+### Version: 1.0-0 RC-9 (release candidate #9) With Live Electronics Tutorial. 
 
-### Released August 1st 2023
+### Released August 31st 2023
 
 
-Copyright © 2017-2023 Alexandre Torres Porres
-
+Copyright © 2017-2023 Alexandre Torres Porres and others 
 
 
 This work is free. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2, as published by Sam Hocevar. See License.txt <https://github.com/porres/pd-else/blob/master/License.txt> and <http://www.wtfpl.net/> for more details
 
-Other licenses may apply for specific objects and this is informed in the source code (examples: [giga.rev~], [sfont~], [sfz~], [plaits~], etc...).
+For details on authorship check the source code. Other licenses also apply for specific objects and this is also informed in the source code. 
+For instance:
+- [beat~], [sfont~], [giga.rev~] are licensed under the GNU GPL library
+- [sfz~] and band limited oscillators like [bl.saw~] are licensed under the BSD 2-Clause library
+- [plaits~], [osc.format], [osc.parse] and [osc.route] are licensed under the MIT library
 
+ELSE comes with a Live Electronics tutorial as part of its documentation written by Alexandre Torres Porres, this work is licensed under a Creative Common (CC} License. 
+
+For copies of the licenses and the terms, please check the 'license' subfolder.
 
 
 --------------------------------------------------------------------------
@@ -97,19 +103,19 @@ ELSE has been in active development for over 5 years but it will still take a li
 
 ### Acknowledgements
 
-Flávio Luis Schiavoni helped me out in a few things when I first started coding and collaborated with the objects: [median~] and [keyboard]. Lucas Cordiviola is an active tester and has helped countless times with compilation issues for windows. 
+Flávio Luis Schiavoni helped me out in a few things when I first started coding and collaborated with the objects: [median~] and [keyboard]. 
 
 I'd also like to thank my Cyclone buddies Derek Kwan and Matt Barber, cause I started learning how to code externals with them as part of the cyclone team. Other developers of cyclone need to be praised, like Czaja, the original author, as I did steal quite a bit from cyclone into ELSE. I'd like to give a special thanks for Matt Barber for developing the "magic" in cyclone that I'm using here and also collaborating to ELSE with the objects: [float2bits], [brown~], [gray~], [perlin~], [pink~] and [blip~].
 
-Lucarda is always helpful testing stuff for Windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object.
+Lucarda is an active tester and has helped countless times with compilation issues for windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object.
 
 Albert Graef from Purr Data is working on a port of ELSE so it builds and runs on Purr Data (still experimental and a long way to go). He's also doing several valuable contributions to the code and being helpful in general in this process - check <https://github.com/agraef/purr-data/releases/tag/2.19.2+ELSE>.
 
-Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of ELSE for other systems as well as ELSE for Camomile and libpd projects, which opened the way for PlugData by Timothy Schoen, who's doing an amazing jaw dropping job with this project based on camomile that includes ELSE. Timothy has also helped me fix many ELSE related issues and coded first versions of compiled band limited oscillators. PlugData is also a fork of Pd with a revamped GUI. See: <https://github.com/timothyschoen/PlugData>.
+Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of ELSE for other systems as well as ELSE for Camomile and libpd projects, which opened the way for PlugData by Timothy Schoen, who's doing an amazing jaw dropping job with this project based on camomile that includes ELSE. Timothy has also helped me fix many ELSE related issues and coded first versions of some objects like the band limited oscillators. Other folks from the PlugData gang are being very helpful like Alex Mitchell and Amy. PlugData is a fork of Pd with a revamped GUI and comes with the ELSE library. See: <https://github.com/timothyschoen/PlugData>.
 
 --------------------------------------------------------------------------
 
-## Current Object list (501 objects):
+## Current Object list (509 objects):
 
 #assorted
     else
@@ -128,11 +134,11 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
 #message management
     format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2
 #list management
-    break order combine delete group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean
+    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean
 #file management
     dir
 #midi
-    midi midi.learn sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out pgm.in pgm.out nemd.in bend.out note.in note.out midi.clock noteinfo panic mono voices suspedal
+    midi midi.learn midi.in midi.out sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out ptouch.in ptouch.out  pgm.in pgm.out nemd.in bend.out note.in note.out midi.clock noteinfo panic mono voices suspedal
 #osc
     osc.route osc.format osc.parse osc.send osc.receive
 #math functions
@@ -144,7 +150,7 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
 #logic
     loop
 #audio multichannel tools
-    nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~
+    voices~ nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~
 #fx: assorted
     downsample~ conv~ chorus~ shaper~ crusher~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
 #fx: delay
@@ -168,7 +174,7 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
 #synthesis: chaotic, stochastic, noise
     white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ stepnoise.mc~ rampnoise~ rampnoise.mc~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~
 #control: mouse/keyboard
-    mouse canvas.mouse keycode keymap
+mouse canvas.mouse keycode keymap keypress
 #control: fade/pan/routing
 fader~ autofade~ autofade2~ balance~ pan2~ pan4~ pan8~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~  xfade.mc~ xgate~ xgate.mc~ xgate2~ xselect~ xselect2~ xselect.mc~ mtx~
 #control: sequencers
