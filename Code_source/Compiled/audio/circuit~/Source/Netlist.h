@@ -11,7 +11,7 @@
 using NetlistDescription = std::vector<std::tuple<ComponentType, std::vector<std::string>, std::vector<int>>>;
 
 struct NetList {
-    typedef std::vector<IComponent*> ComponentList;
+    typedef std::vector<std::unique_ptr<IComponent>> ComponentList;
 
     NetList(NetlistDescription& netlist, int nNets, int numSamples, double sampleRate)
         : lastNetlist(netlist)
@@ -96,6 +96,14 @@ struct NetList {
                 }
                 break;
             }
+            case tTriode: {
+                if (args.size() == 0) {
+                    addComponent(new Triode(pins[0], pins[1], pins[2]));
+                } else {
+                    pd_error(NULL, "circuit~: wrong number of arguments for inductor");
+                }
+                break;
+            }
             case tOpAmp: {
                 if (args.size() == 0) {
                     addComponent(new OpAmp(10, 15, pins[0], pins[1], pins[2]));
@@ -158,12 +166,25 @@ struct NetList {
         // get DC solution
         simulateTick();
         setTimeStep(1.0 / sampleRate);
+        
+        // This helps against clicks
+        for(int i = 0; i < 10; i++)
+        {
+            simulateTick();
+        }
+    }
+
+    ~NetList()
+    {
+        if(Symbolic) klu_free_symbolic(&Symbolic, &Common);
+        if(Numeric) klu_free_numeric(&Numeric, &Common);
+
     }
 
     void addComponent(IComponent* c)
     {
         c->setupNets(nets, c->getPinLocs());
-        components.push_back(c);
+        components.push_back(std::unique_ptr<IComponent>(c));
     }
 
     void setTimeStep(double tStepSize)
@@ -273,8 +294,8 @@ protected:
     double solvertol = 1e-7;
     bool nochecking = true;
 
-    klu_symbolic* Symbolic;
-    klu_numeric* Numeric;
+    klu_symbolic* Symbolic = nullptr;
+    klu_numeric* Numeric = nullptr;
     klu_common Common;
 
     std::vector<double> b;
@@ -299,7 +320,7 @@ protected:
     {
         bool done = true;
         for (int i = 0; i < components.size(); ++i) {
-            done = done && components[i]->newton(system);
+            done &= components[i]->newton(system);
         }
         return done;
     }
