@@ -444,7 +444,7 @@ static void knob_delete(t_gobj *z, t_glist *glist){
     canvas_deletelinesfor(glist, (t_text *)z);
 }
 
-static void knob_get_snd(t_knob* x){
+ void knob_get_snd(t_knob* x){
     if(!x->x_snd_set){ // no send set, search arguments
         t_binbuf *bb = x->x_obj.te_binbuf;
         int n_args = binbuf_getnatom(bb) - 1; // number of arguments
@@ -476,7 +476,7 @@ static void knob_get_snd(t_knob* x){
         x->x_snd_raw = gensym("empty");
 }
 
-static void knob_get_rcv(t_knob* x){
+void knob_get_rcv(t_knob* x){
     if(!x->x_rcv_set){ // no receive set, search arguments
         t_binbuf *bb = x->x_obj.te_binbuf;
         int n_args = binbuf_getnatom(bb) - 1; // number of arguments
