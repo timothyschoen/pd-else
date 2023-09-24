@@ -7,10 +7,11 @@
 
 #pragma once
 
-struct Models {
-    using Model = std::map<std::string, std::map<std::string, double>>;
+using Model = std::map<std::string, double>;
+using ModelList = std::map<std::string, std::map<std::string, double>>;
+class Models {
     
-    static inline const Model Triodes = {
+    static inline const ModelList Triodes = {
         { "12AT7", {
             { "Ex", 1.234 },
             { "Mu", 67.49 },
@@ -73,64 +74,67 @@ struct Models {
             { "Mu", 75.89 },
             { "Rgk", 2000.0 },
             { "Kvb", 7.0 }
-        } },
-        { "6L6GC-JJ", {
-            { "Ex", 1.063 },
-            { "Mu", 13.94 },
-            { "Kg1", 320.2 },
-            { "Kg2", 4500 },
-            { "Kp", 33.2 },
-            { "Kvb", 29.6 },
-            { "Rgi", 1000.0 }
-        } },
-        { "6V6GTA", {
-            { "Ex", 1.31 },
-            { "Mu", 10.7 },
-            { "Kg1", 1672.0 },
-            { "Kg2", 4500 },
-            { "Kp", 41.16 },
-            { "Kvb", 12.7 },
-            { "Rgi", 2000.0 }
-        } },
-        { "EL34-JJ", {
-            { "Ex", 1.35 },
-            { "Mu", 11.55 },
-            { "Kg1", 650.2 },
-            { "Kg2", 6000 },
-            { "Kp", 51.85 },
-            { "Kvb", 25.4 },
-            { "Rgi", 1000.0 }
-        } },
-        { "EL84-JJ", {
-            { "Ex", 1.35 },
-            { "Mu", 19.56 },
-            { "Kg1", 593.0 },
-            { "Kg2", 4500 },
-            { "Kp", 131.34 },
-            { "Kvb", 17.5 },
-            { "Rgi", 1000.0 }
-        } },
-        { "6550", {
-            { "Ex", 1.35 },
-            { "Mu", 7.9 },
-            { "Kg1", 890 },
-            { "Kg2", 4200 },
-            { "Kp", 60 },
-            { "Kvb", 24 },
-            { "Rgi", 1000.0 }
-        } },
-        { "KT88-JJ", {
-            { "Ex", 1.218 },
-            { "Mu", 12.43 },
-            { "Kg1", 315.7 },
-            { "Kg2", 4500 },
-            { "Kp", 26.72 },
-            { "Kvb", 36.1 },
-            { "Rgi", 1000.0 }
         } }
     };
     
-    static inline const Model BJTs = {
+    static inline const ModelList Pentodes = {
+        {"6L6GC-JJ", {
+            {"Mu", 13.94},
+            {"Ex", 1.063},
+            {"Kg1", 320.2},
+            {"Kg2", 4500},
+            {"Kp", 33.2},
+            {"Kvb", 29.6},
+            {"Rgi", 1000}
+        }},
+        {"6V6GTA", {
+            {"Mu", 10.7},
+            {"Ex", 1.31},
+            {"Kg1", 1672.0},
+            {"Kg2", 4500},
+            {"Kp", 41.16},
+            {"Kvb", 12.7},
+            {"Rgi", 2000}
+        }},
+        {"EL34-JJ", {
+            {"Mu", 11.55},
+            {"Ex", 1.35},
+            {"Kg1", 650.2},
+            {"Kg2", 6000},
+            {"Kp", 51.85},
+            {"Kvb", 25.4},
+            {"Rgi", 1000}
+        }},
+        {"EL84-JJ", {
+            {"Mu", 19.56},
+            {"Ex", 1.35},
+            {"Kg1", 593.0},
+            {"Kg2", 4500},
+            {"Kp", 131.34},
+            {"Kvb", 17.5},
+            {"Rgi", 1000}
+        }},
+        {"6550", {
+            {"Mu", 7.9},
+            {"Ex", 1.35},
+            {"Kg1", 890},
+            {"Kg2", 4200},
+            {"Kp", 60},
+            {"Kvb", 24},
+            {"Rgi", 1000}
+        }},
+        {"KT88-JJ", {
+            {"Mu", 12.43},
+            {"Ex", 1.218},
+            {"Kg1", 315.7},
+            {"Kg2", 4500},
+            {"Kp", 26.72},
+            {"Kvb", 36.1},
+            {"Rgi", 1000}
+        }}
+    };
+    
+    static inline const ModelList BJTs = {
         { "2N2222", {
             { "IS", 1e-14 },
             { "BF", 200 },
@@ -319,31 +323,31 @@ struct Models {
         } },
         { "MPS8599", {
             { "IS", 120.32e-15 },
-            { "Kp", 188.84 },
+            { "BF", 188.84 },
             { "BR", 24.295 },
             { "PNP", 1 },
         } },
         { "BC239A", {
             { "IS", 10e-15 },
-            { "Kp", 170 },
+            { "BF", 170 },
             { "BR", 1 },
             { "PNP", 0 },
         } },
         { "BC239B", {
             { "IS", 10e-15 },
-            { "Kp", 320 },
+            { "BF", 320 },
             { "BR", 1 },
             { "PNP", 0 },
         } },
         { "BC239C", {
             { "IS", 10e-15 },
-            { "Kp", 590 },
+            { "BF", 590 },
             { "BR", 1 },
             { "PNP", 0 },
         } }
     };
     
-    static inline const Model JFETs = {
+    static inline const ModelList JFETs = {
         { "2N5952", {
             { "IS", 1e-14 },
             { "Beta", 1.3143e-3 },
@@ -388,7 +392,7 @@ struct Models {
         } }
     };
     
-    static inline const Model MOSFETs = {
+    static inline const ModelList MOSFETs = {
         { "IRF510", {
             { "Vt0", 3.82703 },
             { "Kp", 2.48457 },
@@ -421,7 +425,7 @@ struct Models {
         } },
     };
     
-    static inline const Model Diodes = {
+    static inline const ModelList Diodes = {
         { "Si", {
             { "Type", 0 }, { "IS", 1e-12 },
             //{"Description",  "Generic Silicon diode"},
@@ -496,4 +500,115 @@ struct Models {
             { "n", 1.3 },
         } }
     };
+    
+    static inline const ModelList OpAmps =  {
+        {"LM308", {
+            {"Rin", 40e6},
+            {"Rout", 50},
+            {"Aol", 300e3},
+            {"Gbp", 1e6},
+        }},
+        {"3404A", {
+            {"Rin", 1e12},
+            {"Rout", 50},
+            {"Aol", 100e3},
+            {"Gbp", 1.2e6},
+        }},
+        {"4558", {
+            {"Rin", 5e6},
+            {"Rout", 100},
+            {"Aol", 300e3},
+            {"Gbp", 3e6},
+        }},
+        {"UA741", {
+            {"Rin", 2e6},
+            {"Rout", 75},
+            {"Aol", 200e3},
+            {"Gbp", 1e6},
+        }},
+        {"OP27", {
+            {"Rin", 4e6},
+            {"Rout", 70},
+            {"Aol", 1.78e6},
+            {"Gbp", 8e6},
+        }},
+        {"OP42", {
+            {"Rin", 1e12},
+            {"Rout", 50},
+            {"Aol", 1e6},
+            {"Gbp", 10e6},
+        }},
+        {"OP134", {
+            {"Rin", 10e12},
+            {"Rout", 10},
+            {"Aol", 1e6},
+            {"Gbp", 8e6},
+        }},
+        {"AD746", {
+            {"Rin", 200e9},
+            {"Rout", 10},
+            {"Aol", 282e3},
+            {"Gbp", 13e6},
+        }},
+        {"AD826", {
+            {"Rin", 300e3},
+            {"Rout", 8},
+            {"Aol", 5.6e3},
+            {"Gbp", 35e6},
+        }},
+        {"TL06x", {
+            {"Rin", 1e12},
+            {"Rout", 50},
+            {"Aol", 315e3},
+            {"Gbp", 1e6},
+        }},
+        {"TL07x", {
+            {"Rin", 1e12},
+            {"Rout", 50},
+            {"Aol", 200e3},
+            {"Gbp", 5.25e6},
+        }},
+        {"TL08x", {
+            {"Rin", 1e12},
+            {"Rout", 50},
+            {"Aol", 100e3},
+            {"Gbp", 3e6},
+        }}
+    };
+    
+public:
+    static const ModelList& getModelsForComponent(const std::string& componentName)
+    {
+        if(componentName == "triode")
+        {
+            return Triodes;
+        }
+        if(componentName == "pentode")
+        {
+            return Pentodes;
+        }
+        if(componentName == "diode")
+        {
+            return Diodes;
+        }
+        if(componentName == "jfet")
+        {
+            return JFETs;
+        }
+        if(componentName == "mosfet")
+        {
+            return MOSFETs;
+        }
+        if(componentName == "bjt")
+        {
+            return BJTs;
+        }
+        if(componentName == "opamp")
+        {
+            return OpAmps;
+        }
+
+        assert(false);
+        return {};
+    }
 };
