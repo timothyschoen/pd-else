@@ -234,7 +234,7 @@ static void knob_config_wcenter(t_knob *x, t_canvas *cv, int active){
 
 // configure inlet outlet and outline
 static void knob_config_io(t_knob *x, t_canvas *cv){
-    int inlet = (x->x_rcv == &s_ || x->x_rcv == gensym("empty")) && x->x_edit;
+    int inlet = (x->x_rcv == gensym("") || x->x_rcv == gensym("empty")) && x->x_edit;
     pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_in,
         "-state", inlet ? "normal" : "hidden");
     int outlet = (x->x_snd == &s_ || x->x_snd == gensym("empty")) && x->x_edit;
@@ -1410,7 +1410,7 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     sprintf(x->x_tag_out, "%pOUT", x);
     if(x->x_rcv != gensym("empty"))
         pd_bind(&x->x_obj.ob_pd, x->x_rcv);
-    outlet_new(&x->x_obj, &s_float);
+    outlet_new(&x->x_obj, gensym("float"));
     return(x);
 errstate:
     pd_error(x, "[knob]: improper creation arguments");
