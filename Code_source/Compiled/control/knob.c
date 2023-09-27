@@ -472,7 +472,7 @@ static void knob_delete(t_gobj *z, t_glist *glist){
             }
         }
     }
-    if(x->x_snd_raw == &s_)
+    if(x->x_snd_raw == gensym(""))
         x->x_snd_raw = gensym("empty");
 }
 
@@ -504,7 +504,7 @@ void knob_get_rcv(t_knob* x){
             }
         }
     }
-    if(x->x_rcv_raw == &s_)
+    if(x->x_rcv_raw == gensym(""))
         x->x_rcv_raw = gensym("empty");
 }
 
@@ -738,7 +738,7 @@ static void knob_fgcolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
 static void knob_send(t_knob *x, t_symbol *s){
     if(s == gensym(""))
         s = gensym("empty");
-    t_symbol *snd = s == gensym("empty") ? &s_ : canvas_realizedollar(x->x_glist, s);
+    t_symbol *snd = s == gensym("empty") ? gensym("") : canvas_realizedollar(x->x_glist, s);
     if(snd != x->x_snd){
         x->x_snd_set = 1;
         x->x_snd_raw = s;
@@ -750,15 +750,15 @@ static void knob_send(t_knob *x, t_symbol *s){
 static void knob_receive(t_knob *x, t_symbol *s){
     if(s == gensym(""))
         s = gensym("empty");
-    t_symbol *rcv = s == gensym("empty") ? &s_ : canvas_realizedollar(x->x_glist, s);
+    t_symbol *rcv = s == gensym("empty") ? gensym("") : canvas_realizedollar(x->x_glist, s);
     if(rcv != x->x_rcv){
         x->x_rcv_set = 1;
         t_symbol *old_rcv = x->x_rcv;
         x->x_rcv_raw = s;
         x->x_rcv = rcv;
-        if(old_rcv != &s_ && old_rcv != gensym("empty"))
+        if(old_rcv != gensym("") && old_rcv != gensym("empty"))
             pd_unbind(&x->x_obj.ob_pd, old_rcv);
-        if(x->x_rcv != &s_)
+        if(x->x_rcv != gensym(""))
             pd_bind(&x->x_obj.ob_pd, x->x_rcv);
         knob_config_io(x, glist_getcanvas(x->x_glist));
     }
