@@ -20,7 +20,9 @@
 
 #include "../shared/aubio/src/aubio_priv.h"
 
+#if _MSC_VER
 #define strncasecmp _strnicmp
+#endif
 
 const char_t *aubio_str_get_extension(const char_t *filename)
 {
