@@ -2,12 +2,12 @@
 
 #include "m_pd.h"
 #include "buffer.h"
+
 #include <math.h>
 #include <stdlib.h>
 
 #define FLEN      65536
 #define MAX_COEF  256
-#define TWO_PI    (3.14159265358979323846 * 2)
 
 static t_class *shaper_class;
 
