@@ -912,7 +912,7 @@ struct Switch : Component<N+1> {
         }
     }
     
-    Switch(double s, std::vector<int> pins) : isFixed(true), fixedState(s, state(fixedState))
+    Switch(double s, std::vector<int> pins) : isFixed(true), fixedState(s), state(fixedState)
     {
         for(int i = 0; i < N; i++)
         {
