@@ -11,13 +11,14 @@ typedef struct _var{
 }t_var;
 
 static void var_bang(t_var *x){
-    t_atom at[x->x_n];
+    t_atom* at = malloc(x->x_n * sizeof(t_atom));
     for(int i = 0; i < x->x_n; i++){
         t_float f;
         value_getfloat(x->x_sym[i], &f);
         SETFLOAT(at+i, f);
     }
     outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n, at);
+    free(at);
 }
 
 static void var_list(t_var *x, t_symbol *s, int ac, t_atom *av){
