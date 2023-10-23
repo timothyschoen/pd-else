@@ -120,6 +120,7 @@ ptouch.in.class.sources := Code_source/Compiled/control/ptouch.in.c
 ptouch.out.class.sources := Code_source/Compiled/control/ptouch.out.c
 trunc.class.sources := Code_source/Compiled/control/trunc.c
 unmerge.class.sources := Code_source/Compiled/control/unmerge.c
+var.class.sources := Code_source/Compiled/control/var.c
 
 # signal:
 above~.class.sources := Code_source/Compiled/audio/above~.c
@@ -205,7 +206,6 @@ power~.class.sources := Code_source/Compiled/audio/power~.c
 pan2~.class.sources := Code_source/Compiled/audio/pan2~.c
 pan4~.class.sources := Code_source/Compiled/audio/pan4~.c
 peak~.class.sources := Code_source/Compiled/audio/peak~.c
-pmosc~.class.sources := Code_source/Compiled/audio/pmosc~.c
 phaseseq~.class.sources := Code_source/Compiled/audio/phaseseq~.c
 pulsecount~.class.sources := Code_source/Compiled/audio/pulsecount~.c
 pick~.class.sources := Code_source/Compiled/audio/pick~.c
@@ -283,9 +283,11 @@ magic := Code_source/shared/magic.c
 
 buf := Code_source/shared/buffer.c
     sin~.class.sources := Code_source/Compiled/audio/sin~.c $(buf)
-    op2~.class.sources := Code_source/Compiled/audio/op2~.c $(buf)
-    op4~.class.sources := Code_source/Compiled/audio/op4~.c $(buf)
-    op6~.class.sources := Code_source/Compiled/audio/op6~.c $(buf)
+    fm~.class.sources := Code_source/Compiled/audio/fm~.c $(buf)
+    pm~.class.sources := Code_source/Compiled/audio/pm~.c $(buf)
+    pm2~.class.sources := Code_source/Compiled/audio/pm2~.c $(buf)
+    pm4~.class.sources := Code_source/Compiled/audio/pm4~.c $(buf)
+    pm6~.class.sources := Code_source/Compiled/audio/pm6~.c $(buf)
     shaper~.class.sources = Code_source/Compiled/audio/shaper~.c $(buf)
     tabreader.class.sources = Code_source/Compiled/control/tabreader.c $(buf)
     tabreader~.class.sources = Code_source/Compiled/audio/tabreader~.c $(buf)
