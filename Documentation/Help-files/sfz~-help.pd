@@ -9,11 +9,7 @@
 #X coords 0 -1 1 1 252 42 2 100 100;
 #X restore 304 3 pd;
 #X obj 344 11 cnv 10 10 10 empty empty ELSE 0 15 2 30 #7c7c7c #e0e4dc 0;
-<<<<<<< HEAD
 #X obj 22 40 cnv 4 4 4 empty empty SFZ\ hybrid\ sample\ player 0 28 2 18 #e0e0e0 #000000 0;
-=======
-#X obj 22 40 cnv 4 4 4 empty empty SFZ\ synthesizer 0 28 2 18 #e0e0e0 #000000 0;
->>>>>>> 179333c6f0a637ddf5f0f6ab760813b3075082dc
 #X obj 457 11 cnv 10 10 10 empty empty EL 0 6 2 13 #7c7c7c #e0e4dc 0;
 #X obj 477 11 cnv 10 10 10 empty empty Locus 0 6 2 13 #7c7c7c #e0e4dc 0;
 #X obj 514 11 cnv 10 10 10 empty empty Solus' 0 6 2 13 #7c7c7c #e0e4dc 0;
@@ -350,51 +346,6 @@
 #X connect 0 0 8 0;
 #X connect 2 0 9 0;
 #X connect 7 0 1 0;
-<<<<<<< HEAD
-#X connect 9 0 1 0;
-#X connect 10 0 9 0;
-#X restore 480 229 pd basic;
-#X text 51 89 [sfz~] is based on "sfizz" a SFZ format sample player. For more details on the SFZ format \, players and instruments for download \, see:, f 67;
-#X obj 155 215 else/sfz~ sfz-example.sfz;
-#X text 29 239 see also:;
-#X obj 26 264 else/sfont~;
-#X text 182 451 panic -;
-#X text 232 542 transposition: cents \, channel (optional), f 51;
-#X obj 78 316 cnv 17 3 260 empty \$0-pddp.cnv.let.0 0 5 9 0 16 #dcdcdc #9c9c9c 0;
-#X text 170 559 version -;
-#X text 232 559 prints version info on terminal, f 51;
-#X text 140 468 scale <list> -;
-#X text 140 494 base <float> -;
-#X text 232 494 base MIDI pitch for scale, f 51;
-#X text 232 468 scale in cents to retune (12-tone temperament if no list is given), f 51;
-#X text 128 542 transp <float> -;
-#X text 188 361 list -;
-#X text 232 361 same as "note" message, f 51;
-#X text 182 318 float -;
-#X text 232 318 raw MIDI input, f 51;
-#X text 134 332 open <symbol> -;
-#X text 232 347 note: key \, velocity, f 51;
-#X text 134 405 touch <float> -;
-#X text 98 347 note <float \, float> -;
-#X text 104 376 ctl <float \, float> -;
-#X text 140 391 bend <float> -;
-#X text 116 419 polytouch <f \, f> -;
-#X text 232 405 channel aftertouch: value, f 51;
-#X text 232 419 key aftertouch: value \, key, f 51;
-#X text 232 391 pitch bend: value, f 51;
-#X text 232 376 control change: value \, control, f 51;
-#X text 232 332 load soundfont file (.sfz extension implied), f 51;
-#X text 182 435 flush -;
-#X text 232 435 sends note offs for all notes to clear hanging ones;
-#X text 232 451 stops all sounds immediately, f 51;
-#X text 128 511 scala <symbol> -;
-#X text 232 511 open scala tuning file, f 51;
-#X text 232 527 sets reference frequency for A4 in hertz, f 51;
-#X text 152 527 a4 <float> -;
-#X connect 16 0 30 0;
-#X connect 30 0 0 0;
-#X connect 30 1 0 1;
-=======
 #X connect 8 0 6 0;
 #X connect 9 0 10 0;
 #X connect 10 0 7 0;
@@ -470,4 +421,3 @@
 #X connect 16 0 65 0;
 #X connect 65 0 0 0;
 #X connect 65 1 0 1;
->>>>>>> 179333c6f0a637ddf5f0f6ab760813b3075082dc
