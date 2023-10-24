@@ -331,7 +331,7 @@ static void* sfz_new(t_symbol *s, int ac, t_atom *av){
     x->x_elsefilehandle = elsefile_new((t_pd *)x, sfz_readhook, 0);
     x->x_binbuf = binbuf_new();
     x->x_bufsize = 0;
-
+    
     x->x_canvas = canvas_getcurrent();
     char *canvas_dir = (char *)canvas_getdir(x->x_canvas)->s_name;
     x->x_patch_path = (char*)malloc(strlen(canvas_dir) + 2);
