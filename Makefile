@@ -80,6 +80,7 @@ message.class.sources := Code_source/Compiled/control/message.c
 messbox.class.sources := Code_source/Compiled/control/messbox.c
 metronome.class.sources := Code_source/Compiled/control/metronome.c
 mouse.class.sources := Code_source/Compiled/control/mouse.c
+mpe.in.class.sources := Code_source/Compiled/control/mpe.in.c
 noteinfo.class.sources := Code_source/Compiled/control/noteinfo.c
 note.in.class.sources := Code_source/Compiled/control/note.in.c
 note.out.class.sources := Code_source/Compiled/control/note.out.c
@@ -265,6 +266,9 @@ wrap2.class.sources := Code_source/Compiled/control/wrap2.c
 wrap2~.class.sources := Code_source/Compiled/audio/wrap2~.c
 zerocross~.class.sources := Code_source/Compiled/audio/zerocross~.c
 
+aubio := $(wildcard Code_source/shared/aubio/src/*/*.c) $(wildcard Code_source/shared/aubio/src/*.c)
+    beat~.class.sources := Code_source/Compiled/audio/beat~.c $(aubio)
+
 magic := Code_source/shared/magic.c
     gaussian~.class.sources := Code_source/Compiled/audio/gaussian~.c $(magic)
     imp~.class.sources := Code_source/Compiled/extra_source/Aliases/imp~.c $(magic)
@@ -426,10 +430,10 @@ sfz-clean:
 .PHONY: circuit
 
 circuit:
-	cd Code_source/Compiled/audio/circuit~ && ./build.sh
+	$(MAKE) -C Code_source/Compiled/audio/circuit~ install extension=$(extension) installpath="$(abspath $(PDLIBDIR))/else"
 
 circuit-clean:
-	rm -rf Code_source/Compiled/audio/circuit~/build
+	$(MAKE) -C Code_source/Compiled/audio/circuit~ clean
 
 install: installplus
 

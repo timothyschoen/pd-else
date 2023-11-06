@@ -1,4 +1,4 @@
-#N canvas 501 25 560 704 10;
+#N canvas 409 25 560 704 10;
 #X obj 236 145 else/out~;
 #X obj 306 4 cnv 15 250 40 empty empty empty 12 13 0 18 #7c7c7c #e0e4dc 0;
 #N canvas 382 141 749 319 (subpatch) 0;
@@ -2035,8 +2035,6 @@
 #X obj 394 446 out~;
 #X obj 394 415 else/plaits~ -midi -trigger;
 #X obj 394 279 else/note.in;
-#X text 532 323 You can also trigger the object with a list of note on and off messages \, as given by [keyboard] \, [note.in] and [makenote2] \, for instance., f 44;
-#X obj 394 256 midiin;
 #X obj 618 253 outlet~;
 #X obj 618 141 else/pulse~ 0.5 0.9;
 #X msg 377 133 level \$1;
@@ -2046,8 +2044,9 @@
 #X text 34 294 In other modes where trigger and level work together \, the LPG is actually disabled (and hence so are the decay and cutoff settings). These modes are: 11 (inharmonic string modeling) \, 12 (modal resonator) \, the percussive modes 13 (bass drum) \, 14 (snare drum) and 15 (hi hat) \, as well the 6 op FM modes (18 \, 19 and 20). See details below., f 49;
 #X text 34 442 In FM modes 18 to 20 you have attack and release envelopes that are controlled by trigger input with a gate on and off \, this means that in this case the trigger input can hold a sustained sound when the gate is on. The level input controls loudness or timbre depending on how each preset is programmed. Without the level input enabled it's like this parameter is set to '0.5'., f 49;
 #X text 34 190 In mode 7 (vowel and speech synthesis) \, only the level input controls the LPG. The trigger triggers the utterance of a word and supersedes the level input., f 49;
-#X text 34 240 In mode 23 (Chiptune) \, only the level input controls the LPG. In trigger mode you have a continuous tone and an arppegio note variation at each trigger., f 49;
 #X text 34 390 In modes 11 to 15 \, the level signal works as an envelope. If the trigger mode is enabled \, the level input works as an accent while the trigger triggers a percussive decay envelope., f 49;
+#X text 34 240 In mode 23 (Chiptune) \, only the level input controls the LPG. In trigger mode you have a continuous tone and an arppegio note variation at each trigger snd it supersedes the level input., f 49;
+#X text 530 312 You can also trigger the object with a list of note on and off messages \, as given by [keyboard] \, [note.in] and [makenote2] \, for instance. Actually \, the velocity item in the list (the 2nd elemnt) activates both secondary inlets and act if the trigger and level flags are activated., f 43;
 #X connect 1 0 0 0;
 #X connect 2 0 4 0;
 #X connect 3 0 0 0;
@@ -2058,12 +2057,11 @@
 #X connect 12 0 14 0;
 #X connect 14 0 13 0;
 #X connect 15 0 12 0;
-#X connect 17 0 15 0;
-#X connect 19 0 11 0;
-#X connect 19 0 9 0;
+#X connect 17 0 11 0;
+#X connect 17 0 9 0;
+#X connect 17 0 16 0;
+#X connect 18 0 0 0;
 #X connect 19 0 18 0;
-#X connect 20 0 0 0;
-#X connect 21 0 20 0;
 #X restore 186 363 pd LPG \; trigger \; level;
 #X text 245 365 <-- open for LPG (LowPass Gate) settings and trigger and level input details., f 77;
 #X text 413 444 The 3rd row of he last 8 modes are better described here:, f 51;
