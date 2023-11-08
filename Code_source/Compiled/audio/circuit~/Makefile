@@ -11,7 +11,20 @@ XINCLUDE = \
     -I./Source \
     ${empty}
 
-cflags = ${XINCLUDE} -I .
+cflags += ${XINCLUDE} -I .
+
+define forDarwin
+    cflags += -mmacosx-version-min=10.9
+    cxx.flags += -stdlib=libc++ -std=gnu++17 -fPIC
+endef
+
+define forLinux
+    cflags += -std=c++1z
+endef
+
+define forWindows
+    cflags += -std=c++1z
+endef
     
 circuit~.class.sources = \
     ./Libraries/AMD/amd_1.c \
