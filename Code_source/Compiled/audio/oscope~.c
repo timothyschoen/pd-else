@@ -604,9 +604,10 @@ static t_int *scope_perform(t_int *w){
     if(!x->x_xymode || x->x_frozen){ // do nothing
         return(w+6);
     }
+    /*
     if(!gobj_shouldvis((t_gobj *)x, x->x_glist) || !glist_isvisible(x->x_glist)){
         return(w+6);
-    }
+    } */
     int bufphase = x->x_bufphase;
     int bufsize = x->x_bufsize;
     if(bufphase < bufsize){
