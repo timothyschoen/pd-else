@@ -1,6 +1,7 @@
 // Porres 2016
  
 #include "m_pd.h"
+#include "else_alloca.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -49,11 +50,11 @@ static void wrap2_list(t_wrap2 *x, t_symbol *s, int ac, t_atom *av){
         outlet_float(x->x_outlet, convert(x->x_f = atom_getfloat(av), x->x_min, x->x_max));
         return;
     }
-    t_atom* at = calloc(ac, sizeof(t_atom));
+    t_atom* at = ALLOCA(t_atom, ac);
     for(int i = 0; i < ac; i++)
         SETFLOAT(at+i, convert(atom_getfloatarg(i, ac, av), x->x_min, x->x_max));
     outlet_list(x->x_outlet, 0, ac, at);
-    free(at);
+    FREEA(at);
 }
 
 static void wrap2_set(t_wrap2 *x, t_float f){
