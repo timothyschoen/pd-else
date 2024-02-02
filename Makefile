@@ -47,7 +47,6 @@ click.class.sources := Code_source/Compiled/control/click.c
 canvas.active.class.sources := Code_source/Compiled/control/canvas.active.c
 canvas.bounds.class.sources := Code_source/Compiled/control/canvas.bounds.c
 canvas.edit.class.sources := Code_source/Compiled/control/canvas.edit.c
-canvas.file.class.sources := Code_source/Compiled/control/canvas.file.c
 canvas.gop.class.sources := Code_source/Compiled/control/canvas.gop.c
 canvas.mouse.class.sources := Code_source/Compiled/control/canvas.mouse.c
 canvas.name.class.sources := Code_source/Compiled/control/canvas.name.c
@@ -64,6 +63,7 @@ dir.class.sources := Code_source/Compiled/control/dir.c
 datetime.class.sources := Code_source/Compiled/control/datetime.c
 default.class.sources := Code_source/Compiled/control/default.c
 dollsym.class.sources := Code_source/Compiled/control/dollsym.c
+findfile.class.sources := Code_source/Compiled/control/findfile.c
 floor.class.sources := Code_source/Compiled/control/floor.c
 fold.class.sources := Code_source/Compiled/control/fold.c
 hot.class.sources := Code_source/Compiled/control/hot.c
@@ -80,6 +80,7 @@ message.class.sources := Code_source/Compiled/control/message.c
 messbox.class.sources := Code_source/Compiled/control/messbox.c
 metronome.class.sources := Code_source/Compiled/control/metronome.c
 mouse.class.sources := Code_source/Compiled/control/mouse.c
+mpe.in.class.sources := Code_source/Compiled/control/mpe.in.c
 noteinfo.class.sources := Code_source/Compiled/control/noteinfo.c
 note.in.class.sources := Code_source/Compiled/control/note.in.c
 note.out.class.sources := Code_source/Compiled/control/note.out.c
@@ -120,6 +121,7 @@ ptouch.in.class.sources := Code_source/Compiled/control/ptouch.in.c
 ptouch.out.class.sources := Code_source/Compiled/control/ptouch.out.c
 trunc.class.sources := Code_source/Compiled/control/trunc.c
 unmerge.class.sources := Code_source/Compiled/control/unmerge.c
+var.class.sources := Code_source/Compiled/control/var.c
 
 # signal:
 above~.class.sources := Code_source/Compiled/audio/above~.c
@@ -131,9 +133,6 @@ comb.rev~.class.sources := Code_source/Compiled/audio/comb.rev~.c
 comb.filt~.class.sources := Code_source/Compiled/audio/comb.filt~.c
 adsr~.class.sources := Code_source/Compiled/audio/adsr~.c
 asr~.class.sources := Code_source/Compiled/audio/asr~.c
-autofade~.class.sources := Code_source/Compiled/audio/autofade~.c
-autofade2~.class.sources := Code_source/Compiled/audio/autofade2~.c
-balance~.class.sources := Code_source/Compiled/audio/balance~.c
 bandpass~.class.sources := Code_source/Compiled/audio/bandpass~.c
 bandstop~.class.sources := Code_source/Compiled/audio/bandstop~.c
 bl.imp~.class.sources := Code_source/Compiled/audio/bl.imp~.c
@@ -150,6 +149,7 @@ ceil~.class.sources := Code_source/Compiled/audio/ceil~.c
 cents2ratio~.class.sources := Code_source/Compiled/audio/cents2ratio~.c
 changed~.class.sources := Code_source/Compiled/audio/changed~.c
 changed2~.class.sources := Code_source/Compiled/audio/changed2~.c
+conv~.class.sources := Code_source/Compiled/audio/conv~.c
 cmul~.class.sources := Code_source/Compiled/audio/cmul~.c
 crackle~.class.sources := Code_source/Compiled/audio/crackle~.c
 crossover~.class.sources := Code_source/Compiled/audio/crossover~.c
@@ -162,7 +162,6 @@ drive~.class.sources := Code_source/Compiled/audio/drive~.c
 detect~.class.sources := Code_source/Compiled/audio/detect~.c
 envgen~.class.sources := Code_source/Compiled/audio/envgen~.c
 eq~.class.sources := Code_source/Compiled/audio/eq~.c
-fader~.class.sources := Code_source/Compiled/audio/fader~.c
 fbsine2~.class.sources := Code_source/Compiled/audio/fbsine2~.c
 fdn.rev~.class.sources := Code_source/Compiled/audio/fdn.rev~.c
 floor~.class.sources := Code_source/Compiled/audio/floor~.c
@@ -192,6 +191,7 @@ lowpass~.class.sources := Code_source/Compiled/audio/lowpass~.c
 lowshelf~.class.sources := Code_source/Compiled/audio/lowshelf~.c
 mov.rms~.class.sources := Code_source/Compiled/audio/mov.rms~.c
 mtx~.class.sources := Code_source/Compiled/audio/mtx~.c
+mtx.mc~.class.sources := Code_source/Compiled/audio/mtx.mc~.c
 match~.class.sources := Code_source/Compiled/audio/match~.c
 mov.avg~.class.sources := Code_source/Compiled/audio/mov.avg~.c
 median~.class.sources := Code_source/Compiled/audio/median~.c
@@ -201,10 +201,7 @@ nyquist~.class.sources := Code_source/Compiled/audio/nyquist~.c
 op~.class.sources := Code_source/Compiled/audio/op~.c
 pol2car~.class.sources := Code_source/Compiled/audio/pol2car~.c
 power~.class.sources := Code_source/Compiled/audio/power~.c
-pan2~.class.sources := Code_source/Compiled/audio/pan2~.c
-pan4~.class.sources := Code_source/Compiled/audio/pan4~.c
 peak~.class.sources := Code_source/Compiled/audio/peak~.c
-pmosc~.class.sources := Code_source/Compiled/audio/pmosc~.c
 phaseseq~.class.sources := Code_source/Compiled/audio/phaseseq~.c
 pulsecount~.class.sources := Code_source/Compiled/audio/pulsecount~.c
 pick~.class.sources := Code_source/Compiled/audio/pick~.c
@@ -221,14 +218,11 @@ repeat~.class.sources := Code_source/Compiled/audio/repeat~.c
 resonant~.class.sources := Code_source/Compiled/audio/resonant~.c
 resonant2~.class.sources := Code_source/Compiled/audio/resonant2~.c
 rms~.class.sources := Code_source/Compiled/audio/rms~.c
-rotate~.class.sources := Code_source/Compiled/audio/rotate~.c
-rotate.mc~.class.sources := Code_source/Compiled/audio/rotate.mc~.c
 sh~.class.sources := Code_source/Compiled/audio/sh~.c
 schmitt~.class.sources := Code_source/Compiled/audio/schmitt~.c
 slice~.class.sources := Code_source/Compiled/audio/slice~.c
 lag~.class.sources := Code_source/Compiled/audio/lag~.c
 lag2~.class.sources := Code_source/Compiled/audio/lag2~.c
-sin~.class.sources := Code_source/Compiled/audio/sin~.c
 sig2float~.class.sources := Code_source/Compiled/audio/sig2float~.c
 slew~.class.sources := Code_source/Compiled/audio/slew~.c
 slew2~.class.sources := Code_source/Compiled/audio/slew2~.c
@@ -240,8 +234,6 @@ status~.class.sources := Code_source/Compiled/audio/status~.c
 standard~.class.sources := Code_source/Compiled/audio/standard~.c
 sum~.class.sources := Code_source/Compiled/audio/sum~.c
 sigs~.class.sources := Code_source/Compiled/audio/sigs~.c
-spread~.class.sources := Code_source/Compiled/audio/spread~.c
-spread.mc~.class.sources := Code_source/Compiled/audio/spread.mc~.c
 susloop~.class.sources := Code_source/Compiled/audio/susloop~.c
 svfilter~.class.sources := Code_source/Compiled/audio/svfilter~.c
 trig.delay~.class.sources := Code_source/Compiled/audio/trig.delay~.c
@@ -251,16 +243,8 @@ toggleff~.class.sources := Code_source/Compiled/audio/toggleff~.c
 trighold~.class.sources := Code_source/Compiled/audio/trighold~.c
 unmerge~.class.sources := Code_source/Compiled/audio/unmerge~.c
 vu~.class.sources := Code_source/Compiled/audio/vu~.c
-xfade~.class.sources := Code_source/Compiled/audio/xfade~.c
-xfade.mc~.class.sources := Code_source/Compiled/audio/xfade.mc~.c
-xgate~.class.sources := Code_source/Compiled/audio/xgate~.c
-xgate.mc~.class.sources := Code_source/Compiled/audio/xgate.mc~.c
-xgate2~.class.sources := Code_source/Compiled/audio/xgate2~.c
 xmod~.class.sources := Code_source/Compiled/audio/xmod~.c
 xmod2~.class.sources := Code_source/Compiled/audio/xmod2~.c
-xselect~.class.sources := Code_source/Compiled/audio/xselect~.c
-xselect.mc~.class.sources := Code_source/Compiled/audio/xselect.mc~.c
-xselect2~.class.sources := Code_source/Compiled/audio/xselect2~.c
 wrap2.class.sources := Code_source/Compiled/control/wrap2.c
 wrap2~.class.sources := Code_source/Compiled/audio/wrap2~.c
 zerocross~.class.sources := Code_source/Compiled/audio/zerocross~.c
@@ -269,9 +253,6 @@ aubio := $(wildcard Code_source/shared/aubio/src/*/*.c) $(wildcard Code_source/s
     beat~.class.sources := Code_source/Compiled/audio/beat~.c $(aubio)
 
 magic := Code_source/shared/magic.c
-    sine~.class.sources := Code_source/Compiled/audio/sine~.c $(magic)
-    cosine~.class.sources := Code_source/Compiled/audio/cosine~.c $(magic)
-    fbsine~.class.sources := Code_source/Compiled/audio/fbsine~.c $(magic)
     gaussian~.class.sources := Code_source/Compiled/audio/gaussian~.c $(magic)
     imp~.class.sources := Code_source/Compiled/extra_source/Aliases/imp~.c $(magic)
     impulse~.class.sources := Code_source/Compiled/audio/impulse~.c $(magic)
@@ -288,6 +269,39 @@ magic := Code_source/shared/magic.c
     numbox~.class.sources := Code_source/Compiled/audio/numbox~.c $(magic)
 
 buf := Code_source/shared/buffer.c
+
+    fader~.class.sources := Code_source/Compiled/audio/fader~.c $(buf)
+    autofade~.class.sources := Code_source/Compiled/audio/autofade~.c $(buf)
+    autofade.mc~.class.sources := Code_source/Compiled/audio/autofade.mc~.c $(buf)
+    autofade2~.class.sources := Code_source/Compiled/audio/autofade2~.c $(buf)
+    autofade2.mc~.class.sources := Code_source/Compiled/audio/autofade2.mc~.c $(buf)
+    balance~.class.sources := Code_source/Compiled/audio/balance~.c $(buf)
+    pan~.class.sources := Code_source/Compiled/audio/pan~.c $(buf)
+    pan.mc~.class.sources := Code_source/Compiled/audio/pan.mc~.c $(buf)
+    pan2~.class.sources := Code_source/Compiled/audio/pan2~.c $(buf)
+    pan4~.class.sources := Code_source/Compiled/audio/pan4~.c $(buf)
+    rotate~.class.sources := Code_source/Compiled/audio/rotate~.c $(buf)
+    rotate.mc~.class.sources := Code_source/Compiled/audio/rotate.mc~.c $(buf)
+    spread~.class.sources := Code_source/Compiled/audio/spread~.c $(buf)
+    spread.mc~.class.sources := Code_source/Compiled/audio/spread.mc~.c $(buf)
+    xfade~.class.sources := Code_source/Compiled/audio/xfade~.c $(buf)
+    xfade.mc~.class.sources := Code_source/Compiled/audio/xfade.mc~.c $(buf)
+    xgate~.class.sources := Code_source/Compiled/audio/xgate~.c $(buf)
+    xgate.mc~.class.sources := Code_source/Compiled/audio/xgate.mc~.c $(buf)
+    xgate2.mc~.class.sources := Code_source/Compiled/audio/xgate2.mc~.c $(buf)
+    xgate2~.class.sources := Code_source/Compiled/audio/xgate2~.c $(buf)
+    xselect~.class.sources := Code_source/Compiled/audio/xselect~.c $(buf)
+    xselect.mc~.class.sources := Code_source/Compiled/audio/xselect.mc~.c $(buf)
+    xselect2~.class.sources := Code_source/Compiled/audio/xselect2~.c $(buf)
+    xselect2.mc~.class.sources := Code_source/Compiled/audio/xselect2.mc~.c $(buf)
+
+    sin~.class.sources := Code_source/Compiled/audio/sin~.c $(buf)
+    fm~.class.sources := Code_source/Compiled/audio/fm~.c $(buf)
+    pm~.class.sources := Code_source/Compiled/audio/pm~.c $(buf)
+    pm2~.class.sources := Code_source/Compiled/audio/pm2~.c $(buf)
+    pm4~.class.sources := Code_source/Compiled/audio/pm4~.c $(buf)
+    pm6~.class.sources := Code_source/Compiled/audio/pm6~.c $(buf)
+
     shaper~.class.sources = Code_source/Compiled/audio/shaper~.c $(buf)
     tabreader.class.sources = Code_source/Compiled/control/tabreader.c $(buf)
     tabreader~.class.sources = Code_source/Compiled/audio/tabreader~.c $(buf)
@@ -302,8 +316,12 @@ buf := Code_source/shared/buffer.c
 bufmagic := \
 Code_source/shared/magic.c \
 Code_source/shared/buffer.c
+    cosine~.class.sources := Code_source/Compiled/audio/cosine~.c $(bufmagic)
+    fbsine~.class.sources := Code_source/Compiled/audio/fbsine~.c $(bufmagic)
+    sine~.class.sources := Code_source/Compiled/audio/sine~.c $(bufmagic)
     wavetable~.class.sources = Code_source/Compiled/audio/wavetable~.c $(bufmagic)
     wt~.class.sources = Code_source/Compiled/extra_source/Aliases/wt~.c $(bufmagic)
+    wt2d~.class.sources = Code_source/Compiled/audio/wt2d~.c $(bufmagic)
     tabplayer~.class.sources = Code_source/Compiled/audio/tabplayer~.c $(bufmagic)
 
 
@@ -419,6 +437,14 @@ sfz-install:
     
 sfz-clean:
 	$(MAKE) -C Code_source/Compiled/audio/sfz~ clean
+
+.PHONY: circuit
+
+circuit:
+	$(MAKE) -C Code_source/Compiled/audio/circuit~ install extension=$(extension) installpath="$(abspath $(PDLIBDIR))/else"
+
+circuit-clean:
+	$(MAKE) -C Code_source/Compiled/audio/circuit~ clean
 
 install: installplus
 

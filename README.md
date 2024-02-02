@@ -4,12 +4,11 @@
 
 ### for the Pure Data programming language
 
-### Version: 1.0-0 RC-9 (release candidate #9) With Live Electronics Tutorial. 
+### Version: 1.0-0 RC-11 (release candidate #11) With Live Electronics Tutorial. 
 
-### Released August 31st 2023
+### Released February 06th 2024
 
-
-Copyright © 2017-2023 Alexandre Torres Porres and others 
+Copyright © 2017-2024 Alexandre Torres Porres and others 
 
 
 This work is free. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2, as published by Sam Hocevar. See License.txt <https://github.com/porres/pd-else/blob/master/License.txt> and <http://www.wtfpl.net/> for more details
@@ -20,7 +19,7 @@ For instance:
 - [sfz~] and band limited oscillators like [bl.saw~] are licensed under the BSD 2-Clause library
 - [plaits~], [osc.format], [osc.parse] and [osc.route] are licensed under the MIT library
 
-ELSE comes with a Live Electronics tutorial as part of its documentation written by Alexandre Torres Porres, this work is licensed under a Creative Common (CC} License. 
+ELSE comes with a Live Electronics tutorial as part of its documentation written by Alexandre Torres Porres, this work is licensed under a Creative Commons (CC} License. 
 
 For copies of the licenses and the terms, please check the 'license' subfolder.
 
@@ -29,7 +28,7 @@ For copies of the licenses and the terms, please check the 'license' subfolder.
 
 ###   About ELSE
 
-This version of ELSE needs **Pd 0.54-0** or above.
+This version of ELSE needs **Pd 0.54-1** or above.
 
 ELSE is a big library of externals that extends the performance Pure Data (Pd) - Miller S. Puckette's realtime computer music environment (download Pd from: http://msp.ucsd.edu/software.html).
 
@@ -59,9 +58,9 @@ It might still be important to stress this library runs in Pd Vanilla and is not
 
 #### Building ELSE for Pd Vanilla:
 
-ELSE relies on the build system called "pd-lib-builder" by Katja Vetter (check the project in: <https://github.com/pure-data/pd-lib-builder>). PdLibBuilder tries to find the Pd source directory at several common locations, but when this fails, you have to specify the path yourself using the pdincludepath variable. Example (assuming the unpacked Pd package is in ~/pd-0.54-0; for Windows/MinGW add `pdbinpath=~/pd-0.54-0/bin/`):
+ELSE relies on the build system called "pd-lib-builder" by Katja Vetter (check the project in: <https://github.com/pure-data/pd-lib-builder>). PdLibBuilder tries to find the Pd source directory at several common locations, but when this fails, you have to specify the path yourself using the pdincludepath variable. Example (assuming the unpacked Pd package is in ~/pd-0.54-1; for Windows/MinGW add `pdbinpath=~/pd-0.54-1/bin/`):
 
-<pre>make pdincludepath=~/pd-0.54-0/src/</pre>
+<pre>make pdincludepath=~/pd-0.54-1/src/</pre>
 
 ##### Installing with pdlibbuilder
 
@@ -78,24 +77,24 @@ Cross compiling is also possible with something like this
 
 For technical reasons these objects reside in their own subdirectories of the ELSE source directory, so a normal build as described above will skip them. You cam install these separately and you can also check their subfolders for their own READMEs and instructions.
 
-To install them with the rest of ELSE you can build from the toplevel source directory using the special 'sfont', 'sfz' and 'plaits' targets:
+To install them with the rest of ELSE you can build from the toplevel source directory using the special 'sfont', 'sfz' and 'plaits' targets, such as:
 
-<pre>make sfont sfz plaits pdincludepath=~/pd-0.54-0/src/</pre>
-<pre>make sfont-install sfz-install plaits-install objectsdir=~/else-build</pre>
+<pre>make sfz plaits pdincludepath=~/pd-0.54-1/src/</pre>
+<pre>make sfz-install plaits-install objectsdir=~/else-build</pre>
 
-This also makes sure that [sfont~], [sfz~] and [plaits~] get added to the chosen else library directory instead of their own subdirectories.
+For sfont you should do the same but you also must run a script in the sfont subfolder to copy the needed dependencies, check its readme for more details.
 
 --------------------------------------------------------------------------
 
 ### More About ELSE
 
-**"EL Locus Solus"** is run by yours truly, Alexandre Torres Porres, and it organizes cultural events/concerts and music technology courses (<http://alexandre-torres.wixsite.com/el-locus-solus> ) where a Live Electronics tutorial is provided with examples in Pure Data for its courses. These have been recently translated and completely rewritten to english with plans of being accompanied by a book. The latest releases are available at: <https://github.com/porres/Live-Electronic-Music-Tutorial>. This tutorial solely depends on the ELSE library and is a great didactic companion to this library. Both the library and the tutorial are provided as a single download, directly via Pure Data or GitHub.
+**"EL Locus Solus"** is run by yours truly, Alexandre Torres Porres, and it organizes cultural events/concerts and music technology courses (<http://alexandre-torres.wixsite.com/el-locus-solus> ) where a Live Electronics tutorial is provided with examples in Pure Data for its courses. These have been recently translated and completely rewritten to English with plans of being accompanied by a book. The latest releases are available at: <https://github.com/porres/Live-Electronic-Music-Tutorial>. This tutorial solely depends on the ELSE library and is a great didactic companion to this library. Both the library and the tutorial are provided as a single download, directly via Pure Data or GitHub.
 
-The examples from the first incarnation of this tutorial were first developed for the now abandoned Pd Extended, making extensive use of the existing objects available in Pd Extended's libraries. Even though Pd Extended had many externals, there was the need at some point for something "else" - thus, this library emerged with the goal of providing more objects to include missing functionalities in the Pd Ecossystem.
+The examples from the first incarnation of this tutorial were first developed for the now abandoned Pd Extended, making extensive use of the existing objects available in Pd Extended's libraries. Even though Pd Extended had many externals, there was the need at some point for something "else" - thus, this library emerged with the goal of providing more objects to include missing functionalities in the Pd Ecosystem.
 
 But the library grew to encompass functionalities found in other Pd objects/libraries from old Pd Extended as well, with a different design and more functionalities. This was done in order to remove ALL the dependencies of the didactic material from these other libraries - with the goal to rely on just a single library that's alive (in active development) instead of many projects that are now long gone abandoned or not receiving much attention. I'm also involved in maintaining Cyclone, a legacy library for Pd (see: <https://github.com/porres/pd-cyclone>). But ELSE also superseeds cyclone for the purposes of this didactic material. See below in this document a list of alternatives to Cyclone provided by ELSE.
 
-The goal of ELSE also outgrew the didactic material and includes now objects not necessarily depicted in the computer music examples. Moreover, even basic elements from Pd Vanilla are being redesigned into new objects. So that's it, ELSE is becoming a quite big library and keeps growing and growing. 
+The goal of ELSE also outgrew the didactic material as it now includes objects not necessarily depicted in the computer music examples. Moreover, even basic elements from Pd Vanilla are being redesigned into new objects. So that's it, ELSE is becoming a quite big library and keeps growing and growing. 
 
 ELSE has been in active development for over 5 years but it will still take a little while for it to stabilize into a final version. For now, it's at a "Release Candidate" stage of development, where changes may occur and backwards compatibility is not guaranteed until a final release is available. 
 
@@ -115,82 +114,122 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
 
 --------------------------------------------------------------------------
 
-## Current Object list (509 objects):
+## Current Object list (527 objects):
 
 #assorted
     else
+    
 #gui
     knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile oscope~
+    
 #time
     chrono datetime
+    
 #fft
     hann~ bin.shift~
+    
 #table
     buffer tabgen tabreader tabreader~
+    
 #tuning/notes
-    scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2pitch pitch2note note2dur
+    scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2midi midi2note notedur2ratio
+    
 #patch/subpatch management
-    loadbanger args meter presets dollsym sender receiver retrieve blocksize~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.file canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom
+    loadbanger args meter presets dollsym sender receiver retrieve dispatch var send2~ blocksize~ nop~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos findfile canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom abs.pd~ sendmidi
+    
 #message management
     format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2
+    
 #list management
-    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean
+    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean list.inc
+    
 #file management
     dir
+    
 #midi
-    midi midi.learn midi.in midi.out sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out ptouch.in ptouch.out  pgm.in pgm.out nemd.in bend.out note.in note.out midi.clock noteinfo panic mono voices suspedal
+    midi midi.learn midi.in midi.out sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out ptouch.in ptouch.out  pgm.in pgm.out nemd.in bend.out note.in note.out midi.clock noteinfo panic mono mono~ voices voices~ suspedal
+    
 #osc
     osc.route osc.format osc.parse osc.send osc.receive
+    
 #math functions
-    add add~ median avg mov.avg count gcd lcm frac.add frac.mul ceil ceil~ factor floor floor~ trun trunc~ rint rint~ quantizer quantizer~ fold fold~ lastvalue mag mag~ sin~ wrap2 wrap2~ op op~ cmul~
+    add add~ median avg mov.avg count gcd lcm frac.add frac.mul ceil ceil~ factor floor floor~ trunc trunc~ rint rint~ quantizer quantizer~ fold fold~ lastvalue mag mag~ sin~ wrap2 wrap2~ op op~ cmul~
+    
 #math conversion
     hex2dec dec2hex bpm car2pol car2pol~ cents2ratio cents2ratio~ ms2samps ms2samps~ db2lin db2lin~ float2bits hz2rad lin2db lin2db~ deg2rad rad2deg pz2coeff coeff2pz rad2hz ratio2cents ratio2cents~ samps2ms samps2ms~ pol2car pol2car~ rescale recale~
+    
 #math: constant values
     sr~ nyquist~ pi e
+    
 #logic
     loop
+    
 #audio multichannel tools
-    voices~ nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~
+    nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~
+    
+#analog circuitry emulation
+    circuit~
+    
 #fx: assorted
     downsample~ conv~ chorus~ shaper~ crusher~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
+    
 #fx: delay
-    del\ in~ del\ out~ fbdelay~ ffdelay~ revdelay~ filterdelay~
+    del~ fbdelay~ ffdelay~ revdelay~ filterdelay~
+    
 #fx: dynamics
     compress~ duck~ expand~ noisegate~ norm~
+    
 #fx: reverberation
     allpass.rev~ comb.rev~ echo.rev~ mono.rev~ stereo.rev~ free.rev~ giga.rev~ plate.rev~ fdn.rev~
+    
 #fx: filters
     allpass.2nd~ allpass.filt~ bitnormal~ comb.filt~ lop.bw~ hip.bw~ biquads~ bandpass~ bandstop~ crossover~ bpbank~ bicoeff2 brickwall~ eq~ highpass~ highshelf~ lop2~ lowpass~ lowshelf~ mov.avg~ resonbank~ resonbank2~ resonant~ resonant2~ svfilter~
+    
 #sampling, playing, granulation
     player~ gran.player~ pvoc.player~ pvoc.live~ batch.rec~ bach.write~ rec.file~ play.file~ tabplayer~ tabwriter~ sample~
+    
 #synthesis: synthesizers
-    sfont~ sfz~ plaits~ synth~
+    pm2~ pm4~ pm6~ sfont~ sfz~ plaits~ synth~
+    
 #synthesis: granular
     grain.synth~
-#synthesis: physical modelling
+    
+#synthesis: physical modeling
     pluck~
+    
 #synthesis: oscillators
-    cosine~ impulse~ imp.mc~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ oscbank2~ osc.mc~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ pmosc~ wavetable~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~
+    cosine~ impulse~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ oscbank2~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ fm~ pm~ wavetable~ wt2d~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~
+    
 #synthesis: chaotic, stochastic, noise
-    white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ stepnoise.mc~ rampnoise~ rampnoise.mc~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~
+    white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ rampnoise~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~
+    
 #control: mouse/keyboard
 mouse canvas.mouse keycode keymap keypress
+
 #control: fade/pan/routing
-fader~ autofade~ autofade2~ balance~ pan2~ pan4~ pan8~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~  xfade.mc~ xgate~ xgate.mc~ xgate2~ xselect~ xselect2~ xselect.mc~ mtx~
+fader~ autofade~ autofade.mc~ autofade2~ autofade2.mc~ balance~ pan~ pan.mc~ pan2~ pan4~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~  xfade.mc~ xgate~ xgate.mc~ xgate2~ xgate2.mc~ xselect~ xselect.mc~ xselect2~ xselect2.mc~ mtx~ mtx.mc~
+
 #control: sequencers
-    euclid score score2 pattern sequencer sequencer~ phaseseq~ impseq~ rec rec2
+    euclid score score2 pattern list.seq sequencer sequencer~ phaseseq~ impseq~ rec rec2
+    
 #control: envelopes
     adsr~ asr~ decay~ decay2~ envelope~ envgen~
+    
 #control: ramp/line/curve generators
     {amp~ susloop~ function~ slew slew~ slew2 slew2~ lag~ lag2~ glide glide~ glide2 glide2~
+    
 #control: random/stochastic
     rand.f rand.f~ rand.i rand.i~ rand.list rand.u rand.dist rand.hist histogram markov drunkard drunkard~ brown randpulse randpulse2 lfnoise stepnoise rampnoise
+    
 #control: control rate lfo
     lfo phasor pimp impulse pulse
+    
 #control: triggers
     above above~ bangdiv chance chance~ dust~ dust2~ gatehold~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ trig.delay2~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
+    
 #control: triggers, clock
     clock metronome metronome~ polymetro polymetro~ speed tempo tempo~
+    
 #analysis
     changed~ changed2~ detect~ lastvalue~ median~ peak~ tap range range~ maxpeak~ rms~ mov.rms~ vu~ zerocross~ beat~
 
@@ -213,6 +252,7 @@ But, here are some considerations:
 
 Alternatives:
 
+- 2d.wave~ => else/wt2d~
 - +=~ / [plusequals~] => else/add~
 - operators >~ / <~ / %~ / etc => else/op~ => [expr~]
 - bitwise operators (bitand~ / bitor~, etc) => [expr~]
@@ -319,6 +359,6 @@ Alternatives:
 
 GUI:
 
-- comment => else/note
 - scope~ => else/oscope~
+- comment => else/note (actually, comment is deprecated and based on else’s [note] now.
 

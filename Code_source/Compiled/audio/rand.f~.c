@@ -50,7 +50,7 @@ static t_int *randf_perform(t_int *w){
                 out_low = out_high;
                 out_high = temp;
             }
-            int range = out_high - out_low; // Range
+            float range = out_high - out_low; // Range
             float trig = chs == 1 ? in1[i] : in1[j*n + i];
             if(range == 0)
                 x->x_randf[j] = out_low;
@@ -112,27 +112,29 @@ static void *randf_new(t_symbol *s, int ac, t_atom *av){
     randf_seed(x, s, 0, NULL);
     float low = 0, high = 1;
     x->x_ch = 1;
-    while(av->a_type == A_SYMBOL){
-        if(ac >= 2 && atom_getsymbol(av) == gensym("-seed")){
-            t_atom at[1];
-            SETFLOAT(at, atom_getfloat(av+1));
-            ac-=2, av+=2;
-            randf_seed(x, s, 1, at);
+    if(ac){
+        while(av->a_type == A_SYMBOL){
+            if(ac >= 2 && atom_getsymbol(av) == gensym("-seed")){
+                t_atom at[1];
+                SETFLOAT(at, atom_getfloat(av+1));
+                ac-=2, av+=2;
+                randf_seed(x, s, 1, at);
+            }
+            else if(ac >= 2 && atom_getsymbol(av) == gensym("-ch")){
+                int n = atom_getint(av+1);
+                x->x_ch = n < 1 ? 1 : n;
+                ac-=2, av+=2;
+            }
+            else
+                goto errstate;
         }
-        else if(ac >= 2 && atom_getsymbol(av) == gensym("-ch")){
-            int n = atom_getint(av+1);
-            x->x_ch = n < 1 ? 1 : n;
-            ac-=2, av+=2;
-        }
-        else
-            goto errstate;
-    }
-    if(ac && av->a_type == A_FLOAT){
-        low = atom_getintarg(0, ac, av);
-        ac--, av++;
         if(ac && av->a_type == A_FLOAT){
-            high = atom_getintarg(0, ac, av);
+            low = atom_getintarg(0, ac, av);
             ac--, av++;
+            if(ac && av->a_type == A_FLOAT){
+                high = atom_getintarg(0, ac, av);
+                ac--, av++;
+            }
         }
     }
     x->x_low_let = inlet_new((t_object *)x, (t_pd *)x, &s_signal, &s_signal);
