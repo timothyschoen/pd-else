@@ -1,4 +1,5 @@
 #include "m_pd.h"
+#include "else_alloca.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -64,14 +65,14 @@ t_int *spread_perform(t_int *w){
 void spread_dsp(t_spread *x, t_signal **sp){
 	long i;
     int pointer_count = x->inChans + x->outChans + 2;
-    t_int* sigvec = (t_int*)calloc(pointer_count, sizeof(t_int));
+    t_int* sigvec = ALLOCA(t_int, pointer_count);
 
 	sigvec[0] = (t_int)x; // first pointer is to the object
 	sigvec[pointer_count - 1] = (t_int)sp[0]->s_n; // last pointer is to vector size (N)
 	for(i = 1; i < pointer_count - 1; i++) // attach inlet and all outlets
 		sigvec[i] = (t_int)sp[i-1]->s_vec;
     dsp_addv(spread_perform, pointer_count, (t_int *)sigvec);
-    free(sigvec);
+    FREEA(sigvec, t_int, pointer_count);
 }
 
 void spread_free(t_spread *x){

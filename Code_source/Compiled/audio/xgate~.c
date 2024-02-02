@@ -1,6 +1,7 @@
 // porres 2017-2020
 
 #include "m_pd.h"
+#include "else_alloca.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -73,7 +74,7 @@ static void xgate_dsp(t_xgate *x, t_signal **sp){
     x->x_nchs = sp[0]->s_nchans;
     x->x_sr_khz = sp[0]->s_sr * 0.001;
     int size = x->x_n_outs + 2;
-    t_int *sigvec = (t_int*)calloc(size, sizeof(t_int));
+    t_int *sigvec = ALLOCA(t_int, size);
     sigvec[0] = (t_int)x; // object
     sigvec[1] = (t_int)sp[0]->s_vec; // in
     for(int i = 0; i < x->x_n_outs; i++){ // outs
@@ -81,7 +82,7 @@ static void xgate_dsp(t_xgate *x, t_signal **sp){
         sigvec[2+i] = (t_int)sp[1+i]->s_vec;
     }
     dsp_addv(xgate_perform, size, (t_int*)sigvec);
-    free(sigvec);
+    FREEA(sigvec, t_int, size);
 }
 
 static void *xgate_new(t_floatarg f1, t_floatarg f2, t_floatarg f3){

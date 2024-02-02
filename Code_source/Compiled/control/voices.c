@@ -1,6 +1,7 @@
 // porres 2018-2019
 
 #include "m_pd.h"
+#include "else_alloca.h"
 #include <stdlib.h>
 
 static t_class *voices_class;
@@ -83,7 +84,7 @@ static void voices_noteon(t_voices *x, int ac, t_atom *av){
         first_unused->v_count = x->x_count++; // increase counter
         if(x->x_list_mode){
              
-            t_atom* at = calloc(ac + 1, sizeof(t_atom));
+            t_atom* at = ALLOCA(t_atom, ac + 1);
             SETFLOAT(at, unused_idx + x->x_offset);       // voice number
             for(i = 0; i < ac; i++){
                 if((av+i)->a_type == A_FLOAT)
@@ -92,7 +93,7 @@ static void voices_noteon(t_voices *x, int ac, t_atom *av){
                     SETSYMBOL(at+i+1, atom_getsymbol(av+i));
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, ac+1, at);
-            free(at);
+            FREEA(at, t_atom, ac + 1);
         }
         else
             outlet_list(x->x_outs[unused_idx], &s_list, ac, av);
@@ -106,7 +107,7 @@ static void voices_noteon(t_voices *x, int ac, t_atom *av){
                  SETFLOAT(at1+2, 0);                              // Note-Off
                  outlet_list(x->x_obj.ob_outlet, &s_list, 3, at1);
                  // note on
-                t_atom* at2 = calloc(ac + 1, sizeof(t_atom));
+                t_atom* at2 = ALLOCA(t_atom, ac + 1);
                 SETFLOAT(at2, used_idx + x->x_offset);       // voice number
                 for(i = 0; i < ac; i++){
                     if((av+i)->a_type == A_FLOAT)
@@ -115,7 +116,7 @@ static void voices_noteon(t_voices *x, int ac, t_atom *av){
                         SETSYMBOL(at2+i+1, atom_getsymbol(av+i));
                 }
                 outlet_list(x->x_obj.ob_outlet, &s_list, ac+1, at2);
-                free(at2);
+                FREEA(at2, t_atom, ac + 1);
             }
             else{
                 t_atom at1[2];
@@ -180,7 +181,7 @@ static void voices_list(t_voices *x, t_symbol *s, int ac, t_atom *av){
             if(prev){ // note already in voice allocation
                 if(x->x_retrig == 0){ // retrigger on the same voice allocation
                     if(x->x_list_mode){
-                        t_atom* at = calloc(ac + 1, sizeof(t_atom));
+                        t_atom* at = ALLOCA(t_atom, ac + 1);
                         SETFLOAT(at, prev_idx + x->x_offset);       // voice number
                         for(i = 0; i < ac; i++){
                             if((av+i)->a_type == A_FLOAT)
@@ -189,7 +190,7 @@ static void voices_list(t_voices *x, t_symbol *s, int ac, t_atom *av){
                                 SETSYMBOL(at+i+1, atom_getsymbol(av+i));
                         }
                         outlet_list(x->x_obj.ob_outlet, &s_list, ac+1, at);
-                        free(at);
+                        FREEA(at, t_atom, ac + 1);
                     }
                     else
                         outlet_list(x->x_outs[prev_idx], &s_list, ac, av);
@@ -214,7 +215,7 @@ static void voices_list(t_voices *x, t_symbol *s, int ac, t_atom *av){
         if(used_pitch){ // pitch was found in a used and unreleased voice
             // send note-off
             if(x->x_list_mode){
-                t_atom* at = calloc(ac + 1, sizeof(t_atom));
+                t_atom* at = ALLOCA(t_atom, ac + 1);
                 SETFLOAT(at, used_idx + x->x_offset);       // voice number
                 for(i = 0; i < ac; i++){
                     if((av+i)->a_type == A_FLOAT)
@@ -223,7 +224,7 @@ static void voices_list(t_voices *x, t_symbol *s, int ac, t_atom *av){
                         SETSYMBOL(at+i+1, atom_getsymbol(av+i));
                 }
                 outlet_list(x->x_obj.ob_outlet, &s_list, ac+1, at);
-                free(at);
+                FREEA(at, t_atom, ac + 1);
             }
             else
                 outlet_list(x->x_outs[used_idx], &s_list, ac, av);
@@ -281,7 +282,7 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){
     }
     if(prev){ // found in a voice allocation
         if(x->x_list_mode){
-            t_atom* at = calloc(ac+2, sizeof(t_atom));
+            t_atom* at = ALLOCA(t_atom, ac+2);
             SETFLOAT(at, prev_idx + x->x_offset);       // voice number
             SETSYMBOL(at+1, s);       // message type
             for(i = 0; i < ac; i++){
@@ -291,7 +292,7 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){
                     SETSYMBOL(at+i+2, atom_getsymbol(av+i));
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, ac+2, at);
-            free(at);
+            FREEA(at, t_atom, ac+2);
         }
         else
             outlet_list(x->x_outs[prev_idx], s, ac, av);

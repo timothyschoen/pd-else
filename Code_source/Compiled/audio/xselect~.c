@@ -1,6 +1,7 @@
 // porres 2017-2020
 
 #include "m_pd.h"
+#include "else_alloca.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -69,13 +70,13 @@ static void xselect_dsp(t_xselect *x, t_signal **sp) {
     x->x_sr_khz = sp[0]->s_sr * 0.001;
     int i, count = x->x_ninlets + 3;
     
-    t_int* sigvec = (t_int*)calloc(count, sizeof(t_int));
+    t_int* sigvec = ALLOCA(t_int, count);
     sigvec[0] = (t_int)x; // 1st => object
     sigvec[1] = (t_int)sp[0]->s_n; // 2nd => block (n)
     for(i = 2; i < count; i++) // ins/out
         sigvec[i] = (t_int)sp[i-2]->s_vec;
     dsp_addv(xselect_perform, count, (t_int*)sigvec);
-    free(sigvec);
+    FREEA(sigvec, t_int, count);
 }
 
 static void xselect_time(t_xselect *x, t_floatarg ms){

@@ -1,4 +1,5 @@
 #include "m_pd.h"
+#include "else_alloca.h"
 
 #include <stdlib.h>
 static t_class *order_class;
@@ -24,7 +25,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
     int i = x->x_offset;
     while(ac){
         if(ac >= x->x_n){
-            t_atom* at = calloc(x->x_n+1, sizeof(t_atom));
+            t_atom* at = ALLOCA(t_atom, x->x_n+1);
             SETFLOAT(at, i);
             for(int n = 0; n < x->x_n; n++){
                 if(av->a_type == A_FLOAT)
@@ -36,11 +37,11 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
                 ac--;
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, x->x_n+1, at);
-            free(at);
+            FREEA(at, t_atom, x->x_n+1);
         }
         else{
             int size = ac;
-            t_atom* at = calloc(size+1, sizeof(t_atom));
+            t_atom* at = ALLOCA(t_atom, size+1);
             SETFLOAT(at, i);
             for(int n = 0; n < size; n++){
                 if(av->a_type == A_FLOAT)
@@ -52,7 +53,7 @@ static void order_list(t_order *x, t_symbol *s, int ac, t_atom *av){
                 ac--;
             }
             outlet_list(x->x_obj.ob_outlet, &s_list, size+1, at);
-            free(at);
+            FREEA(at, t_atom, size+1);
         }
         i++;
     }
