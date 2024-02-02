@@ -1,6 +1,6 @@
 #include "m_pd.h"
+#include "buffer.h"
 #include "else_alloca.h"
-#include <math.h>
 #include <stdlib.h>
 
 #define HALF_PI (3.14159265358979323846 * 0.5)
