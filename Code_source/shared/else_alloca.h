@@ -18,9 +18,9 @@
 #define MAX_ALLOCA_BYTES 100
 
 # define ALLOCA(type, nmemb) (type *)((nmemb) < (MAX_ALLOCA_BYTES) ? \
-            alloca((nmemb) * sizeof(type)) : malloc((nmemb) * sizeof(type)))
+            alloca((nmemb) * sizeof(type)) : getbytes((nmemb) * sizeof(type)))
 # define FREEA(array, type, nmemb) (                                 \
-        ((nmemb) < (MAX_ALLOCA_BYTES) || (free((array)), 0)))
+        ((nmemb) >= (MAX_ALLOCA_BYTES)) ? (freebytes(array, (sizeof(type) * nmemb))) : 0)
 #endif /* !DONT_USE_ALLOCA */
 
 #define CALLOCA()

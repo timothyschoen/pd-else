@@ -264,7 +264,7 @@ static void envgen_init(t_envgen *x, int ac, t_atom *av){
 //        x->x_av = getbytes(x->x_ac * sizeof(*(x->x_av)));
         copy_atoms(temp_at, x->x_av, x->x_ac);
         envgen_attack(x, x->x_ac, x->x_av);
-        FREEA(temp_at, t_atom, ac-nlines);
+        FREEA(temp_at, t_atom, (ac-nlines));
     }
 }
 
@@ -476,7 +476,7 @@ static void *envgen_new(t_symbol *s, int ac, t_atom *av){
                     x->x_exp = 1;
 //                    x->x_av = getbytes(k*sizeof(*(x->x_av)));
                     copy_atoms(temp_at, x->x_av, x->x_ac = k);
-                    FREEA(temp_at, t_atom, z-nlines);
+                    FREEA(temp_at, t_atom, (z-nlines));
                     ac-=z, av+=z;
                 }
                 else

@@ -2,6 +2,7 @@
 
 #include "m_pd.h"
 #include "g_canvas.h"
+#include "else_alloca.h"
 #include <string.h>
 
 static t_class *message_class;
@@ -187,12 +188,12 @@ static void message_any(t_message *x, t_symbol *s, int ac, t_atom *av){
         x->x_av = NULL;
     }
     else{
-        x->x_av = (t_atom *)resizebytes(x->x_av * sizeof(t_atom), ac * sizeof(t_atom));
+        x->x_av = (t_atom *)resizebytes(x->x_av, x->x_ac * sizeof(t_atom), ac * sizeof(t_atom));
         x->x_ac = ac;
         for(int i = 0; i < ac; i++){
             if(av[i].a_type == A_SYMBOL)
                 av[i].a_w.w_symbol = canvas_realizedollar(x->x_cv, av[i].a_w.w_symbol);
-            x->x_av[i] = x->x_atom[i] = av[i];
+            x->x_av[i] = av[i];
         }
     }
     message_output(x);
