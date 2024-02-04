@@ -18,8 +18,9 @@
 
 # define ALLOCA(type, nmemb) (type *)((nmemb) < (MAX_ALLOCA_BYTES) ? \
             alloca((nmemb) * sizeof(type)) : getbytes((nmemb) * sizeof(type)))
-# define FREEA(array, type, nmemb) (                                 \
-        ((nmemb) >= (MAX_ALLOCA_BYTES)) ? (freebytes(array, (sizeof(type) * nmemb))) : 0)
-#endif /* !DONT_USE_ALLOCA */
-
-#define CALLOCA()
+# define FREEA(array, type, nmemb) { \
+    if((nmemb) >= (MAX_ALLOCA_BYTES)) { \
+        freebytes(array, (sizeof(type) * nmemb)); \
+    } \
+}
+#endif

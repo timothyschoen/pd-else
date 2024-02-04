@@ -297,13 +297,13 @@ t_int *plaits_perform(t_int *w){
         x->x_modulations.morph = mmod[x->x_block_size * j];
         if(x->x_trigger_mode) // trigger mode
             x->x_modulations.trigger = (trig[x->x_block_size * j] != 0);
-        plaits::Voice::Frame* output = ALLOCA(plaits::Voice::Frame, x->x_block_size)
+        plaits::Voice::Frame* output = ALLOCA(plaits::Voice::Frame, x->x_block_size);
         x->x_voice.Render(x->x_patch, x->x_modulations, output, x->x_block_size);
         for(int i = 0; i < x->x_block_size; i++){
             out[i + (x->x_block_size * j)] = output[i].out / 32768.0f;
             aux[i + (x->x_block_size * j)] = output[i].aux / 32768.0f;
         }
-        FREEA(output, plaits::Voice::Frame, x->x_block_size)
+        FREEA(output, plaits::Voice::Frame, x->x_block_size);
     }
     return(w+11);
 }
