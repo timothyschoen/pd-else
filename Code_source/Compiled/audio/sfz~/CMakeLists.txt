@@ -175,10 +175,11 @@ set(SFIZZ_LIBS
 endif()
 
 # Create an interface target for the external libraries
-add_library(sfizz INTERFACE)
+file(WRITE null.cpp "")
+add_library(sfizz STATIC null.cpp)
 
 # Link the .a files to the interface target
-target_link_libraries(sfizz INTERFACE ${SFIZZ_LIBS})
+target_link_libraries(sfizz PRIVATE ${SFIZZ_LIBS})
 
 add_dependencies(sfizz sfizz_build)
 
