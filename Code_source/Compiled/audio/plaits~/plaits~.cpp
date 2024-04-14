@@ -8,6 +8,7 @@
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/voice.h"
+#include "else_alloca.h"
 
 static t_class *plaits_class;
 
@@ -333,7 +334,7 @@ t_int *plaits_perform(t_int *w){
         x->x_modulations.frequency = fmod[x->x_block_size * j] * 60.f;
         x->x_modulations.morph = mmod[x->x_block_size * j] * 0.5;
         x->x_modulations.harmonics = hmod[x->x_block_size * j] * 0.5;
-        plaits::Voice::Frame output[x->x_block_size];
+        plaits::Voice::Frame* output = ALLOCA(plaits::Voice::Frame, x->x_block_size);
         x->x_voice.Render(x->x_patch, x->x_modulations, output, x->x_block_size);
         for(int i = 0; i < x->x_block_size; i++){
             out[i + (x->x_block_size * j)] = output[i].out / 32768.0f;
