@@ -13,15 +13,17 @@ typedef struct else_obj{
 t_class *else_obj_class;
 
 static int min_major = 0;
-static int min_minor = 54;
-static int min_bugfix = 1;
+static int min_minor = 55;
+static int min_bugfix = 0;
 
 static int else_major = 1;
 static int else_minor = 0;
 static int else_bugfix = 0;
 
 #define STATUS "rc"
-static int status_number = 11;
+static int status_number = 12;
+
+extern void pdlua_setup();
 
 static void else_obj_version(t_else_obj *x){
     int ac = 5;
@@ -37,14 +39,14 @@ static void else_obj_version(t_else_obj *x){
 #else
     outlet_symbol(x->x_out3, gensym("Pd-Vanilla"));
 #endif
-    
+
     int major = 0, minor = 0, bugfix = 0;
     sys_getversion(&major, &minor, &bugfix);
     SETFLOAT(at+0, major);
     SETFLOAT(at+1, minor);
     SETFLOAT(at+2, bugfix);
     outlet_list(x->x_out2,  &s_list, 3, at);
-    
+
     SETFLOAT(at, else_major);
     SETFLOAT(at+1, else_minor);
     SETFLOAT(at+2, else_bugfix);
@@ -60,7 +62,7 @@ void else_obj_about(t_else_obj *x){
     post("-------------------------------------------------------------------");
     post("  -----> ELSE - EL Locus Solus' Externals for Pure Data <-----");
     post("-------------------------------------------------------------------");
-    post("- Version: %d.%d-%d %s-%d; (Released February 06th 2024)", else_major, else_minor, else_bugfix, STATUS, status_number);
+    post("- Version: %d.%d-%d %s-%d; (Unreleased)", else_major, else_minor, else_bugfix, STATUS, status_number);
     post("- Author: Alexandre Torres Porres & others");
     post("- Repository: https://github.com/porres/pd-else");
     post("- License: Do What The Fuck You Want To Public License");
@@ -118,4 +120,8 @@ void else_setup(void){
     pdgui_vmess("load_plugin_script", "s", plugin);
     sprintf(plugin, "%s/browser-else.tcl", else_obj_class->c_externdir->s_name);
     pdgui_vmess("load_plugin_script", "s", plugin);
+    sprintf(plugin, "%s/browser-merda.tcl", else_obj_class->c_externdir->s_name);
+    pdgui_vmess("load_plugin_script", "s", plugin);
+
+    pdlua_setup();
 }

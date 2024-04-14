@@ -6,6 +6,22 @@
 
 lib.name = else
 
+# set this to no to exclude pdlua from build/install
+luamake = yes
+
+ifeq ($(luamake),yes)
+luaflags=-DMAKE_LIB -Ilua/lua -DELSE -ICode_source/Compiled/control/lua/lua
+define forDarwin
+luaflags += -DLUA_USE_MACOSX
+endef
+define forLinux
+luaflags += -DLUA_USE_LINUX
+endef
+define forWindows
+luaflags += -DLUA_USE_WINDOWS
+endef
+endif
+
 aubioflags = -ICode_source/shared/aubio/src
 
 define forDarwin
@@ -13,7 +29,7 @@ define forDarwin
 plaitsflags = arch="$(target.arch)"
 endef
 
-cflags = -ICode_source/shared -DHAVE_STRUCT_TIMESPEC $(aubioflags)
+cflags = -ICode_source/shared -DHAVE_STRUCT_TIMESPEC $(aubioflags) ${luaflags}
 
 uname := $(shell uname -s)
 
@@ -22,7 +38,11 @@ uname := $(shell uname -s)
 #########################################################################
 
 # Lib:
-else.class.sources := Code_source/Compiled/control/else.c
+ifeq ($(luamake),yes)
+lua := Code_source/Compiled/control/lua/pdlua.c Code_source/Compiled/control/lua/lua/onelua.c
+endif
+
+else.class.sources := Code_source/Compiled/control/else.c $(lua)
 
 # GUI:
 knob.class.sources := Code_source/Compiled/control/knob.c
@@ -63,7 +83,6 @@ dir.class.sources := Code_source/Compiled/control/dir.c
 datetime.class.sources := Code_source/Compiled/control/datetime.c
 default.class.sources := Code_source/Compiled/control/default.c
 dollsym.class.sources := Code_source/Compiled/control/dollsym.c
-findfile.class.sources := Code_source/Compiled/control/findfile.c
 floor.class.sources := Code_source/Compiled/control/floor.c
 fold.class.sources := Code_source/Compiled/control/fold.c
 hot.class.sources := Code_source/Compiled/control/hot.c
@@ -150,7 +169,6 @@ cents2ratio~.class.sources := Code_source/Compiled/audio/cents2ratio~.c
 changed~.class.sources := Code_source/Compiled/audio/changed~.c
 changed2~.class.sources := Code_source/Compiled/audio/changed2~.c
 conv~.class.sources := Code_source/Compiled/audio/conv~.c
-cmul~.class.sources := Code_source/Compiled/audio/cmul~.c
 crackle~.class.sources := Code_source/Compiled/audio/crackle~.c
 crossover~.class.sources := Code_source/Compiled/audio/crossover~.c
 cusp~.class.sources := Code_source/Compiled/audio/cusp~.c
@@ -243,6 +261,7 @@ toggleff~.class.sources := Code_source/Compiled/audio/toggleff~.c
 trighold~.class.sources := Code_source/Compiled/audio/trighold~.c
 unmerge~.class.sources := Code_source/Compiled/audio/unmerge~.c
 vu~.class.sources := Code_source/Compiled/audio/vu~.c
+vcf2~.class.sources := Code_source/Compiled/audio/vcf2~.c
 xmod~.class.sources := Code_source/Compiled/audio/xmod~.c
 xmod2~.class.sources := Code_source/Compiled/audio/xmod2~.c
 wrap2.class.sources := Code_source/Compiled/control/wrap2.c
@@ -361,33 +380,39 @@ midi := \
     Code_source/shared/mifi.c \
     Code_source/shared/elsefile.c
     midi.class.sources := Code_source/Compiled/control/midi.c $(midi)
-    
+
 file := Code_source/shared/elsefile.c
     rec.class.sources := Code_source/Compiled/control/rec.c $(file)
 
 smagic := Code_source/shared/magic.c
-    oscope~.class.sources := Code_source/Compiled/audio/oscope~.c $(smagic)
-    
+    scope~.class.sources := Code_source/Compiled/audio/scope~.c $(smagic)
+
 utf := Code_source/shared/s_elseutf8.c
 	note.class.sources := Code_source/Compiled/control/note.c $(utf)
-    
+
+
+
+
 define forWindows
-  ldlibs += -lws2_32 
+  ldlibs += -lws2_32
 endef
 
 #########################################################################
-
 # extra files
 
 extrafiles = \
 $(wildcard Code_source/Abstractions/control/*.pd) \
 $(wildcard Code_source/Abstractions/audio/*.pd) \
-$(wildcard Code_source/Abstractions/extra_abs/*.pd) \
+$(wildcard Code_source/Abstractions/extra_abs/*.*) \
 $(wildcard Code_source/Compiled/extra_source/*.tcl) \
+$(wildcard Code_source/Compiled/audio/scope3d~.pd_lua) \
 $(wildcard Documentation/Help-files/*.pd) \
 $(wildcard Documentation/extra_files/*.*) \
 $(wildcard *.txt) \
-Documentation/README.pdf
+Documentation/README.pdf \
+Code_source/Compiled/control/lua/pd.lua \
+Code_source/Compiled/control/lua/luadoc/hello.lua \
+Code_source/Compiled/control/lua/luadoc/hello.pd_lua
 
 # Change the arch to arm64 if the extension is d_arm64
 ifeq ($(extension),d_arm64)
@@ -426,15 +451,15 @@ plaits-install:
 
 plaits-clean:
 	$(MAKE) -C Code_source/Compiled/audio/plaits~ clean $(plaitsflags)
-    
-# Same for sfz    
+
+# Same for sfz
 
 sfz:
 	$(MAKE) -C Code_source/Compiled/audio/sfz~ system=$(system)
 
 sfz-install:
 	$(MAKE) -C Code_source/Compiled/audio/sfz~ install system=$(system) exten=$(extension) installpath="$(abspath $(PDLIBDIR))/else"
-    
+
 sfz-clean:
 	$(MAKE) -C Code_source/Compiled/audio/sfz~ clean
 
@@ -449,4 +474,10 @@ circuit-clean:
 install: installplus
 
 installplus:
+	cp -r Code_source/Merda/Modules/ "${installpath}"/
 	for v in $(extrafiles); do $(INSTALL_DATA) "$$v" "$(installpath)"; done
+#ifeq ($(luamake),yes)
+#	cp -r Code_source/Compiled/control/lua/luadoc/ "${installpath}"/lua
+#else
+#	rm -f "${installpath}"/pdlua*.pd
+#endif
