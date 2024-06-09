@@ -45,6 +45,8 @@ typedef struct _pic{
      int            x_flag;
      int            x_size;
      int            x_latch;
+     int            x_offset_x;
+     int            x_offset_y;
      t_symbol      *x_fullname;
      t_symbol      *x_filename;
      t_symbol      *x_x;
@@ -206,7 +208,7 @@ static void pic_delete(t_gobj *z, t_glist *glist){
 
 static void pic_draw(t_pic* x, struct _glist *glist, t_floatarg vis){
     t_canvas *cv = glist_getcanvas(glist);
-    int xpos = text_xpix(&x->x_obj, x->x_glist), ypos = text_ypix(&x->x_obj, x->x_glist);
+    int xpos = text_xpix(&x->x_obj, x->x_glist) + x->x_offset_x, ypos = text_ypix(&x->x_obj, x->x_glist) + x->x_offset_y;
     int visible = (glist_isvisible(x->x_glist) && gobj_shouldvis((t_gobj *)x, x->x_glist));
     if(x->x_def_img && (visible || vis)){ // DEFAULT PIC
         sys_vgui(".x%lx.c create image %d %d -anchor nw -tags %lx_picture\n",
@@ -253,9 +255,9 @@ static void pic_save(t_gobj *z, t_binbuf *b){
     if(x->x_filename == &s_)
         x->x_filename = gensym("empty");
     pic_get_snd_rcv(x);
-    binbuf_addv(b, "ssiisisssii", gensym("#X"), gensym("obj"), x->x_obj.te_xpix, x->x_obj.te_ypix,
+    binbuf_addv(b, "ssiisisssiiii", gensym("#X"), gensym("obj"), x->x_obj.te_xpix, x->x_obj.te_ypix,
         atom_getsymbol(binbuf_getvec(x->x_obj.te_binbuf)), x->x_outline, x->x_filename, x->x_snd_raw,
-        x->x_rcv_raw, x->x_size, x->x_latch);
+        x->x_rcv_raw, x->x_size, x->x_latch, x->x_offset_x, x->x_offset_y);
     binbuf_addv(b, ";");
 }
 
@@ -376,16 +378,16 @@ static void pic_outline(t_pic *x, t_float f){
 }
 
 static void pic_size(t_pic *x, t_float f){
-    int size = (int)(f != 0);
-    if(x->x_size != size)
-        x->x_size = size;
+    x->x_size = f != 0.0f;
+}
+
+static void pic_offset(t_pic *x, t_float x_offset, t_float y_offset){
+    x->x_offset_x = (int)x_offset;
+    x->x_offset_y = (int)y_offset;
 }
 
 static void pic_latch(t_pic *x, t_float f){
-    int latch = (int)(f != 0);
-    if(x->x_latch != latch){
-        x->x_latch = latch;
-    }
+    x->x_latch = f != 0.0f;
 }
 
 static void edit_proxy_any(t_edit_proxy *p, t_symbol *s, int ac, t_atom *av){
@@ -506,7 +508,7 @@ static void *pic_new(t_symbol *s, int ac, t_atom *av){
     x->x_edit = cv->gl_edit;
     x->x_send = x->x_snd_raw = x->x_receive = x->x_rcv_raw = x->x_filename = &s_;
     int loaded = x->x_rcv_set = x->x_snd_set = x->x_def_img = x->x_init = x->x_latch = 0;
-    x->x_outline = x->x_size = 0;
+    x->x_outline = x->x_size = x->x_offset_x = x->x_offset_y = 0;
     x->x_fullname = NULL;
     if(ac && av->a_type == A_FLOAT){ // 1ST outline
         x->x_outline = (int)(av->a_w.w_float != 0);
@@ -627,6 +629,7 @@ void pic_setup(void){
     class_addmethod(pic_class, (t_method)pic_send, gensym("send"), A_DEFSYMBOL, 0);
     class_addmethod(pic_class, (t_method)pic_ok, gensym("ok"), A_GIMME, 0);
     class_addmethod(pic_class, (t_method)pic_receive, gensym("receive"), A_DEFSYMBOL, 0);
+    class_addmethod(pic_class, (t_method)pic_offset, gensym("offset"), A_DEFFLOAT, A_DEFFLOAT, 0);
     class_addmethod(pic_class, (t_method)pic_zoom, gensym("zoom"), A_CANT, 0);
     class_addmethod(pic_class, (t_method)pic_size_callback, gensym("_picsize"), A_DEFFLOAT, A_DEFFLOAT, 0);
     class_addmethod(pic_class, (t_method)pic_mouserelease, gensym("_mouserelease"), 0);
