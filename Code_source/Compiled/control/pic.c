@@ -255,9 +255,9 @@ static void pic_save(t_gobj *z, t_binbuf *b){
     if(x->x_filename == &s_)
         x->x_filename = gensym("empty");
     pic_get_snd_rcv(x);
-    binbuf_addv(b, "ssiisisssiiii", gensym("#X"), gensym("obj"), x->x_obj.te_xpix, x->x_obj.te_ypix,
+    binbuf_addv(b, "ssiisisssii", gensym("#X"), gensym("obj"), x->x_obj.te_xpix, x->x_obj.te_ypix,
         atom_getsymbol(binbuf_getvec(x->x_obj.te_binbuf)), x->x_outline, x->x_filename, x->x_snd_raw,
-        x->x_rcv_raw, x->x_size, x->x_latch, x->x_offset_x, x->x_offset_y);
+        x->x_rcv_raw, x->x_size, x->x_latch);
     binbuf_addv(b, ";");
 }
 
