@@ -110,7 +110,7 @@ static void s2f_dsp(t_s2f *x, t_signal **sp){
     }
     s2f_correct(x);
     x->x_nleft = x->x_offset;
-    dsp_add(s2f_perform, 2, x, sp[0]->s_vec + (sp[0]->s_n-1));
+    dsp_add(s2f_perform, 2, x, sp[0]->s_vec);
 }
 
 static void s2f_free(t_s2f *x){
