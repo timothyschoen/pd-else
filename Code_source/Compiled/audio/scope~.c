@@ -1230,6 +1230,9 @@ errstate:
 void scope_tilde_setup(void){
     scope_class = class_new(gensym("scope~"), (t_newmethod)scope_new,
         (t_method)scope_free, sizeof(t_scope), 0, A_GIMME, 0);
+    
+    class_addcreator((t_newmethod)scope_new, gensym("cyclone/scope~"), A_GIMME, 0);
+    
     class_addmethod(scope_class, nullfn, gensym("signal"), 0);
     class_addmethod(scope_class, (t_method) scope_dsp, gensym("dsp"), A_CANT, 0);
     class_addfloat(scope_class, (t_method)scope_period);
