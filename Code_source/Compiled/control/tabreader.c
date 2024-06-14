@@ -55,7 +55,6 @@ static void tabreader_set(t_tabreader *x, t_symbol *s){
 static void tabreader_float(t_tabreader *x, t_float f){
     t_buffer *buf = x->x_buffer;
     buffer_validate(buf, 1); // 2nd arg for error posting
-    
     t_word *vp = buf->c_vectors[0];
     int npts = x->x_loop ? buf->c_npts : buf->c_npts - 1;
     if(vp){
