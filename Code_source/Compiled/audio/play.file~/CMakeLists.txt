@@ -12,9 +12,6 @@ set(FFMPEG_TAR ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-${FFMPEG_VERSION}.tar.bz2)
 set(FFMPEG_SRC ${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-${FFMPEG_VERSION})
 set(FFMPEG_BUILD ${FFMPEG_SRC}/build)
 
-file(GLOB SAMPLERATE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../../../shared/libsamplerate/*.c")
-add_library(libsamplerate STATIC ${SAMPLERATE_SOURCES})
-
 # Define FFmpeg libraries
 set(FFMPEG_LIBS libavcodec libavformat libavutil libswscale libswresample)
 
@@ -43,11 +40,8 @@ foreach(lib ${FFMPEG_LIBS})
     set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION ${FFMPEG_BUILD}/lib/${lib}.a)
 endforeach()
 
-# Add include directories for FFmpeg
-include_directories(${FFMPEG_BUILD}/include)
-
 # Optionally, create an interface library for easier linking
 add_library(ffmpeg_static STATIC IMPORTED GLOBAL)
 set_target_properties(ffmpeg_static PROPERTIES IMPORTED_LOCATION ${FFMPEG_BUILD}/lib/libavcodec.a)
 target_link_libraries(ffmpeg_static INTERFACE ${FFMPEG_LIBS} z iconv)
-target_include_directories(ffmpeg_static INTERFACE ${FFMPEG_SRC})
+target_include_directories(ffmpeg_static INTERFACE ${FFMPEG_BUILD}/include)
