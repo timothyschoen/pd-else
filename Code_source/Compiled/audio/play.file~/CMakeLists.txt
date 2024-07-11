@@ -44,4 +44,6 @@ endforeach()
 add_library(ffmpeg_static STATIC IMPORTED GLOBAL)
 set_target_properties(ffmpeg_static PROPERTIES IMPORTED_LOCATION ${FFMPEG_BUILD}/lib/libavcodec.a)
 target_link_libraries(ffmpeg_static INTERFACE ${FFMPEG_LIBS} z iconv)
+add_dependencies(ffmpeg_static ffmpeg)
+
 target_include_directories(ffmpeg_static INTERFACE ${FFMPEG_SRC})
