@@ -28,9 +28,9 @@ ExternalProject_Add(
     ffmpeg
     SOURCE_DIR ${FFMPEG_SRC}
     URL ${FFMPEG_TAR}
-    CONFIGURE_COMMAND ${FFMPEG_SRC}/configure --prefix=${FFMPEG_BUILD} ${WINDOWS_ARGS} --enable-static --enable-optimizations --disable-shared --disable-debug --disable-doc --disable-programs --disable-x86asm --disable-avdevice --disable-postproc --disable-everything --enable-avcodec --enable-avformat --enable-avutil --enable-swscale --enable-swresample --enable-decoder=mp3*,pcm*,flac,aac,vorbis,opus --enable-parser=mpegaudio,aac --enable-demuxer=mp3,wav,aiff,flac,aac,ogg --enable-filter=aresample --enable-protocol=file
-    BUILD_COMMAND make -C <SOURCE_DIR>
-    INSTALL_COMMAND make -C <SOURCE_DIR> install && ${CMAKE_COMMAND} -E rm -f <SOURCE_DIR>/VERSION
+    CONFIGURE_COMMAND bash -c "${FFMPEG_SRC}/configure --prefix=${FFMPEG_BUILD} ${WINDOWS_ARGS} --enable-static --enable-optimizations --disable-shared --disable-debug --disable-doc --disable-programs --disable-x86asm --disable-avdevice --disable-postproc --disable-everything --enable-avcodec --enable-avformat --enable-avutil --enable-swscale --enable-swresample --enable-decoder=mp3*,pcm*,flac,aac,vorbis,opus --enable-parser=mpegaudio,aac --enable-demuxer=mp3,wav,aiff,flac,aac,ogg" --enable-filter=aresample --enable-protocol=file
+    BUILD_COMMAND bash -c "make -C <SOURCE_DIR>"
+    INSTALL_COMMAND bash -c "make -C <SOURCE_DIR> install && ${CMAKE_COMMAND} -E rm -f <SOURCE_DIR>/VERSION"
     BUILD_IN_SOURCE 1
 )
 
