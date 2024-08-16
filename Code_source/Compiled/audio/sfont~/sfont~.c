@@ -23,8 +23,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "../shared/elsefile.h"
 
 #include <stdlib.h>
-#include <FluidLite/include/fluidlite.h>
-#include <FluidLite/src/fluid_sfont.h>
+#include "FluidLite/include/fluidlite.h"
+#include "FluidLite/src/fluid_sfont.h"
 #include <string.h>
 
 #ifdef _MSC_VER
@@ -36,7 +36,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define MAXSYSEXSIZE 1024 // Size of sysex data list (excluding the F0 [240] and F7 [247] bytes)
 
 static t_class *sfont_class;
- 
+
 static int printed;
 
 typedef struct _sfont{
@@ -243,12 +243,12 @@ static void sfont_sel_tuning(t_sfont *x, t_float bank, t_float pgm, t_float ch){
 static void set_key_tuning(t_sfont *x, double *pitches){
     int ch = x->x_tune_ch, bank = x->x_tune_bank, pgm = x->x_tune_prog;
     const char* name = x->x_tune_name->s_name;
-    
+
     int key[128];
     for(int i = 0; i < 128; i++) key[i] = i;
-    
+
     fluid_synth_tune_notes(x->x_synth, bank, pgm, 128, key, pitches, 1, name);
-    
+
     if(ch > 0)
         fluid_synth_activate_tuning(x->x_synth, ch-1, bank, pgm, 1);
     else if(!ch) for(int i = 0; i < x->x_ch; i++)
@@ -266,7 +266,7 @@ static void sfont_set_tuning(t_sfont *x,  t_symbol *s, int ac, t_atom *av){
         x->x_tune_name = atom_getsymbolarg(3, ac, av);
     else
         x->x_tune_name = gensym("Custom-tuning");
-        
+
 }
 
 static void sfont_remap(t_sfont *x, t_symbol *s, int ac, t_atom *av){
@@ -656,7 +656,7 @@ errstate:
     pd_error(x, "[sfont~]: wrong args");
     return(NULL);
 }
- 
+
 void sfont_tilde_setup(void){
     sfont_class = class_new(gensym("sfont~"), (t_newmethod)sfont_new,
         (t_method)sfont_free, sizeof(t_sfont), CLASS_DEFAULT, A_GIMME, 0);
