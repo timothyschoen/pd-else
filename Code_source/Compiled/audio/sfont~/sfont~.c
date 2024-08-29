@@ -23,8 +23,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "../shared/elsefile.h"
 
 #include <stdlib.h>
-#include <FluidLite/include/fluidlite.h>
-#include <FluidLite/src/fluid_sfont.h>
+#include "FluidLite/include/fluidlite.h"
+#include "FluidLite/src/fluid_sfont.h"
 #include <string.h>
 
 #ifdef _MSC_VER
@@ -243,12 +243,11 @@ static void sfont_sel_tuning(t_sfont *x, t_float bank, t_float pgm, t_float ch){
 static void set_key_tuning(t_sfont *x, double *pitches){
     int ch = x->x_tune_ch, bank = x->x_tune_bank, pgm = x->x_tune_prog;
     const char* name = x->x_tune_name->s_name;
-    
+
     int key[128];
     for(int i = 0; i < 128; i++) key[i] = i;
-    
+
     fluid_synth_tune_notes(x->x_synth, bank, pgm, 128, key, pitches, 1, name);
-    
 
     if(ch > 0)
         fluid_synth_activate_tuning(x->x_synth, ch-1, bank, pgm, 1);
