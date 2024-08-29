@@ -99,7 +99,7 @@ endif()
 # Add required flags for the builds
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     gw_warn(-Wall -Wextra -Wno-multichar -Werror=return-type)
-     if(PROJECT_SYSTEM_PROCESSOR MATCHES "(i.86|x86_64)")
+    if(PROJECT_SYSTEM_PROCESSOR MATCHES "(i.86|x86_64)")
         add_compile_options(-msse2)
     elseif(PROJECT_SYSTEM_PROCESSOR MATCHES "(arm.*)")
         add_compile_options(-mfpu=neon)

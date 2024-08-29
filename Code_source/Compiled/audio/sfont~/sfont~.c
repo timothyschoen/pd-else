@@ -36,7 +36,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define MAXSYSEXSIZE 1024 // Size of sysex data list (excluding the F0 [240] and F7 [247] bytes)
 
 static t_class *sfont_class;
- 
+
 static int printed;
 
 typedef struct _sfont{
@@ -71,7 +71,7 @@ typedef struct _sfont{
 }t_sfont;
 
 static void sfont_getversion(void){
-    //post("[sfont~] version 1.0-rc2 (using fluidsynth %s)", FLUIDSYNTH_VERSION);
+    post("[sfont~] version 1.0-rc6 (using fluidlite 1.2.2)");
 }
 
 static void sfont_verbose(t_sfont *x, t_floatarg f){
@@ -249,6 +249,7 @@ static void set_key_tuning(t_sfont *x, double *pitches){
     
     fluid_synth_tune_notes(x->x_synth, bank, pgm, 128, key, pitches, 1, name);
     
+
     if(ch > 0)
         fluid_synth_activate_tuning(x->x_synth, ch-1, bank, pgm, 1);
     else if(!ch) for(int i = 0; i < x->x_ch; i++)
@@ -266,7 +267,7 @@ static void sfont_set_tuning(t_sfont *x,  t_symbol *s, int ac, t_atom *av){
         x->x_tune_name = atom_getsymbolarg(3, ac, av);
     else
         x->x_tune_name = gensym("Custom-tuning");
-        
+
 }
 
 static void sfont_remap(t_sfont *x, t_symbol *s, int ac, t_atom *av){
@@ -470,14 +471,14 @@ static void sfont_info(t_sfont *x){
     post("Loaded soundfont: %s", fluid_sfont_get_name(x->x_sfont));
     post("------------------- presets -------------------");
     int i = 1;
-    fluid_preset_t* preset;
+    fluid_preset_t* preset = fluid_sfont_get_preset(x->x_sfont, 0, 0);
+    if(!preset) return;
     fluid_sfont_iteration_start(x->x_sfont);
-    /*
-    while((preset = fluid_sfont_iteration_next(x->x_sfont))){
-        int bank = fluid_preset_get_banknum(preset), pgm = fluid_preset_get_num(preset);
-        const char* name = fluid_preset_get_name(preset);
+    while((fluid_sfont_iteration_next(x->x_sfont, preset))) {
+        int bank = preset->get_banknum(preset), pgm = preset->get_num(preset);
+        const char* name = preset->get_name(preset);
         post("%03d - bank (%d) pgm (%d) name (%s)", i++, bank, pgm, name);
-    } */
+    }
     post("\n");
 }
 
@@ -656,7 +657,7 @@ errstate:
     pd_error(x, "[sfont~]: wrong args");
     return(NULL);
 }
- 
+
 void sfont_tilde_setup(void){
     sfont_class = class_new(gensym("sfont~"), (t_newmethod)sfont_new,
         (t_method)sfont_free, sizeof(t_sfont), CLASS_DEFAULT, A_GIMME, 0);

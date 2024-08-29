@@ -358,6 +358,7 @@ rand := Code_source/shared/random.c
     white~.class.sources := Code_source/Compiled/audio/white~.c $(rand)
     pink~.class.sources := Code_source/Compiled/audio/pink~.c $(rand)
     gray~.class.sources := Code_source/Compiled/audio/gray~.c $(rand)
+    velvet~.class.sources := Code_source/Compiled/audio/velvet~.c $(rand)
     pluck~.class.sources := Code_source/Compiled/audio/pluck~.c $(rand)
     rand.u.class.sources := Code_source/Compiled/control/rand.u.c $(rand)
     rand.hist.class.sources := Code_source/Compiled/control/rand.hist.c $(rand)
@@ -464,7 +465,7 @@ sfz-install:
 sfz-clean:
 	$(MAKE) -C Code_source/Compiled/audio/sfz~ clean
 
-# and for play.file
+# and for play.file + sfload
 play.file:
 	$(MAKE) -C Code_source/Compiled/audio/play.file~ system=$(system) extension=$(extension) all_obj
 
