@@ -26,8 +26,8 @@ function(message)
 endfunction()
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
-    "Default build type: Release" FORCE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
+    "Default build type: Debug" FORCE)
 endif()
 
 file(GLOB else_sources
