@@ -91,6 +91,6 @@ target_include_directories(else_shared PUBLIC ${LIBSAMPLERATE_INCLUDE} ${CMAKE_C
 if(WIN32)
     target_link_options(else_shared PUBLIC -static-libgcc -static-libstdc++ -static)
     target_link_libraries(else_shared PUBLIC "ws2_32;iphlpapi;stdc++;bcrypt")
-    target_compile_definitions(else_shared PRIVATE FLOAT_APPROX=1 _POSIX_SEM_VALUE_MAX=32767)
     target_compile_options(else_shared PRIVATE -msse2)
+    target_compile_definitions(opus PRIVATE FLOAT_APPROX=1 _POSIX_SEM_VALUE_MAX=32767)
 endif()
