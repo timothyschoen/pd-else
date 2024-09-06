@@ -25,12 +25,6 @@ set(PD_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/else" CACHE STRING "Externals bi
 include(${CMAKE_CURRENT_SOURCE_DIR}/pd.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/shared.cmake)
 
-function(message)
-    if (NOT MESSAGE_QUIET)
-        _message(${ARGN})
-    endif()
-endfunction()
-
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
     "Default build type: Release" FORCE)
@@ -60,10 +54,10 @@ endforeach()
 target_sources(beat_tilde PRIVATE ${aubio_sources})
 target_link_libraries(else PRIVATE pdlua)
 
-add_subdirectory(Source/Control/pd.link)
+#add_subdirectory(Source/Control/pd.link)
 add_subdirectory(Source/Audio/circuit~)
 add_subdirectory(Source/Audio/plaits~)
-add_subdirectory(Source/Audio/play.file~)
+#add_subdirectory(Source/Audio/play.file~)
 add_subdirectory(Source/Audio/sfont~)
 add_subdirectory(Source/Audio/sfz~)
 add_subdirectory(Source/Control/lua)

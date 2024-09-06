@@ -1,9 +1,21 @@
+function(message)
+    if (NOT MESSAGE_QUIET)
+        _message(${ARGN})
+    endif()
+endfunction()
+
 file(GLOB SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/libsamplerate/*.c
 )
 
-add_library(else_shared SHARED ${SOURCES})
+set(LINK_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/udp/udp_discovery_peer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/udp/udp_discovery_protocol.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/link.cpp
+)
+
+add_library(else_shared SHARED ${SOURCES} ${LINK_SOURCES})
 
 set_target_properties(else_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
 set_target_properties(else_shared PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
@@ -24,4 +36,55 @@ endif()
 
 if(PD_FLOATSIZE64)
     target_compile_definitions(else_shared PRIVATE PD_FLOATSIZE=64)
+endif()
+
+# External directories
+set(FFMPEG_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source/Shared/ffmpeg-7.0.1")
+set(LIBSAMPLERATE_INCLUDE "${CMAKE_SOURCE_DIR}/Source/Shared/libsamplerate")
+
+set(FFMPEG_LIBS
+    "${FFMPEG_OUT_DIR}/libavformat/libavformat.a"
+    "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.a"
+    "${FFMPEG_OUT_DIR}/libavutil/libavutil.a"
+    "${FFMPEG_OUT_DIR}/libswresample/libswresample.a"
+)
+
+message(STATUS "Configuring ffmpeg")
+file(MAKE_DIRECTORY ${FFMPEG_OUT_DIR})
+execute_process(
+    COMMAND tar xjf ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/ffmpeg/ffmpeg-7.0.1.tar.bz2 -C ${CMAKE_CURRENT_BINARY_DIR}/Source/Shared
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+file(REMOVE ${FFMPEG_OUT_DIR}/VERSION) # Causes problems, because there is some header somewhere named just <version>
+
+add_custom_command(
+    OUTPUT ${FFMPEG_LIBS}
+    COMMAND bash -c "${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/ffmpeg/build_ffmpeg.sh ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/ffmpeg ${CMAKE_C_COMPILER_LAUNCHER}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Source/Shared
+    COMMENT "Building FFmpeg libraries..."
+    VERBATIM
+)
+
+message(STATUS "Configuring Opus")
+set(MESSAGE_QUIET ON)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus)
+set(MESSAGE_QUIET OFF)
+
+# Define the custom target that depends on the FFmpeg build
+add_custom_target(
+    ffmpeg
+    ALL
+    DEPENDS ${FFMPEG_LIBS}
+)
+
+target_include_directories(else_shared PUBLIC ${FFMPEG_OUT_DIR} ${LIBSAMPLERATE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus/include)
+target_link_libraries(else_shared PUBLIC ${FFMPEG_LIBS} opus z)
+add_dependencies(else_shared ffmpeg)
+
+if(WIN32)
+    target_link_options(else_shared PUBLIC -static-libgcc -static-libstdc++ -static)
+    target_link_libraries(else_shared PUBLIC "ws2_32;iphlpapi;stdc++")
+    target_compile_definitions(opus PRIVATE FLOAT_APPROX=1 _POSIX_SEM_VALUE_MAX=32767)
+    target_compile_options(opus PRIVATE -msse2)
+    target_compile_definitions(pdlink_common PUBLIC _POSIX_SEM_VALUE_MAX=32767)
 endif()
