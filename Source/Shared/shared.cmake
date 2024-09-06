@@ -4,18 +4,21 @@ function(message)
     endif()
 endfunction()
 
-file(GLOB SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/libsamplerate/*.c
-)
-
 set(LINK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/udp/udp_discovery_peer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/udp/udp_discovery_protocol.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link/link.cpp
 )
 
-add_library(else_shared SHARED ${SOURCES} ${LINK_SOURCES})
+add_library(link STATIC ${LINK_SOURCES})
+
+
+file(GLOB ELSE_SHARED_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/libsamplerate/*.c
+)
+
+add_library(else_shared SHARED ${ELSE_SHARED_SOURCES})
 
 set_target_properties(else_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
 set_target_properties(else_shared PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
@@ -73,13 +76,17 @@ set(MESSAGE_QUIET OFF)
 
 # Define the custom target that depends on the FFmpeg build
 add_custom_target(
-    ffmpeg
+    ffmpeg_deps
     ALL
     DEPENDS ${FFMPEG_LIBS}
 )
 
+add_library(ffmpeg INTERFACE)
+target_link_libraries(ffmpeg INTERFACE ${FFMPEG_LIBS})
+target_include_directories(ffmpeg INTERFACE ${FFMPEG_OUT_DIR})
+add_dependencies(ffmpeg ffmpeg_deps)
+
 target_include_directories(else_shared PUBLIC ${LIBSAMPLERATE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus/include)
-target_link_libraries(else_shared PUBLIC opus z)
 
 if(WIN32)
     target_link_options(else_shared PUBLIC -static-libgcc -static-libstdc++ -static)
