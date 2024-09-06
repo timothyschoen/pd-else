@@ -62,6 +62,13 @@ add_subdirectory(Source/Audio/sfont~)
 add_subdirectory(Source/Audio/sfz~)
 add_subdirectory(Source/Control/lua)
 
+target_link_libraries(sfload PUBLIC ${FFMPEG_LIBS})
+target_link_libraries(play.file_tilde PUBLIC ${FFMPEG_LIBS})
+target_include_directories(play.file_tilde PRIVATE ${FFMPEG_OUT_DIR})
+target_include_directories(sfload PRIVATE ${FFMPEG_OUT_DIR})
+add_dependencies(sfload ffmpeg)
+add_dependencies(play.file_tilde ffmpeg)
+
 set(pdf_help "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/README.pdf")
 file(GLOB help_files "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Help-files/*")
 file(GLOB extra_files

@@ -78,9 +78,8 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
-target_include_directories(else_shared PUBLIC ${FFMPEG_OUT_DIR} ${LIBSAMPLERATE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus/include)
-target_link_libraries(else_shared PUBLIC ${FFMPEG_LIBS} opus z)
-add_dependencies(else_shared ffmpeg)
+target_include_directories(else_shared PUBLIC ${LIBSAMPLERATE_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus/include)
+target_link_libraries(else_shared PUBLIC opus z)
 
 if(WIN32)
     target_link_options(else_shared PUBLIC -static-libgcc -static-libstdc++ -static)
