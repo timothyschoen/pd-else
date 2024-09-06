@@ -86,6 +86,8 @@ target_link_libraries(ffmpeg INTERFACE ${FFMPEG_LIBS})
 target_include_directories(ffmpeg INTERFACE ${FFMPEG_OUT_DIR})
 add_dependencies(ffmpeg ffmpeg_deps)
 
+target_include_directories(link PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/link)
+
 target_include_directories(else_shared PUBLIC ${LIBSAMPLERATE_INCLUDE})
 
 if(WIN32)
