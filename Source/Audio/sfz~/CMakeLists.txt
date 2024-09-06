@@ -126,6 +126,7 @@ target_link_libraries(sfz_tilde PRIVATE ${SFIZZ_LIBS} stdc++)
 target_include_directories(sfz_tilde PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
 target_compile_definitions(sfz_tilde PRIVATE MIDI_CC_COUNT=127 SFIZZ_VERSION="1.2.2")
 add_dependencies(sfz_tilde sfizz)
+target_sources(sfz_tilde PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../Shared/elsefile.c)
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(sfz_tilde PUBLIC m)
