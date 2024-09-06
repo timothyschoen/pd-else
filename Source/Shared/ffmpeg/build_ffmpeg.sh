@@ -10,6 +10,7 @@ elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
 elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+    ffmpeg_config="--disable-pthreads --extra-ldflags=-no-pthreads"
     ffmpeg_cc="${CC:-gcc}"
 else
     echo "Unsupported OS: $OS"
@@ -18,7 +19,7 @@ fi
 
 # Configure and compile FFmpeg
 cd ffmpeg-7.0.1
-./configure --disable-asm --disable-pthreads --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
+./configure --disable-asm --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
             --disable-programs --disable-iconv --disable-avdevice --disable-postproc --disable-network \
             --disable-everything --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
             --enable-swresample --enable-decoder=mp3*,pcm*,aac*,flac,vorbis,opus --enable-parser=mpegaudio,aac \
