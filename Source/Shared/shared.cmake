@@ -83,8 +83,8 @@ target_link_libraries(else_shared PUBLIC ${FFMPEG_LIBS} opus z)
 add_dependencies(else_shared ffmpeg)
 
 if(WIN32)
-    target_link_options(else_shared PUBLIC -static-libgcc -static -no-pthread) # Skip pthread, it's already linked by ffmpeg
-    target_link_libraries(else_shared PUBLIC "ws2_32;iphlpapi;bcrypt")
+    target_link_options(else_shared PUBLIC -static-libgcc -static-libstdc++ -static)
+    target_link_libraries(else_shared PUBLIC "ws2_32;iphlpapi;stdc++;bcrypt")
     target_compile_definitions(else_shared PRIVATE FLOAT_APPROX=1 _POSIX_SEM_VALUE_MAX=32767)
     target_compile_options(else_shared PRIVATE -msse2)
 endif()
