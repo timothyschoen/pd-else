@@ -16,10 +16,7 @@ jobs:
   Linux-Build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - name: Downloads pd-Sources
         shell: bash
@@ -47,10 +44,7 @@ jobs:
   macOS-Build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - name: Downloads pd sources
         shell: bash
@@ -79,13 +73,9 @@ jobs:
   Windows-Build:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - if: runner.os == 'Windows'
-        name: "Install mingw deps"
+      - name: "Install mingw deps"
         uses: msys2/setup-msys2@v2
         with:
           install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake mingw64/mingw-w64-x86_64-ccache
