@@ -61,7 +61,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 		if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 		    target_compile_definitions(${PROJECT_NAME} PUBLIC PD_LONGINTTYPE=__int64)
 		endif()
-		target_compile_definitions(${PROJECT_NAME} PUBLIC MSW=1 NT=1 _POSIX_SEM_VALUE_MAX=32767)
+		target_compile_definitions(${PROJECT_NAME} PUBLIC MSW=1 NT=1)
 	endif()
 
 	# Support for PD double precision
