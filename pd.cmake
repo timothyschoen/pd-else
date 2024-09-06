@@ -62,7 +62,6 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 		    target_compile_definitions(${PROJECT_NAME} PUBLIC PD_LONGINTTYPE=__int64)
 		endif()
 		target_compile_definitions(${PROJECT_NAME} PUBLIC MSW=1 NT=1)
-		target_link_options(${PROJECT_NAME} PUBLIC --allow-multiple-definition)
 	endif()
 
 	# Support for PD double precision
