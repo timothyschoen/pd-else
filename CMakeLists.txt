@@ -115,5 +115,5 @@ math(EXPR total_compiled "${control_c_file_count} + ${signal_c_file_count}")
 math(EXPR total_abstractions "${control_pd_file_count} + ${signal_pd_file_count}")
 
 message(STATUS "${total_compiled} coded objects (${signal_c_file_count} signal objects / ${control_c_file_count} control objects)")
-message(STATUS "${total_abstractions} coded objects (${signal_pd_file_count} signal objects / ${control_pd_file_count} control objects)")
+message(STATUS "${total_abstractions} abstractions (${signal_pd_file_count} signal objects / ${control_pd_file_count} control objects)")
 message(STATUS "Merda modules: ${modules_pd_file_count}")
