@@ -51,8 +51,9 @@ set(FFMPEG_LIBS
 
 message(STATUS "Configuring ffmpeg")
 file(MAKE_DIRECTORY ${FFMPEG_OUT_DIR})
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/ffmpeg/ffmpeg-7.0.1.tar.bz2" FFMPEG_TAR_PATH)
 execute_process(
-    COMMAND tar xjf ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/ffmpeg/ffmpeg-7.0.1.tar.bz2 -C ${CMAKE_CURRENT_BINARY_DIR}/Source/Shared
+    COMMAND tar xjf ${FFMPEG_TAR_PATH} -C ${CMAKE_CURRENT_BINARY_DIR}/Source/Shared
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 file(REMOVE ${FFMPEG_OUT_DIR}/VERSION) # Causes problems, because there is some header somewhere named just <version>
