@@ -85,3 +85,28 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/sfz~/sfz" DESTINATION ${PD_O
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH}/Live-Electronics-Tutorial)
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION ${PD_OUTPUT_PATH}/LICENSE)
 file(REMOVE_RECURSE ${PD_OUTPUT_PATH}/audio)
+
+
+# Log the object count
+function(count_files_and_directories dir extension file_count)
+    file(GLOB files "${dir}/*")
+    foreach(file ${files})
+        get_filename_component(file_name "${file}" NAME)
+        if(NOT file_name MATCHES "^\\.")  # Exclude hidden files
+            math(EXPR ${file_count} "${${file_count}} + 1")
+        endif()
+    endforeach()
+    set(${file_count} ${${file_count}} PARENT_SCOPE)
+endfunction()
+
+count_files_and_directories("${CMAKE_CURRENT_SOURCE_DIR}/Source/Control" "c" control_c_file_count)
+count_files_and_directories("${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio" "c" signal_c_file_count)
+count_files_and_directories("${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Control" "pd" control_pd_file_count)
+count_files_and_directories("${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Audio" "pd" signal_pd_file_count)
+count_files_and_directories("${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Merda/Modules" "pd" modules_pd_file_count)
+math(EXPR total_compiled "${control_c_file_count} + ${signal_c_file_count}")
+math(EXPR total_abstractions "${control_pd_file_count} + ${signal_pd_file_count}")
+
+message(STATUS "${total_compiled} coded objects (${signal_c_file_count} signal objects / ${control_c_file_count} control objects)")
+message(STATUS "${total_abstractions} coded objects (${signal_pd_file_count} signal objects / ${control_pd_file_count} control objects)")
+message(STATUS "Merda modules: ${modules_pd_file_count}")
