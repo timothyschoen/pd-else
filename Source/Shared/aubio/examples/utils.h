@@ -18,8 +18,8 @@
 
 */
 
-#include "../shared/aubio/src/aubio.h"
-#include "../shared/aubio/src/config.h"
+#include "../Shared/aubio/src/aubio.h"
+#include "../Shared/aubio/src/config.h"
 
 #ifdef HAVE_STDIO_H
 #include <stdio.h>              // for fprintf

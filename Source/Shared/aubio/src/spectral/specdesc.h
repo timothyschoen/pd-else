@@ -155,7 +155,7 @@
 #ifndef AUBIO_SPECDESC_H
 #define AUBIO_SPECDESC_H
 
-#include "../shared/aubio/src/aubio.h"
+#include "../Shared/aubio/src/aubio.h"
 
 #ifdef __cplusplus
 extern "C" {

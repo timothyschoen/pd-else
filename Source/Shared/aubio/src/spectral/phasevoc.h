@@ -34,7 +34,7 @@
 #ifndef AUBIO_PHASEVOC_H
 #define AUBIO_PHASEVOC_H
 
-#include "../shared/aubio/src/aubio.h"
+#include "../Shared/aubio/src/aubio.h"
 
 #ifdef __cplusplus
 extern "C" {
