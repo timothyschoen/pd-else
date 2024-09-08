@@ -122,13 +122,3 @@ add_library(sfizz INTERFACE)
 target_link_libraries(sfizz INTERFACE ${SFIZZ_LIBS})
 target_include_directories(sfizz INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
 add_dependencies(sfizz sfizz_deps)
-
-add_dependencies(sfz_tilde sfizz)
-
-if(UNIX AND NOT APPLE)
-    target_link_libraries(sfz_tilde PUBLIC m)
-endif()
-if(WIN32)
-    target_link_options(sfz_tilde PUBLIC -static-libgcc -static-libstdc++ -static)
-    target_link_libraries(sfz_tilde PUBLIC "ws2_32;iphlpapi;")
-endif()
