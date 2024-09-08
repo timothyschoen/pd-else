@@ -13,6 +13,7 @@ elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
 elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+    ffmpeg_config="--toolchain=msvc"
     ffmpeg_cc="${CC:-gcc}"
 else
     echo "Unsupported OS: $OS"
