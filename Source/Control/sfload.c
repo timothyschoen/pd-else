@@ -133,13 +133,17 @@ void sfload_check_done(t_sfload* x){ // result clock
         clock_delay(x->x_result_clock, 20);
 }
 
-static void sfload_find_file(t_sfload *x, t_symbol* file, char* dir_out, char* filename_out){
-    const char *filename = file->s_name;
-    const char *dirname = canvas_getdir(x->x_canvas)->s_name;
-    char* fileout;
-    open_via_path(dirname, filename, "", dir_out, &fileout, MAXPDSTRING-1, 0);
-    memcpy(filename_out, fileout, strlen(fileout) + 1);
-    strcat(dir_out, "/");
+static void sfload_find_file(t_sfload *x, t_symbol* file, char* dir_out){
+    static char fname[MAXPDSTRING];
+    char *bufptr;
+    int fd = canvas_open(x->x_canvas, file->s_name, "", fname, &bufptr, MAXPDSTRING, 1);
+    if(fd < 0){
+        post("[sfload] file '%s' not found", file->s_name);
+        return;
+    }
+    else{
+        memcpy(dir_out, fname, strlen(bufptr) + 1);
+    }
 }
 
 void sfload_load(t_sfload* x, t_symbol* s, int ac, t_atom* av){
@@ -166,9 +170,7 @@ void sfload_load(t_sfload* x, t_symbol* s, int ac, t_atom* av){
         pd_error(x, "[sfload]: Invalid arguments for 'load' message\n");
         return;
     }
-    char dir[MAXPDSTRING], file[MAXPDSTRING];
-    sfload_find_file(x, path, dir, file);
-    snprintf(x->x_path, MAXPDSTRING, "%s/%s", dir, file);
+    sfload_find_file(x, path, x->x_path);
     if(pthread_create(&x->x_process_thread, NULL, sfload_read_audio, x) != 0){
         pd_error(x, "[sfload]: Error creating thread\n");
         return;
