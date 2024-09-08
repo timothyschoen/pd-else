@@ -32,14 +32,14 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
-file(TOUCH ${CMAKE_CURRENt_BINARY_DIR}/null.c)
-add_library(ffmpeg STATIC ${CMAKE_CURRENt_BINARY_DIR}/null.c)
-target_link_libraries(ffmpeg STATIC ${FFMPEG_LIBS} z)
+file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/null.c)
+add_library(ffmpeg STATIC ${CMAKE_CURRENT_BINARY_DIR}/null.c)
+target_link_libraries(ffmpeg PUBLIC ${FFMPEG_LIBS} z)
 target_include_directories(ffmpeg INTERFACE ${FFMPEG_OUT_DIR})
 add_dependencies(ffmpeg ffmpeg_deps)
 
 if(WIN32)
-    target_link_libraries(ffmpeg INTERFACE bcrypt)
+    target_link_libraries(ffmpeg PUBLIC bcrypt)
 endif()
 
 # Clean up
