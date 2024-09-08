@@ -24,6 +24,7 @@ typedef struct _sfload{
     t_canvas       *x_canvas;
     t_symbol       *x_arr_name;
     pthread_t       x_process_thread;
+    int             x_thread_created;
     _Atomic int     x_result_ready;
     t_clock        *x_result_clock;
     char            x_path[MAXPDSTRING];
@@ -172,6 +173,7 @@ void sfload_load(t_sfload* x, t_symbol* s, int ac, t_atom* av){
         pd_error(x, "[sfload]: Error creating thread\n");
         return;
     }
+    x->x_thread_created = 1;
     clock_delay(x->x_result_clock, 20);
 }
 
@@ -181,7 +183,7 @@ void sfload_set(t_sfload* x, t_symbol* s){
 
 static void sfload_free(t_sfload *x){
     clock_free(x->x_result_clock);
-    if(x->x_process_thread) pthread_join(x->x_process_thread, NULL);
+    if(x->x_thread_created) pthread_join(x->x_process_thread, NULL);
     av_channel_layout_uninit(&x->x_layout);
     avcodec_free_context(&x->x_stream_ctx);
     avformat_close_input(&x->x_ic);
@@ -201,6 +203,7 @@ static void *sfload_new(t_symbol *s, int ac, t_atom *av){
     x->x_all_out = NULL;
     x->x_canvas = canvas_getcurrent();
     x->x_result_ready = 0;
+    x->x_thread_created = 0;
     x->x_result_clock = clock_new(x, (t_method)sfload_check_done);
     return(x);
 }
