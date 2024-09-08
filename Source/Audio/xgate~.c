@@ -4,6 +4,7 @@
 #include <buffer.h>
 #include <stdlib.h>
 #include <math.h>
+#include <else_alloca.h>
 
 static t_class *xgate_class;
 

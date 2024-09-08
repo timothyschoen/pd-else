@@ -2,6 +2,8 @@
 
 #include <m_pd.h>
 #include <buffer.h>
+#include <else_alloca.h>
+#include <stdlib.h>
 
 #define MAX_INOUT 4096
 

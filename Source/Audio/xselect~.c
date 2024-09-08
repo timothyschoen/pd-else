@@ -2,6 +2,7 @@
 
 #include <m_pd.h>
 #include <buffer.h>
+#include <else_alloca.h>
 
 static t_class *xselect_class;
 
