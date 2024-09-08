@@ -18,15 +18,15 @@
 
 */
 
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/spectral/specdesc.h"
-#include "../shared/aubio/src/tempo/beattracking.h"
-#include "../shared/aubio/src/spectral/phasevoc.h"
-#include "../shared/aubio/src/onset/peakpicker.h"
-#include "../shared/aubio/src/mathutils.h"
-#include "../shared/aubio/src/tempo/tempo.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/spectral/specdesc.h"
+#include "../Shared/aubio/src/tempo/beattracking.h"
+#include "../Shared/aubio/src/spectral/phasevoc.h"
+#include "../Shared/aubio/src/onset/peakpicker.h"
+#include "../Shared/aubio/src/mathutils.h"
+#include "../Shared/aubio/src/tempo/tempo.h"
 
 /* structure to store object state */
 struct _aubio_tempo_t {

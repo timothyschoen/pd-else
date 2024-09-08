@@ -20,11 +20,11 @@
 
 /* default values : alpha=4, beta=3, threshold=0.25 */
 
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/fvec.h"
-#include "../shared/aubio/src/cvec.h"
-#include "../shared/aubio/src/mathutils.h"
-#include "../shared/aubio/src/spectral/tss.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/fvec.h"
+#include "../Shared/aubio/src/cvec.h"
+#include "../Shared/aubio/src/mathutils.h"
+#include "../Shared/aubio/src/spectral/tss.h"
 
 struct _aubio_tss_t
 {

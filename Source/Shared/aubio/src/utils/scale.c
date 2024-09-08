@@ -18,9 +18,9 @@
 
 */
 
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/fvec.h"
-#include "../shared/aubio/src/utils/scale.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/fvec.h"
+#include "../Shared/aubio/src/utils/scale.h"
 
 struct _aubio_scale_t {
   smpl_t ilow;

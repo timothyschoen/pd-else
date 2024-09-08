@@ -18,13 +18,13 @@
 
 */
 
-#include "../shared/aubio/src/aubio_priv.h"
-#include "../shared/aubio/src/fvec.h"
-#include "../shared/aubio/src/cvec.h"
-#include "../shared/aubio/src/spectral/fft.h"
-#include "../shared/aubio/src/spectral/specdesc.h"
-#include "../shared/aubio/src/mathutils.h"
-#include "../shared/aubio/src/utils/hist.h"
+#include "../Shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/fvec.h"
+#include "../Shared/aubio/src/cvec.h"
+#include "../Shared/aubio/src/spectral/fft.h"
+#include "../Shared/aubio/src/spectral/specdesc.h"
+#include "../Shared/aubio/src/mathutils.h"
+#include "../Shared/aubio/src/utils/hist.h"
 
 void aubio_specdesc_energy(aubio_specdesc_t *o, const cvec_t * fftgrain, fvec_t * onset);
 void aubio_specdesc_hfc(aubio_specdesc_t *o, const cvec_t * fftgrain, fvec_t * onset);

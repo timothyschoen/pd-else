@@ -18,7 +18,7 @@
 
 */
 
-#include "../shared/aubio/src/aubio_priv.h"
+#include "../Shared/aubio/src/aubio_priv.h"
 
 #if _MSC_VER
 #define strncasecmp _strnicmp
