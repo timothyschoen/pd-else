@@ -3,6 +3,7 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
+#include <else_alloca.h>
 #include <m_pd.h>
 
 #define FRAMES 4096
@@ -375,7 +376,7 @@ static void playfile_set(t_playfile *x, t_symbol* s){
 static t_int *playfile_perform(t_int *w){
     t_playfile *x = (t_playfile *)(w[1]);
     unsigned nch = x->x_nch;
-    t_sample *outs[nch];
+    t_sample** outs = ALLOCA(t_sample*, nch);
     for (int i = nch; i--;)
         outs[i] = x->x_outs[i];
     int n = (int)(w[2]);
@@ -437,13 +438,16 @@ static t_int *playfile_perform(t_int *w){
             }
         }
     }
-    else
+    else {
         while(samples_filled < n){
-            silence:
+        silence:
             for(int ch = nch; ch--;)
                 outs[ch][samples_filled] = 0.0f;
             samples_filled++;
         }
+    }
+    
+    FREEA(outs, t_sample*, nch);
     return(w+4);
 }
 
