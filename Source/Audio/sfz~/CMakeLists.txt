@@ -41,7 +41,7 @@ set(BASEFLAGS
 
 message(STATUS "Configuring sfizz")
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build")
-execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} OUTPUT_QUIET ERROR_QUIET
+execute_process(COMMAND ${CMAKE_COMMAND} .. -GUnix\ Makefiles ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
 )
 
@@ -118,7 +118,7 @@ add_custom_command(
 )
 
 
-add_library(sfizz INTERFACE)
+add_library(sfizz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/null.cpp)
 target_link_libraries(sfizz INTERFACE ${SFIZZ_LIBS})
 target_include_directories(sfizz INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
 add_dependencies(sfizz sfizz_deps)
