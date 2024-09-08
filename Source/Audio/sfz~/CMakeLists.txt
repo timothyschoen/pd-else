@@ -119,6 +119,6 @@ add_custom_command(
 
 
 add_library(sfizz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/null.cpp)
-target_link_libraries(sfizz INTERFACE ${SFIZZ_LIBS})
+target_link_libraries(sfizz STATIC ${SFIZZ_LIBS})
 target_include_directories(sfizz INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
 add_dependencies(sfizz sfizz_deps)

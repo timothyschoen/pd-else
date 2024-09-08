@@ -32,8 +32,9 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
-add_library(ffmpeg INTERFACE)
-target_link_libraries(ffmpeg INTERFACE ${FFMPEG_LIBS} z)
+file(TOUCH ${CMAKE_CURRENt_BINARY_DIR}/null.c)
+add_library(ffmpeg STATIC ${CMAKE_CURRENt_BINARY_DIR}/null.c)
+target_link_libraries(ffmpeg STATIC ${FFMPEG_LIBS} z)
 target_include_directories(ffmpeg INTERFACE ${FFMPEG_OUT_DIR})
 add_dependencies(ffmpeg ffmpeg_deps)
 
