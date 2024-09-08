@@ -185,7 +185,7 @@ void sfload_set(t_sfload* x, t_symbol* s){
 
 static void sfload_free(t_sfload *x){
     clock_free(x->x_result_clock);
-    pthread_join(x->x_process_thread, NULL);
+    if(x->x_process_thread) pthread_join(x->x_process_thread, NULL);
     av_channel_layout_uninit(&x->x_layout);
     avcodec_free_context(&x->x_stream_ctx);
     avformat_close_input(&x->x_ic);

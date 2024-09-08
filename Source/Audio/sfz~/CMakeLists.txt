@@ -105,7 +105,7 @@ set(SFIZZ_LIBS
 )
 
 add_custom_target(
-    sfizz
+    sfizz_deps
     ALL
     DEPENDS ${SFIZZ_LIBS}
 )
@@ -117,14 +117,12 @@ add_custom_command(
     VERBATIM
 )
 
-add_custom_target(sfizz_build
-    DEPENDS ${SFIZZ_LIBS}
-)
 
-add_pd_external(sfz_tilde sfz~ sfz~.c)
-target_link_libraries(sfz_tilde PRIVATE ${SFIZZ_LIBS} else_shared stdc++)
-target_include_directories(sfz_tilde PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
-target_compile_definitions(sfz_tilde PRIVATE MIDI_CC_COUNT=127 SFIZZ_VERSION="1.2.2")
+add_library(sfizz INTERFACE)
+target_link_libraries(sfizz INTERFACE ${SFIZZ_LIBS})
+target_include_directories(sfizz INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
+add_dependencies(sfizz sfizz_deps)
+
 add_dependencies(sfz_tilde sfizz)
 
 if(UNIX AND NOT APPLE)
