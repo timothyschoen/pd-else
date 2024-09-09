@@ -29,6 +29,10 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
+if(MSVC)
+list(APPEND FFMPEG_LIBS z)
+endif()
+
 file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/null.c)
 add_library(ffmpeg STATIC ${CMAKE_CURRENT_BINARY_DIR}/null.c)
 target_link_libraries(ffmpeg PUBLIC ${FFMPEG_LIBS})
