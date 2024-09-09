@@ -2,7 +2,6 @@
 
 # Variables
 FFMPEG_DIR="ffmpeg-7.0.1"
-FFMPEG_TAR="$1/${FFMPEG_DIR}.tar.bz2"
 OS=$(uname)
 
 # Define platform-specific configurations
@@ -15,6 +14,7 @@ elif [[ "$OS" == "Linux" ]]; then
 elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
     ffmpeg_config="--toolchain=msvc"
     ffmpeg_cc="${CC:-gcc}"
+    sed -i '/_DEPCMD=/c\_DEPCMD='\''$(DEP$(1)) $(DEP$(1)FLAGS) $($(1)DEP_FLAGS) $< 2>&1 | grep "^Note:.*file:" | sed -e "s^.*file: *^$@: ^" | tr \\\\ / > $(@:.o=.d)'\''' "$FFMPEG_DIR/configure"
 else
     echo "Unsupported OS: $OS"
     exit 1
