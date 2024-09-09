@@ -1,6 +1,6 @@
 #N canvas 290 135 553 456 12;
 #X declare -path else;
-#N canvas 565 98 772 384 (subpatch) 0;
+#N canvas 565 98 772 384 (subpatch) 1;
 #X obj 176 112 cnv 15 235 190 empty empty empty 20 12 0 14 #dbdbdb #373737 0;
 #X obj 240 155 knob 50 0 2000 2 0 \$0-decay \$0-set-decay #e4e4e4 #a8a8a8 #4d4d4d 0 0 0 0 1 270 0 0 0;
 #X obj 297 155 knob 50 0 1 0 0 \$0-sustain \$0-set-sustain #e4e4e4 #a8a8a8 #4d4d4d 0 0 0 0 1 270 0 0 0;
@@ -239,4 +239,4 @@
 #X connect 16 0 12 4;
 #X connect 17 0 12 5;
 #X connect 18 0 12 6;
-#X coords 0 1 100 -1 250 224 2 250 150;
+#X coords 0 1 100 -1 237 192 2 257 173;

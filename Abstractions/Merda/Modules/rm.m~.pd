@@ -58,7 +58,7 @@
 #X connect 1 0 0 0;
 #X restore 223 445 pd GUI;
 #X text 250 125 IN;
-#N canvas 227 82 394 451 (subpatch) 0;
+#N canvas 227 82 394 451 (subpatch) 1;
 #X obj 112 112 cnv 15 82 225 empty empty empty 20 12 0 14 #dbdbdb #373737 0;
 #X obj 121 120 note 62 18 Inter empty 5 54 54 54 0 187 187 187 1 1 RING MOD;
 #X obj 129 177 else/knob 50 20 2000 1 20 \$0-hz \$0-set-hz #dfdfdf #bbbbbb #000000 0 0 0 0 1 320 0 0 20;
@@ -100,4 +100,4 @@
 #X connect 15 0 18 0;
 #X connect 17 0 11 0;
 #X connect 18 0 12 1;
-#X coords 0 1 100 -1 97 257 2 250 125;
+#X coords 0 1 100 -1 84 227 2 256 147;
