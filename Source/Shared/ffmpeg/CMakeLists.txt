@@ -19,11 +19,8 @@ endif()
 
 message(STATUS "Configuring ffmpeg")
 file(MAKE_DIRECTORY ${FFMPEG_OUT_DIR})
-string(REGEX REPLACE "^([A-Za-z]):" "/\\1" FFMPEG_TAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-7.0.1.tar.bz2")
-execute_process(
-    COMMAND tar xjf ${FFMPEG_TAR_PATH} -C ${CMAKE_CURRENT_BINARY_DIR}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+set(FFMPEG_TAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-7.0.1.tar.bz2")
+file(ARCHIVE_EXTRACT INPUT "${FFMPEG_TAR_PATH}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 file(REMOVE ${FFMPEG_OUT_DIR}/VERSION) # Causes problems, because there is some header somewhere named just <version>
 
 add_custom_command(
