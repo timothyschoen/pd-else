@@ -3,10 +3,10 @@ set(FFMPEG_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg-7.0.1")
 
 if(MSVC)
     set(FFMPEG_LIBS
-        "${FFMPEG_OUT_DIR}/libavformat/libavformat.lib"
-        "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.lib"
-        "${FFMPEG_OUT_DIR}/libavutil/libavutil.lib"
-        "${FFMPEG_OUT_DIR}/libswresample/libswresample.lib"
+        "${FFMPEG_OUT_DIR}/libavformat/Release/libavformat.lib"
+        "${FFMPEG_OUT_DIR}/libavcodec/Release/libavcodec.lib"
+        "${FFMPEG_OUT_DIR}/libavutil/Release/libavutil.lib"
+        "${FFMPEG_OUT_DIR}/libswresample/Release/libswresample.lib"
     )
 else()
     set(FFMPEG_LIBS
