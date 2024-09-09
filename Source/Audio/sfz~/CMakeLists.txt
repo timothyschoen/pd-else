@@ -49,13 +49,75 @@ endif()
 
 message(STATUS "Configuring sfizz")
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build")
-execute_process(COMMAND ${CMAKE_COMMAND} .. -GUnix\ Makefiles ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
+execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
 )
 
 
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
+if(MSVC)
+# For some reason, it appears in the Debug folder, even when building in release mode...
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/$<CONFIG>)
+else()
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib)
+endif()
 
+if(MSVC)
+set(SFIZZ_LIBS
+    ${SFIZZ_LIB_DIR}/sfizz_static.lib
+    ${SFIZZ_LIB_DIR}/sfizz_internal.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cephes.lib
+    ${SFIZZ_LIB_DIR}/sfizz_filesystem_impl.lib
+    ${SFIZZ_LIB_DIR}/sfizz_fmidi.lib
+    ${SFIZZ_LIB_DIR}/sfizz_hiir_polyphase_iir2designer.lib
+    ${SFIZZ_LIB_DIR}/sfizz_import.lib
+    ${SFIZZ_LIB_DIR}/sfizz_kissfft.lib
+    ${SFIZZ_LIB_DIR}/sfizz_messaging.lib
+    ${SFIZZ_LIB_DIR}/sfizz_parser.lib
+    ${SFIZZ_LIB_DIR}/sfizz_pugixml.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spin_mutex.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spline.lib
+    ${SFIZZ_LIB_DIR}/sfizz_tunings.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cpuid.lib
+    ${SFIZZ_LIB_DIR}/absl_hash.lib
+    ${SFIZZ_LIB_DIR}/absl_strings.lib
+    ${SFIZZ_LIB_DIR}/absl_bad_optional_access.lib
+    ${SFIZZ_LIB_DIR}/absl_bad_variant_access.lib
+    ${SFIZZ_LIB_DIR}/absl_base.lib
+    ${SFIZZ_LIB_DIR}/absl_city.lib
+    ${SFIZZ_LIB_DIR}/absl_civil_time.lib
+    ${SFIZZ_LIB_DIR}/absl_cord.lib
+    ${SFIZZ_LIB_DIR}/absl_cord_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_functions.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_handle.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_info.lib
+    ${SFIZZ_LIB_DIR}/absl_crc32c.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_cord_state.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_cpu_detect.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_debugging_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_demangle_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_exponential_biased.lib
+    ${SFIZZ_LIB_DIR}/absl_graphcycles_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_hashtablez_sampler.lib
+    ${SFIZZ_LIB_DIR}/absl_int128.lib
+    ${SFIZZ_LIB_DIR}/absl_log_severity.lib
+    ${SFIZZ_LIB_DIR}/absl_low_level_hash.lib
+    ${SFIZZ_LIB_DIR}/absl_malloc_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_raw_hash_set.lib
+    ${SFIZZ_LIB_DIR}/absl_raw_logging_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_spinlock_wait.lib
+    ${SFIZZ_LIB_DIR}/absl_stacktrace.lib
+    ${SFIZZ_LIB_DIR}/absl_strings_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_symbolize.lib
+    ${SFIZZ_LIB_DIR}/absl_synchronization.lib
+    ${SFIZZ_LIB_DIR}/absl_throw_delegate.lib
+    ${SFIZZ_LIB_DIR}/absl_time.lib
+    ${SFIZZ_LIB_DIR}/absl_time_zone.lib
+    ${SFIZZ_LIB_DIR}/st_audiofile.lib
+    ${SFIZZ_LIB_DIR}/st_audiofile_formats.lib
+    ${SFIZZ_LIB_DIR}/aiff.lib
+)
+else()
 set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/libsfizz.a
     ${SFIZZ_LIB_DIR}/libsfizz_internal.a
@@ -111,6 +173,7 @@ set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZZ_LIB_DIR}/libaiff.a
 )
+endif()
 
 add_custom_target(
     sfizz_deps
