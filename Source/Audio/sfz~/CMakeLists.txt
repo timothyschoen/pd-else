@@ -58,9 +58,9 @@ execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERR
 
 if(MSVC)
 # For some reason, it appears in the Debug folder, even when building in release mode...
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib/$<CONFIG>)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
 else()
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/build/library/lib)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
 endif()
 
 if(MSVC)
