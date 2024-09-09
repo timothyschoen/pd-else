@@ -1,12 +1,21 @@
 # External directories
 set(FFMPEG_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg-7.0.1")
 
-set(FFMPEG_LIBS
-    "${FFMPEG_OUT_DIR}/libavformat/libavformat.a"
-    "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.a"
-    "${FFMPEG_OUT_DIR}/libavutil/libavutil.a"
-    "${FFMPEG_OUT_DIR}/libswresample/libswresample.a"
-)
+if(MSVC)
+    set(FFMPEG_LIBS
+        "${FFMPEG_OUT_DIR}/libavformat/libavformat.lib"
+        "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.lib"
+        "${FFMPEG_OUT_DIR}/libavutil/libavutil.lib"
+        "${FFMPEG_OUT_DIR}/libswresample/libswresample.lib"
+    )
+else()
+    set(FFMPEG_LIBS
+        "${FFMPEG_OUT_DIR}/libavformat/libavformat.a"
+        "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.a"
+        "${FFMPEG_OUT_DIR}/libavutil/libavutil.a"
+        "${FFMPEG_OUT_DIR}/libswresample/libswresample.a"
+    )
+endif()
 
 message(STATUS "Configuring ffmpeg")
 file(MAKE_DIRECTORY ${FFMPEG_OUT_DIR})
