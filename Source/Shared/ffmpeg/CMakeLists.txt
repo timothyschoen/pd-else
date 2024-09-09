@@ -29,7 +29,7 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
-if(MSVC)
+if(UNIX)
 list(APPEND FFMPEG_LIBS z)
 endif()
 
