@@ -45,6 +45,8 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
     set(MSVC_TARGET_ARCH "-A Win32")
 endif()
+elseif(APPLE)
+list(APPEND BASEFLAGS "-GUnix\ Makefiles")
 endif()
 
 message(STATUS "Configuring sfizz")
