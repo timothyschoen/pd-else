@@ -39,6 +39,14 @@ set(BASEFLAGS
     "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
 )
 
+if(MSVC)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(MSVC_TARGET_ARCH "-A x64")
+else()
+    set(MSVC_TARGET_ARCH "-A Win32")
+endif()
+endif()
+
 message(STATUS "Configuring sfizz")
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build")
 execute_process(COMMAND ${CMAKE_COMMAND} .. -GUnix\ Makefiles ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
@@ -112,11 +120,10 @@ add_custom_target(
 
 add_custom_command(
     OUTPUT ${SFIZZ_LIBS}
-    COMMAND ${CMAKE_COMMAND} --build .
+    COMMAND ${CMAKE_COMMAND} --build . --config $<CONFIG>
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
     VERBATIM
 )
-
 
 add_library(sfizz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/null.cpp)
 target_link_libraries(sfizz PUBLIC ${SFIZZ_LIBS})
