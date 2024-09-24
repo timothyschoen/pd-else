@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Install dependencies
         shell: bash
-        run: apt update && apt install -y build-essential cmake git curl gawk zip
+        run: apt update && apt install -y build-essential cmake git curl gawk zip libz-dev
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
