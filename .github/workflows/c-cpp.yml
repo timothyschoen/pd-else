@@ -15,6 +15,11 @@ jobs:
   # ===============================================================
   Linux-Build:
     runs-on: ubuntu-latest
+    container:
+      image: debian-oldoldstable
+      options: --privileged
+      volumes:
+        - /sys/fs/cgroup:/sys/fs/cgroup
     steps:
       - uses: actions/checkout@v4
         with:
