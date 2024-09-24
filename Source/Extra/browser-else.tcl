@@ -29,7 +29,7 @@ proc category_else_menu::load_menutree {} {
             {assorted
                 {else}}
             {gui
-                {knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile scope~ scope3d~}}
+                {knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile scope~}}
             {time
                 {chrono datetime}}
             {fft
@@ -49,7 +49,7 @@ proc category_else_menu::load_menutree {} {
             {midi
                 {midi midi.learn midi.in midi.out sysrt.in sysrt.out ctl.in ctl.out touch.in touch.out ptouch.in ptouch.out pgm.in pgm.out bend.in bend.out note.in note.out midi.clock noteinfo panic mono mono~ voices voices~ suspedal}}
             {osc/network
-                {osc.route osc.format osc.parse osc.send osc.receive pd.link pd.link~}}
+                {osc.route osc.format osc.parse osc.send osc.receive pdlink pdlink~}}
             {math\ functions
                 {add add~ median avg mov.avg count gcd lcm frac.add frac.mul ceil ceil~ factor floor floor~ trun trunc~ rint rint~ quantizer quantizer~ fold fold~ lastvalue mag mag~ sin~ wrap2 wrap2~ op op~}}
             {math\ conversion

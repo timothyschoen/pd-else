@@ -16,7 +16,7 @@ This work is free. You can redistribute it and/or modify it under the terms of t
 For details on authorship check the source code. Other licenses also apply for specific objects and this is also informed in the source code.
 For instance:
 
-- [beat~], [sfont~], [giga.rev~] and [lua] are licensed under the GNU GPL library
+- [beat~], [sfont~], [giga.rev~] are licensed under the GNU GPL library
 - [sfz~] and band limited oscillators like [bl.saw~] are licensed under the BSD 2-Clause library
 - [plaits~], [osc.format], [osc.parse] and [osc.route] are licensed under the MIT library
 
@@ -97,19 +97,19 @@ Flávio Luis Schiavoni helped me out in a few things when I first started coding
 
 I'd also like to thank my Cyclone buddies Derek Kwan and Matt Barber, cause I started learning how to code externals with them as part of the cyclone team. Other developers of cyclone need to be praised, like Czaja, the original author, as I did steal quite a bit from cyclone into ELSE. I'd like to give a special thanks for Matt Barber for developing the "magic" in cyclone that I'm using here and also collaborating to ELSE with the objects: [float2bits], [brown~], [gray~], [perlin~], [pink~] and [blip~].
 
-Lucarda is an active tester and has helped countless times with compilation issues for windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object. Ben Wesch made [scope3d~] for ELSE, a nice 3D oscilloscope.
+Lucarda is an active tester and has helped countless times with compilation issues for windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object. 
 
 Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of ELSE for other systems as well as ELSE for Camomile and libpd projects, which opened the way for PlugData by Timothy Schoen, who's doing an amazing jaw dropping job with this project based on camomile that includes ELSE. Timothy has also helped me fix many ELSE related issues and has made incredible and countless contributions to ELSE with fixes, improvements and new objects. Other folks from the PlugData gang are being very helpful like Alex Mitchell and Amy. PlugData is a fork of Pd with a revamped GUI and comes with the ELSE library. See: <https://github.com/timothyschoen/PlugData>.
 
 --------------------------------------------------------------------------
 
-## Current Object list (553 objects):
+## Current Object list (551 objects):
 
 #assorted
     else
 
 #gui
-    knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile scope~ scope3d~
+    knob numbox~ drum.seq bicoeff pad messbox mtx.ctl biplot zbiplot pic colors function circle slider2d display out.mc~ out~ out4~ out8~ gain~ gain2~ button keyboard graph~ range.hsl multi.vsl spectrograph~ meter~ meter2~ meter4~ meter8~ note mix2~ mix4~ setdsp~ openfile scope~
 
 #time
     chrono datetime
@@ -158,9 +158,6 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
 
 #analog circuitry emulation
     circuit~
-
-#scripting
-    lua
 
 #fx: assorted
     downsample~ conv~ chorus~ shaper~ crusher~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
