@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: apt update && apt install -y curl build-essential cmake gawk
+        run: apt update && apt install -y curl build-essential cmake gawk zip
 
       - name: Downloads pd-Sources
         shell: bash
