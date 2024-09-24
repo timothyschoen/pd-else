@@ -37,7 +37,7 @@ jobs:
 
       - name: Configure pd-else
         run: |
-          cmake -BBuild -DPD_PATH=${{github.workspace}}/pure-data
+          cmake -BBuild -DPD_PATH=./pure-data
 
       - name: Build pd-else
         run: |
