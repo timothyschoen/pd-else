@@ -16,7 +16,7 @@ jobs:
   Linux-Build:
     runs-on: ubuntu-latest
     container:
-      image: debian:oldoldstable
+      image: debian:oldstable
       options: --privileged
       volumes:
         - /sys/fs/cgroup:/sys/fs/cgroup
