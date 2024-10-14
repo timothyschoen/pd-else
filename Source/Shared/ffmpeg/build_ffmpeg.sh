@@ -7,7 +7,7 @@ OS=$(uname)
 
 # Define platform-specific configurations
 if [[ "$OS" == "Darwin" ]]; then
-    ffmpeg_config="--disable-everything --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
+    ffmpeg_config="--disable-hwaccels --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
     ffmpeg_cc="clang -arch x86_64 -arch arm64"
 elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
