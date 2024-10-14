@@ -7,7 +7,7 @@ OS=$(uname)
 
 # Define platform-specific configurations
 if [[ "$OS" == "Darwin" ]]; then
-    ffmpeg_config="--extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
+    ffmpeg_config="--disable-everything --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
     ffmpeg_cc="clang -arch x86_64 -arch arm64"
 elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
@@ -47,7 +47,7 @@ fi
 
 # Configure and compile FFmpeg
 cd "$FFMPEG_DIR"
-./configure --disable-asm --disable-libxcb --disable-bzlib --disable-lzma --disable-sdl2 --disable-securetransport  --disable-libdrm --disable-vaapi --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
+./configure --disable-asm --disable-libxcb --disable-bzlib --disable-lzma --disable-sdl2 --disable-securetransport --disable-libdrm --disable-vaapi --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
             --disable-programs --disable-iconv --disable-avdevice --disable-postproc --disable-network \
             --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
             --enable-swresample --enable-decoder=mp3*,pcm*,aac*,flac,vorbis,opus --enable-parser=mpegaudio,aac \
