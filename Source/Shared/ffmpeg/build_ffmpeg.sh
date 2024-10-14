@@ -13,7 +13,7 @@ elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
 elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
-    ffmpeg_config="--disable-hwaccels --disable-d3d11va --disable-d3d12va --disable-dxva2 --disable-cuda-llvm  --disable-schannel --disable-mediafoundation --toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
+    ffmpeg_config="--toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
     ffmpeg_cc="cl.exe"
     sed -i.bak '5021c\
             _DEPCMD='\''$(DEP$(1)) $(DEP$(1)FLAGS) $($(1)DEP_FLAGS) $< 2>&1 | grep "^Note:.*file:" | sed -e "s^.*file: *^$@: ^" | tr \\\\\\\\/ \/ > $(@:.o=.d)'\'' '$'\n' "$FFMPEG_DIR/configure"
@@ -52,6 +52,11 @@ cd "$FFMPEG_DIR"
             --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
             --enable-swresample --enable-decoder=mp3*,pcm*,aac*,flac,vorbis,opus --enable-parser=mpegaudio,aac \
             --enable-demuxer=mp3,wav,aiff,flac,aac,ogg,pcm* --enable-filter=aresample --enable-protocol=file \
+            --disable-everything --enable-demuxer=avi --enable-demuxer=mov --enable-demuxer=mp3 \
+            --enable-demuxer=flv --enable-demuxer=asf --enable-muxer=avi --enable-muxer=mov --enable-muxer=mp4 \
+            --enable-muxer=flv --enable-muxer=asf --enable-decoder=mp3 --enable-decoder=aac --enable-decoder=h264 \
+            --enable-decoder=mpeg4 --enable-decoder=mpeg1video --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-encoder=aac --enable-encoder=mpeg4 \
+            --enable-encoder=mpeg1video --enable-parser=mpeg4video \
             $ffmpeg_config
 
 make CC="$2 $ffmpeg_cc"
