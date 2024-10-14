@@ -7,13 +7,13 @@ OS=$(uname)
 
 # Define platform-specific configurations
 if [[ "$OS" == "Darwin" ]]; then
-    ffmpeg_config="--disable-hwaccels --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
+    ffmpeg_config="--extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
     ffmpeg_cc="clang -arch x86_64 -arch arm64"
 elif [[ "$OS" == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
 elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
-    ffmpeg_config="--toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
+    ffmpeg_config="--disable-hwaccels --toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
     ffmpeg_cc="cl.exe"
     sed -i.bak '5021c\
             _DEPCMD='\''$(DEP$(1)) $(DEP$(1)FLAGS) $($(1)DEP_FLAGS) $< 2>&1 | grep "^Note:.*file:" | sed -e "s^.*file: *^$@: ^" | tr \\\\\\\\/ \/ > $(@:.o=.d)'\'' '$'\n' "$FFMPEG_DIR/configure"
