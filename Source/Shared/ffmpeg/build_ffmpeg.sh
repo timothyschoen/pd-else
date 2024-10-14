@@ -47,9 +47,9 @@ fi
 
 # Configure and compile FFmpeg
 cd "$FFMPEG_DIR"
-./configure --disable-asm --disable-libdrm --disable-vaapi --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
+./configure --disable-asm --disable-libxcb --disable-bzlib --disable-sdl2 --disable-securetransport  --disable-libdrm --disable-vaapi --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
             --disable-programs --disable-iconv --disable-avdevice --disable-postproc --disable-network \
-            --disable-everything --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
+            --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
             --enable-swresample --enable-decoder=mp3*,pcm*,aac*,flac,vorbis,opus --enable-parser=mpegaudio,aac \
             --enable-demuxer=mp3,wav,aiff,flac,aac,ogg,pcm* --enable-filter=aresample --enable-protocol=file \
             $ffmpeg_config

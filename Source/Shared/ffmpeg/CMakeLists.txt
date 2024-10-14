@@ -6,6 +6,7 @@ set(FFMPEG_LIBS
     "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.a"
     "${FFMPEG_OUT_DIR}/libavutil/libavutil.a"
     "${FFMPEG_OUT_DIR}/libswresample/libswresample.a"
+    "${FFMPEG_OUT_DIR}/libswscale/libswscale.a"
 )
 
 message(STATUS "Configuring ffmpeg")
