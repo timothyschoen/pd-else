@@ -163,7 +163,7 @@ static void sfont_bank(t_sfont *x, t_symbol *s, int ac, t_atom *av){
             return;
         }
         int fail = fluid_synth_bank_select(x->x_synth, ch, bank);
-        if(!fail){
+        if(!fail && x->x_sfont){
             x->x_bank = bank;
             fluid_preset_t* preset = fluid_sfont_get_preset(x->x_sfont, x->x_bank, x->x_pgm);
             if(preset == NULL){
@@ -283,8 +283,10 @@ static void sfont_scale(t_sfont *x, t_symbol *s, int ac, t_atom *av){
     s = NULL;
     int i, div, n1, n_m1;
     double *scale;
-    if(!ac){ // default, equal temperament
+    int length;
+    if(ac <= 1){ // default, equal temperament
         scale = calloc(sizeof(double), 13);
+        length = 13;
         for(i = 0; i < 13; i++){
             scale[i] = i * 100;
             post("def scale[%d] = %d", i, (int)scale[i]);
@@ -292,12 +294,13 @@ static void sfont_scale(t_sfont *x, t_symbol *s, int ac, t_atom *av){
     }
     else{
         scale = calloc(sizeof(double), ac);
+        length = ac-1;
         for(i = 0; i < ac; i++){
             scale[i] = atom_getfloatarg(i, ac, av);
             post("scale[%d] = %d", i, (int)scale[i]);
         }
     }
-    n_m1 = ac-1;
+    n_m1 = length-1;
     n1 = -(int)x->x_base;
     n1 -= (n_m1-1);
     div = n1 / n_m1;
