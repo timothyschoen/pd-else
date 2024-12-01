@@ -13,7 +13,11 @@
 #include <math.h>
 
 #define t_float float
+#if _MSC_VER
+#define t_complex _Fcomplex
+#else
 #define t_complex _Complex t_float
+#endif
 
 #define partial_step_count 127
 #define max_integrals 3
