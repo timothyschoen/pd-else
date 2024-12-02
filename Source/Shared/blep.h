@@ -28,7 +28,7 @@
     #define COMPLEX_ADD(a, b) _FCbuild(crealf(a) + crealf(b), cimagf(a) + cimagf(b))
     #define COMPLEX_SUB(a, b) _FCbuild(crealf(a) - crealf(b), cimagf(a) - cimagf(b))
     #define COMPLEX_MUL(a, b) _FCmulcc(a, b)
-    #define COMPLEX_SCALE(a, b) _Cbuild(crealf(a) * b, cimagf(a) * b)
+    #define COMPLEX_SCALE(a, b) _FCbuild(crealf(a) * b, cimagf(a) * b)
     #define COMPLEX_DIV(a, b) _FCdivcc(a, b)
 #else
     #include <complex.h>
@@ -76,8 +76,8 @@ static void elliptic_blep_coeffs_init (t_elliptic_blep_coeffs *coeffs)
     coeffs->complex_poles[4] = CMPLXF(-1177.6059328793112, 19350.807275259638);
     coeffs->complex_poles[5] = CMPLXF(-351.8405852427604, 20192.24393379015);
 
-    coeffs->real_poles[0] = -20.000000000000025;
-    coeffs->real_poles[1] = -6298.035731484052;
+    coeffs->real_poles[0] = CMPLXF(-20.000000000000025, 0);
+    coeffs->real_poles[1] = CMPLXF(-6298.035731484052, 0);
 
     coeffs->complex_coeffs_direct[0] = CMPLXF(-20.13756830149893,  -11.467013478535181);
     coeffs->complex_coeffs_direct[1] = CMPLXF(-16453.812748230637, -7298.835752208561);
