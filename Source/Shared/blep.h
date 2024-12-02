@@ -24,8 +24,7 @@
 #endif
 
 #if defined(_MSC_VER)
-    #include <complex>
-    #include <intrin.h>
+    #include <complex.h>
     #define COMPLEX_ADD(a, b) _FCbuild(crealf(a) + crealf(b), cimagf(a) + cimagf(b))
     #define COMPLEX_SUB(a, b) _FCbuild(crealf(a) - crealf(b), cimagf(a) - cimagf(b))
     #define COMPLEX_MUL(a, b) _FCmulcc(a, b)
