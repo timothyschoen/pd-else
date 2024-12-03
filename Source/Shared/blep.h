@@ -111,7 +111,7 @@ static void elliptic_blep_add_pole(t_elliptic_blep *blep, size_t index, t_comple
     }
 
     // Set up
-    t_complex blepCoeff = 1.0;
+    t_complex blepCoeff = CMPLXF(1.0, 0.0);
     for (size_t o = 0; o <= max_blep_order; ++o) {
         blep->blep_coeffs[o][index] = blepCoeff;
         blepCoeff = COMPLEX_DIV(blepCoeff, COMPLEX_SCALE(pole, angular_frequency)); // factor from integrating
