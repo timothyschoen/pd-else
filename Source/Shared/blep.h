@@ -28,7 +28,7 @@
     #define COMPLEX_ADD(a, b) _FCbuild(crealf(a) + crealf(b), cimagf(a) + cimagf(b))
     #define COMPLEX_SUB(a, b) _FCbuild(crealf(a) - crealf(b), cimagf(a) - cimagf(b))
     #define COMPLEX_MUL(a, b) _FCmulcc(a, b)
-    #define COMPLEX_SCALE(a, b) _FCbuild(crealf(a) * b, cimagf(a) * b)
+    #define COMPLEX_SCALE(a, b) _FCmulcr(a, b)
     #define COMPLEX_DIV(a, b) _FCdivcc(a, b)
 #else
     #include <complex.h>
