@@ -33,7 +33,7 @@
     {
         double real = (crealf(in1) * crealf(in2) + cimagf(in1) * cimagf(in2)) / (crealf(in2) * crealf(in2) + cimagf(in2) * cimagf(in2));
         double imag = (cimagf(in1) * crealf(in2) - crealf(in1) * cimagf(in2)) / (crealf(in2) * crealf(in2) + cimagf(in2) * cimagf(in2));
-        return CMPLX(real,imag);
+        return CMPLXF(real,imag);
     }
 #else
     #include <complex.h>
