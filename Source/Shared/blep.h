@@ -173,8 +173,7 @@ static void elliptic_blep_add_in_past(t_elliptic_blep *blep, t_float amount, siz
     t_complex *high_poles = blep->partial_step_poles[int_index + 1];
     for (size_t i = 0; i < count; ++i) {
         t_complex lerp_pole = COMPLEX_ADD(low_poles[i], COMPLEX_SCALE(COMPLEX_SUB(high_poles[i], low_poles[i]), frac_index));
-        t_complex am = { amount, 0 };
-        blep->state[i] = COMPLEX_ADD(blep->state[i], COMPLEX_SCALE(bc[i], crealf(COMPLEX_MUL(lerp_pole, am))));
+        blep->state[i] = COMPLEX_ADD(blep->state[i], COMPLEX_MUL(bc[i], COMPLEX_SCALE(lerp_pole, amount)));
     }
 }
 
