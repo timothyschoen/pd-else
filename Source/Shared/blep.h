@@ -29,12 +29,11 @@
     #define COMPLEX_SUB(a, b) _FCbuild(crealf(a) - crealf(b), cimagf(a) - cimagf(b))
     #define COMPLEX_MUL(a, b) _FCmulcc(a, b)
     #define COMPLEX_SCALE(a, b) _FCmulcr(a, b)
-    static t_complex COMPLEX_DIV(t_complex a, t_complex b) {
-        t_complex result;
-        float denominator = b._Val[0] * b._Val[0] + b._Val[1] * b._Val[1];
-        result._Val[0] = (a._Val[0] * b._Val[0] + a._Val[1] * b._Val[1]) / denominator;
-        result._Val[1] = (a._Val[1] * b._Val[0] - a._Val[0] * b._Val[1]) / denominator;
-        return result;
+    static t_complex COMPLEX_DIV(t_complex in1, t_complex in2)
+    {
+        double real = (crealf(in1) * crealf(in2) + cimagf(in1) * cimagf(in2)) / (crealf(in2) * crealf(in2) + cimagf(in2) * cimagf(in2));
+        double imag = (cimagf(in1) * crealf(in2) - crealf(in1) * cimagf(in2)) / (crealf(in2) * crealf(in2) + cimagf(in2) * cimagf(in2));
+        return CMPLX(real,imag);
     }
 #else
     #include <complex.h>
@@ -117,7 +116,7 @@ static void elliptic_blep_add_pole(t_elliptic_blep *blep, size_t index, t_comple
     }
 
     // Set up
-    t_complex blepCoeff = { 1.0 };
+    t_complex blepCoeff = CMPLXF(1.0, 0.0f);
     for (size_t o = 0; o <= max_blep_order; ++o) {
         blep->blep_coeffs[o][index] = blepCoeff;
         blepCoeff = COMPLEX_DIV(blepCoeff, COMPLEX_SCALE(pole, angular_frequency)); // factor from integrating
@@ -133,7 +132,7 @@ static void elliptic_blep_create(t_elliptic_blep *blep, int direct, t_float srat
     // For now, just cast real poles to complex ones
     const t_float *realCoeffs = (direct ? s_plane_coeffs.real_coeffs_direct : s_plane_coeffs.real_coeffs_blep);
     for (size_t i = 0; i < real_count; ++i) {
-        t_complex real = { realCoeffs[i], 0 };
+        t_complex real = CMPLXF(realCoeffs[i], 0);
         elliptic_blep_add_pole(blep, i, s_plane_coeffs.real_poles[i], real, angular_frequency);
     }
     const t_complex *complexCoeffs = (direct ? s_plane_coeffs.complex_coeffs_direct : s_plane_coeffs.complex_coeffs_blep);
