@@ -24,12 +24,22 @@
 #endif
 
 #if defined(_MSC_VER)
+static t_complex complexDiv(t_complex a, t_complex b) {
+    t_complex result;
+    float denominator = b._Val[0] * b._Val[0] + b._Val[1] * b._Val[1];
+
+    result._Val[0] = (a._Val[0] * b._Val[0] + a._Val[1] * b._Val[1]) / denominator;
+    result._Val[1] = (a._Val[1] * b._Val[0] - a._Val[0] * b._Val[1]) / denominator;
+
+    return result;
+}
+
     #include <complex.h>
     #define COMPLEX_ADD(a, b) _FCbuild(crealf(a) + crealf(b), cimagf(a) + cimagf(b))
     #define COMPLEX_SUB(a, b) _FCbuild(crealf(a) - crealf(b), cimagf(a) - cimagf(b))
     #define COMPLEX_MUL(a, b) _FCmulcc(a, b)
-    #define COMPLEX_SCALE(a, b) _FCbuild(crealf(a) * b, cimagf(a) * b)
-    #define COMPLEX_DIV(a, b) _FCdivcc(a, b)
+    #define COMPLEX_SCALE(a, b) _FCbuild(crealf(a) * (b), cimagf(a) * (b))
+    #define COMPLEX_DIV(a, b) complexDiv((a), (b))
 #else
     #include <complex.h>
     #define COMPLEX_ADD(a, b) ((a) + (b))
@@ -107,11 +117,11 @@ static void elliptic_blep_add_pole(t_elliptic_blep *blep, size_t index, t_comple
     // Set up partial powers of the pole (so we can move forward/back by fractional samples)
     for (size_t s = 0; s <= partial_step_count; ++s) {
         t_float partial = ((t_float)s)/partial_step_count;
-        blep->partial_step_poles[s][index] = cexp(COMPLEX_SCALE(pole, partial*angular_frequency));
+        blep->partial_step_poles[s][index] = cexpf(COMPLEX_SCALE(pole, partial*angular_frequency));
     }
 
     // Set up
-    t_complex blepCoeff = 1.0;
+    t_complex blepCoeff = { 1.0 };
     for (size_t o = 0; o <= max_blep_order; ++o) {
         blep->blep_coeffs[o][index] = blepCoeff;
         blepCoeff = COMPLEX_DIV(blepCoeff, COMPLEX_SCALE(pole, angular_frequency)); // factor from integrating
@@ -127,7 +137,8 @@ static void elliptic_blep_create(t_elliptic_blep *blep, int direct, t_float srat
     // For now, just cast real poles to complex ones
     const t_float *realCoeffs = (direct ? s_plane_coeffs.real_coeffs_direct : s_plane_coeffs.real_coeffs_blep);
     for (size_t i = 0; i < real_count; ++i) {
-        elliptic_blep_add_pole(blep, i, s_plane_coeffs.real_poles[i], realCoeffs[i], angular_frequency);
+        t_complex real = { realCoeffs[i], 0 };
+        elliptic_blep_add_pole(blep, i, s_plane_coeffs.real_poles[i], real, angular_frequency);
     }
     const t_complex *complexCoeffs = (direct ? s_plane_coeffs.complex_coeffs_direct : s_plane_coeffs.complex_coeffs_blep);
     for (size_t i = 0; i < complex_count; ++i) {
@@ -138,7 +149,7 @@ static void elliptic_blep_create(t_elliptic_blep *blep, int direct, t_float srat
 static t_float elliptic_blep_get(t_elliptic_blep* blep) {
     t_float sum = 0;
     for (size_t i = 0; i < count; ++i) {
-        sum += creal(blep->state[i]*blep->coeffs[i]);
+        sum += crealf(COMPLEX_MUL(blep->state[i], blep->coeffs[i]));
     }
     return sum;
 }
@@ -148,7 +159,7 @@ static void elliptic_blep_add(t_elliptic_blep *blep, t_float amount, size_t blep
     t_complex* bc = blep->blep_coeffs[blep_order];
     
     for (size_t i = 0; i < count; ++i) {
-        blep->state[i] += COMPLEX_SCALE(bc[i], amount);
+        blep->state[i] = COMPLEX_ADD(blep->state[i], COMPLEX_SCALE(bc[i], amount));
     }
 }
 
@@ -167,7 +178,8 @@ static void elliptic_blep_add_in_past(t_elliptic_blep *blep, t_float amount, siz
     t_complex *high_poles = blep->partial_step_poles[int_index + 1];
     for (size_t i = 0; i < count; ++i) {
         t_complex lerp_pole = COMPLEX_ADD(low_poles[i], COMPLEX_SCALE(COMPLEX_SUB(high_poles[i], low_poles[i]), frac_index));
-        blep->state[i] += COMPLEX_SCALE(bc[i], lerp_pole*amount);
+        t_complex am = { amount, 0 };
+        blep->state[i] = COMPLEX_ADD(blep->state[i], COMPLEX_SCALE(bc[i], crealf(COMPLEX_MUL(lerp_pole, am))));
     }
 }
 
@@ -175,7 +187,7 @@ static void elliptic_blep_step(t_elliptic_blep *blep) {
     t_float sum = 0;
     const t_complex *poles = blep->partial_step_poles[partial_step_count-1];
     for (size_t i = 0; i < count; ++i) {
-        sum += creal(COMPLEX_MUL(blep->state[i], blep->coeffs[i]));
+        sum += crealf(COMPLEX_MUL(blep->state[i], blep->coeffs[i]));
         blep->state[i] = COMPLEX_MUL(blep->state[i], poles[i]);
     }
 }
@@ -194,7 +206,7 @@ static void elliptic_blep_step_samples(t_elliptic_blep *blep, t_float samples) {
 
     for (size_t i = 0; i < count; ++i) {
         t_complex lerp_pole = COMPLEX_ADD(low_poles[i], COMPLEX_SCALE(COMPLEX_SUB(high_poles[i], low_poles[i]), frac_index));
-        blep->state[i] *= lerp_pole;
+        blep->state[i] = COMPLEX_MUL(blep->state[i], lerp_pole);
     }
 }
 
