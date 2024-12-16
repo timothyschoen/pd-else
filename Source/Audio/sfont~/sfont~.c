@@ -283,24 +283,19 @@ static void sfont_scale(t_sfont *x, t_symbol *s, int ac, t_atom *av){
     s = NULL;
     int i, div, n1, n_m1;
     double *scale;
-    int length;
-    if(ac <= 1){ // default, equal temperament
-        scale = calloc(sizeof(double), 13);
-        length = 13;
-        for(i = 0; i < 13; i++){
-            scale[i] = i * 100;
-            post("def scale[%d] = %d", i, (int)scale[i]);
-        }
+    if(!ac){ // default, equal temperament
+        t_atom at[13];
+        for(i = 0; i < 13; i++)
+            SETFLOAT(at+i, i * 100.0);
+        sfont_scale(x, gensym("scale"), 13, at);
+        return;
     }
     else{
         scale = calloc(sizeof(double), ac);
-        length = ac-1;
-        for(i = 0; i < ac; i++){
-            scale[i] = atom_getfloatarg(i, ac, av);
-            post("scale[%d] = %d", i, (int)scale[i]);
-        }
+        for(i = 0; i < ac; i++)
+            scale[i] = (double)atom_getfloatarg(i, ac, av);
     }
-    n_m1 = length-1;
+    n_m1 = ac-1;
     n1 = -(int)x->x_base;
     n1 -= (n_m1-1);
     div = n1 / n_m1;

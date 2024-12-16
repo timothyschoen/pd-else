@@ -91,6 +91,7 @@ file(GLOB extra_files
 set(lua_resources
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/scope3d~.pd_lua
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Control/lua/pd.lua
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Control/lua/pdx.lua
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Control/lua/luadoc/hello.lua
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Control/lua/luadoc/hello.pd_lua
 )
@@ -101,7 +102,7 @@ file(GLOB abstractions ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Audio/*.pd ${CMA
 file(COPY ${pdf_help} ${extra_files} ${help_files} ${abstractions} ${tcl_files} ${lua_resources} DESTINATION ${PD_OUTPUT_PATH})
 file(COPY ${merda_files} DESTINATION ${PD_OUTPUT_PATH})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/sfz~/sfz" DESTINATION ${PD_OUTPUT_PATH})
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH}/Live-Electronics-Tutorial)
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION ${PD_OUTPUT_PATH}/LICENSE)
 file(REMOVE_RECURSE ${PD_OUTPUT_PATH}/audio)
 

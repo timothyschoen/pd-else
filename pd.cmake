@@ -1,3 +1,14 @@
+if(APPLE)
+   set(PD_EXTENSION ".darwin-fat-32.so" CACHE STRING "File extension for pd external")
+elseif(UNIX)
+   if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
+          set(PD_EXTENSION ".l_amd64" CACHE STRING "File extension for pd external")
+   else()
+          set(PD_EXTENSION ".l_arm64" CACHE STRING "File extension for pd external")
+   endif()
+elseif(WIN32)
+   set(PD_EXTENSION ".m_amd64" CACHE STRING "File extension for pd external")
+endif()
 
 # The path to this file.
 set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
@@ -34,19 +45,12 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 	# Includes the path to Pure Data sources.
 	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
 
-	# Defines plateform specifix suffix and the linking necessities.
+	# Defines platform specific suffix and the linking necessities.
 	set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
 	if(APPLE)
 		set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-		set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".d_fat")
-	elseif(UNIX)
-	   if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
-		  set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".l_amd64")
-	   else()
-		  set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".l_arm64")
-	   endif()
 	elseif(WIN32)
-		set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".m_amd64")
 		find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
 		target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 ${PD_LIBRARY})
 	endif()

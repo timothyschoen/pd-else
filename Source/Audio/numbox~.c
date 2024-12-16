@@ -11,9 +11,9 @@
 #define MINSIZE        8
 
 #if __APPLE__
-char def_font[100] = "Menlo";
+static char def_font[100] = "Menlo";
 #else
-char def_font[100] = "DejaVu Sans Mono";
+static char def_font[100] = "DejaVu Sans Mono";
 #endif
 
 typedef struct _numbox{
@@ -66,7 +66,7 @@ char *set_x_buf(t_numbox *x){
             if(x->x_buf[e] == 'e' || x->x_buf[e] == 'E')
                 break;
         if(i >= real_numwidth || e < bufsize)
-            x->x_buf[real_numwidth-1] = '>';
+            x->x_buf[real_numwidth-1] = '|';
         x->x_buf[real_numwidth] = 0;
     }
     return(x->x_buf);
