@@ -78,7 +78,7 @@
 #X text 104 170 PWM;
 #X obj 56 121 else/popmenu 75 26 12 #dfdfdf black \  \$0-set-waveform \$0-waveform empty empty 0 0 -1 1 0 1 0 0 0 0 0 sine tri saw vsaw square;
 #X text 62 102 WAVEFORM:;
-#X obj 141 178 note 55 12 Menlo \$0-set-note-st 0 0 0 0 0 255 255 255 0 1 +02 st;
+#X obj 141 178 note 55 12 Menlo \$0-set-note-st 0 0 0 0 0 255 255 255 0 1 +00 st;
 #X text 97 205 Lin FM, f 3;
 #X coords 0 1 100 -1 161 277 1 50 50;
 #X restore 58 72 graph;
@@ -658,4 +658,4 @@
 #X connect 16 3 19 3;
 #X connect 17 0 16 3;
 #X connect 19 0 1 0;
-#X coords 0 -1 1 1 178 308 2 50 50;
+#X coords 0 -1 1 1 161 277 2 58 72;
