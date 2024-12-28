@@ -10,6 +10,7 @@ sys_gui("\n"
 "\n"
 "array set ::dialog_menu::var_outline {} ;\n"
 "array set ::dialog_menu::var_outmode {} ;\n"
+"\n"
 "array set ::dialog_menu::var_load {} ;\n"
 "array set ::dialog_menu::var_loadbang {} ;\n"
 "array set ::dialog_menu::var_savestate {} ;\n"
@@ -27,10 +28,9 @@ sys_gui("\n"
 "array set ::dialog_menu::var_color_fg {} ;\n"
 "array set ::dialog_menu::var_colorradio {} ;\n" // radio for what color type we're setting
 "\n"
-
+//
 // ------------------------------------------------------------------------------------------------
 // Get parameters from Pd when asking for properties!
-    
 "proc menu_dialog {id \\\n"
 "         width height fontsize \\\n"
 "         outline outmode \\\n"
@@ -44,12 +44,12 @@ sys_gui("\n"
 "    set ::dialog_menu::var_height($vid) $height \n"
 "    set ::dialog_menu::var_fontsize($vid) $fontsize \n"
 "    set ::dialog_menu::var_outline($vid) $outline \n"
-"    set ::dialog_menu::var_outmode($vid) $outmode \n"
+"    set ::dialog_menu::var_outmode($vid) [string map {{\\ } \" \"} $outmode]\n"
 "    set ::dialog_menu::var_load($vid) $load \n"
 "    set ::dialog_menu::var_loadbang($vid) $loadbang \n"
 "    set ::dialog_menu::var_savestate($vid) $savestate \n"
 "    set ::dialog_menu::var_keep($vid) $keep \n"
-"    set ::dialog_menu::var_pos($vid) $pos \n"
+"    set ::dialog_menu::var_pos($vid) [string map {{\\ } \" \"} $pos]\n"
 "\n" // attached symbols
 "    set lbl [::pdtk_text::unescape $lbl]\n"
 "    set rcv [::pdtk_text::unescape $rcv]\n"
@@ -82,27 +82,13 @@ sys_gui("\n"
 "    set ::dialog_menu::var_color_fg($vid) $fg\n"
 "    set ::dialog_menu::var_colorradio($vid) 0\n" // init to 'bg'
 "\n"
-
 // ------------------------------------------------------------------------------------------------
-        
 // HELPER PROCEDURES/FUNCTIONS:
-"proc ::dialog_menu::clip {val min {max {}}} {\n"
-"    if {$min ne {} && $val < $min} {return $min}\n"
-"    if {$max ne {} && $val > $max} {return $max}\n"
-"    return $val\n"
-"}\n"
-"\n"
 //
 "proc ::dialog_menu::applymacos {id} {\n"
 "    if {$::windowingsystem eq \"aqua\"} {\n"
 "        ::dialog_menu::apply $id\n"
 "    }\n"
-"}\n"
-"\n"
-//
-"proc ::dialog_menu::menucheck {option id} {\n"
-"    $id.num.show.mb configure -text $option\n"
-"    ::dialog_menu::applymacos $id\n"
 "}\n"
 "\n"
 //
@@ -115,10 +101,20 @@ sys_gui("\n"
 "    }\n"
 "}\n"
 "\n"
+//
+"proc ::dialog_menu::outmenucheck {option id} {\n"
+"    $id.out.mode.mb configure -text $option\n"
+"    ::dialog_menu::applymacos $id\n"
+"}\n"
+"\n"
+//
+"proc ::dialog_menu::posmenucheck {option id} {\n"
+"    $id.misc.pos.mb configure -text $option\n"
+"    ::dialog_menu::applymacos $id\n"
+"}\n"
+"\n"
 // --------------------------------------------------------------------------------------------
-
 // DRAW PROPERTIES' WINDOW:
-        
 // Initialize creation/drawing of properties window
 "    toplevel $id -class DialogWindow\n"
 "    wm title $id {[popmenu] Properties}\n"
@@ -155,21 +151,31 @@ sys_gui("\n"
 // Frame Outline and Outmode
 "    labelframe $id.out\n"
 "    pack $id.out -side top -fill x\n"
-"    $id.out config -borderwidth 1 -pady 4\n"
-        // Outline Checkbox
+"    $id.out config -borderwidth 1 -pady 4 \n"
+    // Outline Checkbox
 "    frame $id.out.outline\n"
 "    label $id.out.outline.lab -text [_ \"Outline: \"]\n"
 "    checkbutton $id.out.outline.ent -variable ::dialog_menu::var_outline($vid) -width 5\\\n"
 "       -command \"::dialog_menu::applymacos $id\"\n"
 "    pack $id.out.outline.ent $id.out.outline.lab -side right -anchor e\n"
-        // Entry for Outmode
-"    frame $id.out.mode \n"
+        // Dropdown menu for out mode:
+"    frame $id.out.mode\n"
 "    label $id.out.mode.lab -text [_ \"Out mode: \"]\n"
-"    entry $id.out.mode.ent -textvariable ::dialog_menu::var_outmode($vid) -width 6\n"
-"    pack $id.out.mode.ent $id.out.mode.lab -side right -anchor e\n"
+"   menubutton $id.out.mode.mb -text $::dialog_menu::var_outmode($vid) -menu $id.out.mode.mb.menu -width 6\n"
+"   menu $id.out.mode.mb.menu -tearoff 0\n"
+"   $id.out.mode.mb configure -menu $id.out.mode.mb.menu\n"
+        // Add radiobuttons using foreach
+"   set outmodes { Index Item Both }\n"
+"   foreach out_selection $outmodes {\n"
+"       $id.out.mode.mb.menu add radiobutton -label $out_selection \\\n"
+"           -variable ::dialog_menu::var_outmode($vid) -value $out_selection \\\n"
+"           -command \"::dialog_menu::outmenucheck $out_selection $id\"\n"
+"   }\n"
+"    pack $id.out.mode.lab $id.out.mode.mb -side left\n"
         // Position of items
 "    pack $id.out.outline $id.out.mode -side left -anchor center\n"
 "    $id.out config -padx 60\n"
+"\n"
 "\n"
 // Frame for Load settings
 "    labelframe $id.load\n"
@@ -189,7 +195,7 @@ sys_gui("\n"
         // Entry for load value
 "    frame $id.load.load \n"
 "    label $id.load.load.lab -text [_ \"Load Value\"]\n"
-"    entry $id.load.load.ent -textvariable ::dialog_menu::var_load($vid) -width 7 -state normal\n"
+"    entry $id.load.load.ent -textvariable ::dialog_menu::var_load($vid) -width 3 -state normal\n"
 "    pack $id.load.load.ent $id.load.load.lab -side right -anchor e\n"
         // When savestate is selected, disbale load box
 "    if { $::dialog_menu::var_savestate($vid) == 1 } {\n"
@@ -205,15 +211,33 @@ sys_gui("\n"
 "    $id.misc config -borderwidth 1 -pady 4\n"
         // Keep Checkbox
 "    frame $id.misc.keep\n"
-"    label $id.misc.keep.lab -text [_ \"Keep: \"]\n"
+"    label $id.misc.keep.lab -text [_ \"Keep Items: \"]\n"
 "    checkbutton $id.misc.keep.ent -variable ::dialog_menu::var_keep($vid) -width 5\\\n"
 "       -command \"::dialog_menu::applymacos $id\"\n"
 "    pack $id.misc.keep.ent $id.misc.keep.lab -side right -anchor e\n"
-        // Entry for Position
+        
+
+        // Dropdown menu for out mode:
+"    frame $id.misc.pos\n"
+"    label $id.misc.pos.lab -text [_ \"Menu Position: \"]\n"
+"   menubutton $id.misc.pos.mb -text $::dialog_menu::var_pos($vid) -menu $id.misc.pos.mb.menu -width 6\n"
+"   menu $id.misc.pos.mb.menu -tearoff 0\n"
+"   $id.misc.pos.mb configure -menu $id.misc.pos.mb.menu\n"
+        // Add radiobuttons using foreach
+"   set posmodes { Bottom Top Left Right Over }\n"
+"   foreach pos_selection $posmodes {\n"
+"       $id.misc.pos.mb.menu add radiobutton -label $pos_selection \\\n"
+"           -variable ::dialog_menu::var_pos($vid) -value $pos_selection \\\n"
+"           -command \"::dialog_menu::posmenucheck $pos_selection $id\"\n"
+"   }\n"
+"    pack $id.misc.pos.lab $id.misc.pos.mb -side left\n"
+        
+/*        // Entry for Position
 "    frame $id.misc.pos \n"
 "    label $id.misc.pos.lab -text [_ \"Menu Position: \"]\n"
 "    entry $id.misc.pos.ent -textvariable ::dialog_menu::var_pos($vid) -width 6\n"
-"    pack $id.misc.pos.ent $id.misc.pos.lab -side right -anchor e\n"
+"    pack $id.misc.pos.ent $id.misc.pos.lab -side right -anchor e\n" */
+        
         // Position of items
 "    pack $id.misc.keep $id.misc.pos -side left -anchor center\n"
 "    $id.misc config -padx 60\n"
@@ -229,7 +253,7 @@ sys_gui("\n"
 "    pack $id.label.label.ent $id.label.label.lab -side right -anchor e\n"
     // Position of items
 "    pack $id.label.label -side left -anchor center\n"
-"    $id.label config -padx 10\n"
+"    $id.label config -padx 30\n"
 "\n"
 // Frame for attached symbols
 "    labelframe $id.syms -borderwidth 1 -padx 5 -pady 8 -text [_ \"Attached symbols: \"]\n"
@@ -418,42 +442,26 @@ sys_gui("\n"
 // Bind and unbind enter key to Apply button on macOS for entry widgets
 "    if {$::windowingsystem eq \"aqua\"} {\n"
 // call apply on Return in entry boxes that are in focus & rebind Return to ok button
-"        bind $id.load.load.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.out.outline.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-        /*
-"        bind $id.num.size.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.num.xpos.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.num.ypos.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.discrete.steps.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.angle.range.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.angle.offset.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 "        bind $id.dim.width.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.logmode.expmode_entry <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.range.min.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.range.max_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
+"        bind $id.dim.height.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
+"        bind $id.dim.fontsize.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
+"        bind $id.load.load.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
+"        bind $id.label.label.ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.send.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.param.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.var.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.receive.w_ent <KeyPress-Return> \"::dialog_menu::bind_enter_to_apply $id\"\n"
 // unbind Return from ok button when an entry takes focus
-"        $id.load.load.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.out.outline.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.num.size.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.num.xpos.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.num.ypos.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.discrete.steps.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.angle.range.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.angle.offset.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 "        $id.dim.width.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.rng.logmode.expmode_entry config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.rng.range.min.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
-"        $id.rng.range.max_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
+"        $id.dim.height.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
+"        $id.dim.fontsize.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
+"        $id.load.load.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
+"        $id.label.label.ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 "        $id.syms.send.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 "        $id.syms.param.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 "        $id.syms.var.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 "        $id.syms.receive.w_ent config -validate focusin -vcmd \"::dialog_menu::unbind_return $id\"\n"
 // remove cancel button from focus list since it's not activated on Return
-        */
 "        $id.cao.cancel config -takefocus 0\n"
 // show active focus on the ok button as it *is* activated on Return
 "        $id.cao.ok config -default normal\n"

@@ -685,12 +685,25 @@ static void menu_properties(t_gobj *z, t_glist *owner){
     menu_get_rcv(x);
     menu_get_snd(x);
     menu_get_var(x);
+    t_symbol *outmode = gensym("Index");
+    if(x->x_outmode == 1)
+        outmode = gensym("Item");
+    else if(x->x_outmode == 2)
+        outmode = gensym("Both");
+    t_symbol *position = gensym("Bottom");
+    if(x->x_outmode == 1)
+        position = gensym("Top");
+    else if(x->x_outmode == 2)
+        position = gensym("Left");
+    else if(x->x_outmode == 2)
+        position = gensym("Right");
+    else if(x->x_outmode == 2)
+        position = gensym("Over");
     pdgui_stub_vnew(&x->x_obj.ob_pd, "menu_dialog", owner,
-        "ffiiiiiiiisssssss",
-        (float)(x->x_width / x->x_zoom), // ??????
-        (float)(x->x_height / x->x_zoom), // ???????
-        x->x_fontsize, x->x_outline, x->x_outmode,
-        x->x_load, x->x_lb, x->x_savestate, x->x_keep, x->x_pos,
+        "ii iis iiiis sssssss",
+        x->x_width, x->x_height,
+        x->x_fontsize, x->x_outline, outmode->s_name,
+        x->x_load, x->x_lb, x->x_savestate, x->x_keep, position->s_name,
         x->x_label->s_name, x->x_rcv_raw->s_name, x->x_snd_raw->s_name,
         x->x_param->s_name, x->x_var_raw->s_name,
         x->x_bg->s_name, x->x_fg->s_name);
@@ -721,12 +734,12 @@ static void menu_apply(t_menu *x, t_symbol *s, int ac, t_atom *av){
     int height = atom_getintarg(1, ac, av);
     int fontsize = atom_getintarg(2, ac, av);
     x->x_outline = atom_getintarg(3, ac, av);
-    x->x_outmode = atom_getintarg(4, ac, av);
+    t_symbol *outmode = atom_getsymbolarg(4, ac, av);
     x->x_load = atom_getfloatarg(5, ac, av);
     x->x_lb = atom_getintarg(6, ac, av);
     x->x_savestate = atom_getintarg(7, ac, av);
     x->x_keep = atom_getintarg(8, ac, av);
-    x->x_pos = atom_getintarg(9, ac, av);
+    t_symbol *position = atom_getsymbolarg(9, ac, av);
     t_symbol *label = atom_getsymbolarg(10, ac, av);
     t_symbol *rcv = atom_getsymbolarg(11, ac, av);
     t_symbol *snd = atom_getsymbolarg(12, ac, av);
@@ -735,6 +748,22 @@ static void menu_apply(t_menu *x, t_symbol *s, int ac, t_atom *av){
     t_symbol *bg = atom_getsymbolarg(15, ac, av);
     t_symbol *fg = atom_getsymbolarg(16, ac, av);
     menu_config_io(x); // for outline
+    if(outmode == gensym("Index"))
+        x->x_outmode = 0;
+    else if(outmode == gensym("Item"))
+        x->x_outmode = 1;
+    else if(outmode == gensym("Both"))
+        x->x_outmode = 2;
+    int pos = 0;
+    if(position == gensym("Top"))
+        pos = 1;
+    else if(position == gensym("Left"))
+        pos = 2;
+    else if(position == gensym("Right"))
+        pos = 3;
+    else if(position == gensym("Ober"))
+        pos = 4;
+    menu_pos(x, pos);
     menu_width(x, width);
     menu_height(x, height);
     menu_fontsize(x, fontsize);
@@ -918,11 +947,35 @@ static void *menu_new(t_symbol *s, int ac, t_atom *av){
                     else
                         goto errstate;
                 }
-                else if(sym == gensym("-width")){
-                    x->x_width = 1, av++, ac--;
+                if(sym == gensym("-width")){
+                    if(ac >= 2){
+                        x->x_flag = 1, av++, ac--;
+                        if(av->a_type == A_FLOAT){
+                            x->x_width = atom_getint(av);
+                            if(x->x_width < 40)
+                                x->x_fontsize = 40;
+                            av++, ac--;
+                        }
+                        else
+                            goto errstate;
+                    }
+                    else
+                        goto errstate;
                 }
-                else if(sym == gensym("-height")){
-                    x->x_height = 1, av++, ac--;
+                if(sym == gensym("-height")){
+                    if(ac >= 2){
+                        x->x_flag = 1, av++, ac--;
+                        if(av->a_type == A_FLOAT){
+                            x->x_height = atom_getint(av);
+                            if(x->x_height < 25)
+                                x->x_height = 25;
+                            av++, ac--;
+                        }
+                        else
+                            goto errstate;
+                    }
+                    else
+                        goto errstate;
                 }
                 else if(sym == gensym("-bg")){
                     if(ac >= 2){
