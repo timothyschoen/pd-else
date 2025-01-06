@@ -356,6 +356,7 @@ static void messbox_set(t_messbox *x, t_symbol *s, int ac, t_atom *av){
     size_t length;
     sys_vgui("%s configure -state normal\n", x->text_id);
     sys_vgui("%s delete 0.0 end \n", x->text_id);
+    binbuf_clear(x->x_state);
     binbuf_restore(x->x_state, ac, av);
     if(ac){
         int i;
