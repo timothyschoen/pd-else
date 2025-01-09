@@ -12,9 +12,18 @@
 #define FORMAT_LITERAL      1
 #define FORMAT_MINSLOTTYPE  2
 #define FORMAT_INT          2
-#define FORMAT_FLOAT        3
-#define FORMAT_CHAR         4
+#define FORMAT_UINT         3
+#define FORMAT_FLOAT        4
 #define FORMAT_STRING       5
+#define FORMAT_CHARINT      6   // e.g. %hhd
+#define FORMAT_SHORTINT     7   // e.g. %hd
+#define FORMAT_LONGINT64    8   // e.g. %lld
+#define FORMAT_LONGINT      9   // e.g. %ld
+#define FORMAT_UCHAR        10  // e.g. %hhu or %c
+#define FORMAT_USHORT       11  // e.g. %hu
+#define FORMAT_ULONG        12  // e.g. %lu
+#define FORMAT_ULONG64      13  // e.g. %llu
+#define FORMAT_LONGDOUBLE   14  // e.g. %Lf
 
 /* Numbers:  assuming max 62 digits preceding a decimal point in any
    fixed-point representation of a t_float (39 in my system)
@@ -28,7 +37,7 @@
 #define FORMAT_MAXWIDTH      256
 
 typedef struct _format{
-    t_object  x_ob;
+    t_object  x_obj;
     int       x_nslots;
     int       x_nproxies;  /* as requested (and allocated) */
     t_pd    **x_proxies;
@@ -38,7 +47,7 @@ typedef struct _format{
 }t_format;
 
 typedef struct _format_proxy{
-    t_object    p_ob;
+    t_object    p_obj;
     t_format  *p_master;
     int         p_id;
     int         p_type;  /* a value #defined above */
@@ -51,7 +60,6 @@ typedef struct _format_proxy{
 
 static t_class *format_class, *format_proxy_class;
 
-/* LATER use snprintf, if it is available on other systems (should be...) */
 static void format_proxy_checkit(t_format_proxy *x, char *buf){
     int result = 0, valid = 0;
     char *pattend = x->p_pattend;
@@ -62,15 +70,29 @@ static void format_proxy_checkit(t_format_proxy *x, char *buf){
             t_float f = x->p_atom.a_w.w_float;
             if(x->p_type == FORMAT_INT)
             /* CHECKME large/negative values */
-                result = sprintf(buf, x->p_pattern, (long)f);
-            else if(x->p_type == FORMAT_FLOAT)
-                result = sprintf(buf, x->p_pattern, f);
-            else if(x->p_type == FORMAT_CHAR)
-            /* CHECKED: if 0 is input into a %c-slot, the whole output
-		   string is null-terminated */
-            /* CHECKED: float into a %c-slot is truncated,
-		   but CHECKME large/negative values */
+                result = sprintf(buf, x->p_pattern, (signed int)f);
+            else if(x->p_type == FORMAT_CHARINT)
+                result = sprintf(buf, x->p_pattern, (signed char)f);
+            else if(x->p_type == FORMAT_SHORTINT)
+                result = sprintf(buf, x->p_pattern, (signed short)f);
+            else if(x->p_type == FORMAT_LONGINT)
+                result = sprintf(buf, x->p_pattern, (signed long)f);
+            else if(x->p_type == FORMAT_LONGINT64)
+                result = sprintf(buf, x->p_pattern, (signed long long)f);
+            else if(x->p_type == FORMAT_UINT)
+                result = sprintf(buf, x->p_pattern, (unsigned int)f);
+            else if(x->p_type == FORMAT_UCHAR)
                 result = sprintf(buf, x->p_pattern, (unsigned char)f);
+            else if(x->p_type == FORMAT_USHORT)
+                result = sprintf(buf, x->p_pattern, (unsigned short)f);
+            else if(x->p_type == FORMAT_ULONG)
+                result = sprintf(buf, x->p_pattern, (unsigned long)f);
+            else if(x->p_type == FORMAT_ULONG64)
+                result = sprintf(buf, x->p_pattern, (unsigned long long)f);
+            else if(x->p_type == FORMAT_FLOAT)
+                result = sprintf(buf, x->p_pattern, (double)f);
+            else if(x->p_type == FORMAT_LONGDOUBLE)
+                result = sprintf(buf, x->p_pattern, (long double)f);
             else if(x->p_type == FORMAT_STRING){
                 /* CHECKED: any number input into a %s-slot is ok */
                 char temp[64];  /* LATER rethink */
@@ -78,7 +100,7 @@ static void format_proxy_checkit(t_format_proxy *x, char *buf){
                 result = sprintf(buf, x->p_pattern, temp);
             }
             else
-                pd_error(x, "[format]: can't convert float to type of argument %d", x->p_id + 1);
+                pd_error(x, "[format]: can't convert float");
             if(result > 0)
                 valid = 1;
         }
@@ -96,7 +118,7 @@ static void format_proxy_checkit(t_format_proxy *x, char *buf){
                     valid = 1;
             }
             else
-                pd_error(x, "[format]: can't convert symbol to type of argument %d", x->p_id + 1);
+                pd_error(x, "[format]: can't convert symbol");
         }
         *pattend = tmp;
     }
@@ -108,9 +130,10 @@ static void format_proxy_checkit(t_format_proxy *x, char *buf){
         x->p_size = 0;
 }
 
-static void format_dooutput(t_format *x){
+static t_symbol* format_getsymbol(t_format *x){
     int i, outsize;
     char *outstring;
+    t_symbol *sym = NULL;
     outsize = x->x_fsize;  /* this is strlen() + 1 */
     /* LATER consider subtracting format pattern sizes */
     for(i = 0; i < x->x_nslots; i++){
@@ -119,8 +142,8 @@ static void format_dooutput(t_format *x){
             outsize += y->p_size;
         else{
             /* slot i has received an invalid input -- CHECKME if this
-	       condition blocks all subsequent output requests? */
-            return;
+               condition blocks all subsequent output requests? */
+            return(NULL);
         }
     }
     if(outsize > 0 && (outstring = getbytes(outsize))){
@@ -138,18 +161,49 @@ static void format_dooutput(t_format *x){
             inp = y->p_pattend;
         }
         strcpy(outp, inp);
-        outp = outstring;
-        outlet_symbol(((t_object *) x)->ob_outlet, gensym(outstring));
+
+        // Remove backslashes and handle escape sequences
+        char *final_outp = outstring;
+        char *temp_outp = outstring;
+        while(*final_outp){
+            if(*final_outp == '\\'){
+                // Count consecutive backslashes
+                int backslash_count = 0;
+                while(final_outp[backslash_count] == '\\')
+                    backslash_count++;
+                // Copy half of the backslashes (integer division)
+                int to_copy = backslash_count / 2;
+                for (int j = 0; j < to_copy; j++)
+                    *temp_outp++ = '\\';
+                // Skip all the backslashes we've already processed
+                final_outp += backslash_count;
+            }
+            else
+                *temp_outp++ = *final_outp++;
+        }
+        *temp_outp = '\0';  // Null-terminate the final string
+
+        // Get the modified string
+        sym = gensym(outstring);
         freebytes(outstring, outsize);
+        return(sym);
     }
+    else
+        return(NULL);
+}
+
+static void format_dooutput(t_format *x){
+    t_symbol *outsym = format_getsymbol(x);
+    if(outsym != NULL)
+        outlet_symbol(x->x_obj.ob_outlet, outsym);
 }
 
 static void format_proxy_float(t_format_proxy *x, t_float f){
-    char buf[FORMAT_MAXWIDTH + 1];  /* LATER rethink */
+    char buf[FORMAT_MAXWIDTH + 1];
     SETFLOAT(&x->p_atom, f);
     format_proxy_checkit(x, buf);
     if(x->p_id == 0 && x->p_valid)
-	format_dooutput(x->p_master);  /* CHECKED: only first inlet */
+        format_dooutput(x->p_master); // only first inlet
 }
 
 static void format_proxy_symbol(t_format_proxy *x, t_symbol *s){
@@ -157,7 +211,7 @@ static void format_proxy_symbol(t_format_proxy *x, t_symbol *s){
     SETSYMBOL(&x->p_atom, s);
     format_proxy_checkit(x, buf);
     if(x->p_id == 0 && x->p_valid)
-	format_dooutput(x->p_master);  /* CHECKED: only first inlet */
+        format_dooutput(x->p_master); // only first inlet
 }
 
 static void format_dolist(t_format *x, t_symbol *s, int ac, t_atom *av, int startid){
@@ -226,6 +280,9 @@ static int format_parsepattern(t_format *x, char **patternp){
     char errstring[MAXPDSTRING];
     char *ptr;
     char modifier = 0;
+    int hmodifier = 0;
+    int lmodifier = 0;
+    int Lmodifier = 0;
     int width = 0;
     int precision = 0;
     int *numfield = &width;
@@ -234,55 +291,92 @@ static int format_parsepattern(t_format *x, char **patternp){
     for(ptr = *patternp; *ptr; ptr++){
         if(*ptr >= '0' && *ptr <= '9'){
             if(!numfield){
-                if(x) sprintf(errstring, "extra number field");
-                    break;
+                if(x)
+                    sprintf(errstring, "extra number field");
+                break;
             }
             *numfield = 10 * *numfield + *ptr - '0';
             if(dotseen){
                 if(precision > FORMAT_MAXPRECISION){
-                    if(x) sprintf(errstring, "precision field too large");
-                        break;
+                    if(x)
+                        sprintf(errstring, "precision field too large");
+                    break;
                 }
             }
             else{
                 if(width > FORMAT_MAXWIDTH){
-                    if(x) sprintf(errstring, "width field too large");
-                        break;
+                    if(x)
+                        sprintf(errstring, "width field too large");
+                    break;
                 }
             }
             continue;
         }
         if(*numfield)
             numfield = 0;
-        if(strchr("diouxX", *ptr)){
-            type = FORMAT_INT;
+        if(strchr("di", *ptr)){
+            if(!hmodifier && !lmodifier)
+                type = FORMAT_INT;
+            else if(hmodifier == 1)
+                type = FORMAT_SHORTINT;
+            else if(hmodifier == 2)
+                type = FORMAT_CHARINT;
+            else if(lmodifier == 1)
+                type = FORMAT_LONGINT;
+            else if(lmodifier == 2)
+                type = FORMAT_LONGINT64;
+            else if(modifier){
+                if(x)
+                    sprintf(errstring, "\'%c\' modifier not supported", modifier);
+            }
+            break;
+        }
+        else if(strchr("ouxX", *ptr)){
+            if(!hmodifier && !lmodifier)
+                type = FORMAT_UINT;
+            else if(hmodifier == 1)
+                type = FORMAT_USHORT;
+            else if(hmodifier == 2)
+                type = FORMAT_UCHAR;
+            else if(lmodifier == 1)
+                type = FORMAT_ULONG;
+            else if(lmodifier == 2)
+                type = FORMAT_ULONG64;
+            else if(modifier){
+                if(x)
+                    sprintf(errstring, "\'%c\' modifier not supported", modifier);
+            }
             break;
         }
         else if(strchr("eEfFgGaA", *ptr)){
-/*            if(modifier)
-                {
-                if(x) sprintf(errstring, "\'%c\' modifier not supported", modifier);
-                    break;
-                }*/
-            type = FORMAT_FLOAT;
+            if(!Lmodifier)
+                type = FORMAT_FLOAT;
+            else if(Lmodifier)
+                type = FORMAT_LONGDOUBLE;
+            else if(modifier){
+                if(x)
+                    sprintf(errstring, "\'%c\' modifier not supported", modifier);
+            }
             break;
         }
         else if(strchr("c", *ptr)){
             if(modifier){
-                if(x) sprintf(errstring, "\'%c\' modifier not supported", modifier);
-                    break;
+                if(x)
+                    sprintf(errstring, "\'%c\' modifier not supported", modifier);
+                break;
             }
-            type = FORMAT_CHAR;
+            type = FORMAT_UCHAR;
             break;
         }
         else if(strchr("s", *ptr)){
             if(modifier){
-                if(x) sprintf(errstring, "\'%c\' modifier not supported", modifier);
-                    break;
+                if(x)
+                    sprintf(errstring, "\'%c\' modifier not supported", modifier);
+                break;
             }
             type = FORMAT_STRING;
             break;
-            }
+        }
         else if(*ptr == '%'){
             type = FORMAT_LITERAL;
             if(x){  // buffer-shrinking hack at the 2nd run
@@ -299,11 +393,11 @@ static int format_parsepattern(t_format *x, char **patternp){
                 char *p1 = ptr;       // Points to the backslash
                 char *p2 = ptr + 1;   // Points to the next character (e.g., the space)
                 
-                if (*p2 != '\0') {    // Ensure there's a character after the backslash
+                if(*p2 != '\0'){    // Ensure there's a character after the backslash
                     // Shift everything left, overwriting the backslash
-                    do {
+                    do{
                         *p1++ = *p2++;
-                    } while (*p2);
+                    }while(*p2);
                     *p1 = '\0';  // Null-terminate the string
                 }
                 // Adjust the pointer so that the current position is correctly processed
@@ -311,67 +405,97 @@ static int format_parsepattern(t_format *x, char **patternp){
             }
         }
         else if(strchr("CSnm", *ptr)){
-            if(x) sprintf(errstring, "\'%c\' type not supported", *ptr);
-                break;
+            if(x)
+                sprintf(errstring, "\'%c\' type not supported", *ptr);
+            break;
         }
         else if(strchr("l", *ptr)){
-            if(modifier){
-                if(x) sprintf(errstring, "only single modifier is supported");
-                    break;
+            if(modifier == 0){
+                modifier = *ptr;
+                lmodifier++;
             }
-            modifier = *ptr;
-        }
-/* added this for new formats but it did not work (porres)
-        else if(strchr("L", *ptr)){
-                if(modifier){
+            else if(modifier != 'l' || lmodifier >= 2){
                 if(x)
-                    sprintf(errstring, "only single modifier is supported");
+                    sprintf(errstring, "too many modifiers");
                 break;
             }
-            modifier = *ptr;
-        }*/
+            else{
+                modifier = *ptr;
+                lmodifier++;
+            }
+        }
         else if(strchr("h", *ptr)){
+            if(modifier == 0){
+                modifier = *ptr;
+                hmodifier++;
+            }
+            else if(modifier != 'h' || hmodifier >= 2){
+                if(x)
+                    sprintf(errstring, "too many modifiers");
+                break;
+            }
+            else{
+                modifier = *ptr;
+                hmodifier++;
+            }
+        }
+        else if(strchr("L", *ptr)){
+            Lmodifier++;
             if(modifier){
-                if(x) sprintf(errstring, "only single modifier is supported");
+                if(x)
+                    sprintf(errstring, "too many modifiers");
                 break;
             }
             modifier = *ptr;
         }
-        else if(strchr("hjLqtzZ", *ptr)){
-            if(x) sprintf(errstring, "\'%c\' modifier not supported", *ptr);
-                break;
+        else if(strchr("jqtzZ", *ptr)){
+            if(x)
+                sprintf(errstring, "\'%c\' modifier not supported", *ptr);
+            break;
         }
         else if(*ptr == '.'){
             if(dotseen){
-                if(x) sprintf(errstring, "multiple dots");
-                    break;
+                if(x)
+                    sprintf(errstring, "multiple dots");
+                break;
             }
             numfield = &precision;
             dotseen = 1;
         }
         else if(*ptr == '$'){
-            if(x) sprintf(errstring, "parameter number field not supported");
-                break;
+            if(x)
+                sprintf(errstring, "parameter number field not supported");
+            break;
         }
         else if(*ptr == '*'){
-            if(x) sprintf(errstring, "%s parameter not supported", (dotseen ? "precision" : "width"));
-                break;
+            if(x)
+                sprintf(errstring, "%s parameter not supported", (dotseen ? "precision" : "width"));
+            break;
         }
-        else if(!strchr("-+ #\'", *ptr)){ // accepted flags
-            if(x) sprintf(errstring, "\'%c\' format character not supported", *ptr);
+        else if(strchr("-+ #", *ptr)){ // accepted flags
+            if(dotseen){
+                sprintf(errstring, "parameters out of order, flags come before precision field");
                 break;
+            }
+            else
+                continue;
+        }
+        else{
+            if(x)
+                sprintf(errstring, "\'%c\' format character not supported", *ptr);
+            break;
         }
     }
     if(*ptr)
         ptr++;  // LATER rethink
-    else
-        if(x) sprintf(errstring, "type not specified");
-            if(x && type == FORMAT_UNSUPPORTED){
-                if(*errstring)
-                    pd_error(x, "[format]: slot skipped (%s %s)", errstring, "in a format pattern");
-                else
-                    pd_error(x, "[format]: slot skipped");
-            }
+    else if(x)
+        sprintf(errstring, "type not specified");
+    if(x && type == FORMAT_UNSUPPORTED){
+        if(*errstring)
+            pd_error(x, "[format]: slot skipped (%s %s)", errstring, "in a format pattern");
+        else
+            pd_error(x, "[format]: slot skipped");
+    }
     *patternp = ptr;
     return(type);
 }
@@ -399,7 +523,7 @@ static char *format_gettext(int ac, t_atom *av, int *sizep){
             size--;
         atom_string(av, atomtext, MAXPDSTRING);
         newsize = size + strlen(atomtext) + 1;
-        if (!(newbuf = resizebytes(buf, size, newsize))){
+        if(!(newbuf = resizebytes(buf, size, newsize))){
             *sizep = 1;
             return (getbytes(1));
         }
