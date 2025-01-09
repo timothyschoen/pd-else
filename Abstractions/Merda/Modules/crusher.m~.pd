@@ -123,4 +123,4 @@
 #X connect 10 0 15 1;
 #X connect 10 1 15 2;
 #X connect 15 0 2 0;
-#X coords 0 1 100 -1 162 160 2 350 125;
+#X coords 0 1 100 -1 144 121 2 358 150;

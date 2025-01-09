@@ -270,4 +270,4 @@
 #X connect 22 0 23 4;
 #X connect 23 0 1 0;
 #X connect 24 0 12 0;
-#X coords 0 -1 1 1 165 286 2 50 50;
+#X coords 0 -1 1 1 147 253 2 59 72;

@@ -27,7 +27,7 @@
 #X restore 318 104 pd set;
 #X obj 29 45 inlet~;
 #X obj 29 431 outlet~;
-#N canvas 517 59 711 437 preset 0;
+#N canvas 517 59 711 437 preset 1;
 #X obj 125 121 else/sender 1 \\\$0-presets;
 #X msg 125 86 name \$1;
 #X obj 90 171 else/receiver;
@@ -124,4 +124,4 @@
 #X connect 17 0 15 0;
 #X connect 18 0 16 1;
 #X connect 18 1 17 1;
-#X coords 0 1 100 -1 159 250 2 275 150;
+#X coords 0 1 100 -1 139 212 2 284 176;
