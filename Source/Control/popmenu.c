@@ -453,8 +453,8 @@ static void menu_set(t_menu* x, t_floatarg f){
         sys_vgui("%s entryconfigure %d -variable %s -value \"option_%d\" \n",
             x->x_tag_menu, x->x_idx, x->x_tag_menu_sel, x->x_idx);
     }
-    pdgui_vmess(0, "rr rs", x->x_tag_mb, "configure",
-        "-text", x->x_idx == -1 ? x->x_label->s_name : x->x_items[x->x_idx]->s_name);
+    //pdgui_vmess(0, "rr rs", x->x_tag_mb, "configure",
+    //    "-text", x->x_idx == -1 ? x->x_label->s_name : x->x_items[x->x_idx]->s_name);
 }
 
 static void menu_float(t_menu* x, t_floatarg f){
