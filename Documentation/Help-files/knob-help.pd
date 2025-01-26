@@ -1,4 +1,4 @@
-#N canvas 479 33 564 824 10;
+#N canvas 479 38 564 824 10;
 #X obj 2 4 cnv 15 301 42 empty empty knob 20 20 2 37 #e0e0e0 #000000 0;
 #N canvas 0 22 450 278 (subpatch) 0;
 #X coords 0 1 100 -1 302 42 1;
@@ -31,7 +31,7 @@
 #X msg 327 86 exp \$1;
 #X floatatom 327 59 5 0 0 0 - - - 0;
 #X obj 327 31 else/initmess 4;
-#X obj 588 448 else/knob 110 110 1760 1 440 empty empty #202020 #bbbbbb #00faff 0 0 0 0 1 320 0 0 110 empty empty 0 0 0 0 0 0 0 0;
+#X obj 588 448 else/knob 110 110 1760 1 440 empty empty #202020 #bbbbbb #00faff 0 0 0 0 1 320 0 0 440 empty empty 0 8 0 0 0 0 0 0;
 #X floatatom 588 582 11 0 0 0 - - - 12;
 #X obj 162 128 tgl 19 0 empty empty empty 0 -8 0 10 #dfdfdf #000000 #000000 0 1;
 #X text 181 284 0;
@@ -51,6 +51,7 @@
 #X obj 588 367 tgl 22 0 empty empty empty 0 -8 0 10 #dfdfdf #000000 #000000 0 1;
 #X obj 380 60 else/midi.learn;
 #A saved;
+#A saved;
 #X text 656 97 <-- see also;
 #X obj 155 487 else/knob 125 1 10 0 1 empty empty #7c7c7c #000000 #b3dfde 1 1 11 1 1 320 90 0 1 empty empty 0 8 0 0 0 0 1 0;
 #X msg 155 458 offset \$1;
@@ -67,7 +68,6 @@
 #X msg 647 416 jump \$1;
 #X obj 647 375 tgl 22 0 empty empty empty 0 -8 0 10 #dfdfdf #000000 #000000 0 1;
 #X text 677 376 <- jump on click, f 9;
-#X text 347 485 You can see that how when the knob reaches the mid point of the knob you have '440' as the mid value between 110 and 1760! You can also alt+click to go directly to this mid value. Other usages include a frequency or gain multiplier \, from 0.5 to 2 for instance \, where 1 is the mid point., f 33;
 #X obj 162 103 loadbang;
 #X obj 93 128 tgl 19 0 empty empty empty 0 -8 0 10 #dfdfdf #000000 #000000 0 1;
 #X msg 93 156 ticks \$1;
@@ -75,12 +75,13 @@
 #X text 40 324 Besides the angular range \, you can also set an angle offset to shift the start position. The example below is similar to the above \, but the shift is 90 degrees the motion is circular \, there is an arc and we have an outline. Additionally \, note that there's a canvas in the background so you can set yet a 4th color in the scheme., f 41;
 #X text 32 16 You can set to discrete mode with a number of steps and also show tick marks for them as below (where we have 11 steps from 0 to 10 and the numbers are comments). Note that \, when displayed \, the first and last ticks are a bit thicker and wider., f 44;
 #X text 453 235 You can also set to linear via the properties window., f 48;
+#X text 347 485 You can see that how when the knob reaches the mid point of the knob you have '440' as the mid value between 110 and 1760! You can also double click to go directly to this mid value. Other usages include a frequency or gain multiplier \, from 0.5 to 2 for instance \, where 1 is the mid point., f 33;
 #X connect 0 0 2 0;
 #X connect 3 0 0 0;
 #X connect 4 0 3 0;
 #X connect 5 0 4 0;
 #X connect 6 0 7 0;
-#X connect 8 0 45 0;
+#X connect 8 0 44 0;
 #X connect 21 0 0 0;
 #X connect 22 0 6 0;
 #X connect 23 0 22 0;
@@ -90,11 +91,11 @@
 #X connect 31 0 23 0;
 #X connect 38 0 6 0;
 #X connect 39 0 38 0;
-#X connect 42 0 8 0;
+#X connect 41 0 8 0;
+#X connect 41 0 42 0;
 #X connect 42 0 43 0;
-#X connect 43 0 44 0;
+#X connect 43 0 20 0;
 #X connect 44 0 20 0;
-#X connect 45 0 20 0;
 #X restore 457 123 pd +parameters;
 #X floatatom 197 117 7 0 0 0 - - - 12;
 #X text 161 690 float;
@@ -177,6 +178,7 @@
 #X obj 397 212 r \$0-knob2;
 #X obj 565 147 r \$0-knob2-learn;
 #X obj 565 249 else/midi.learn;
+#A saved;
 #A saved;
 #X msg 484 147 learn;
 #X obj 635 220 bng 21 250 50 0 empty empty empty 0 -12 0 16 #dfdfdf #000000 #000000;
@@ -277,12 +279,12 @@
 #X msg 136 181 arcstart 90;
 #X msg 143 200 arcstart;
 #X msg 221 201 reset;
-#X text 29 373 The 'arcstart' value is where the arc starts \, just 'arcstart' sets the current value as the start value. double clicking on the object restores to the 'arcstart' value \, so does the 'reset' message., f 65;
-#X text 336 281 double click to restore to arc start state (same as 'reset'), f 12;
 #X text 29 423 The 'load' message sets the initial value for when the object is loaded. A 'load' message without float saves the current value as the load value. In 'savestate' mode \, when you save the patch \, the current knob's value becomes the 'load' value. Note that the [savestate] object is needed if you use [knob] in an abstraction. In 'loadbang' mode (default) \, the load value is output at load time., f 65;
 #X msg 342 249 lb 0;
 #X text 380 249 no loadbang;
 #X text 435 93 by default \, the knob has an outter square area \, with the same background color. There's a second mode without the square or any outline \, in which the knob circle increases in size. Use the "square 0" message or the '-nosquare' flag to change the display mode. You can also set it via properties. When you don't have the square \, note that when you are in edit mode the [knob] shows just a square outline around as to indicate you're in edit mode and where you can connect the object. Inlets and outlets are hidden in run mode but also appear in edit mode., f 55;
+#X text 336 281 double click or alt+click to restore to arc start state (same as 'reset'), f 12;
+#X text 29 373 The 'arcstart' value is where the arc starts \, just 'arcstart' sets the current value as the start value. double clicking or alt+clicking on the object restores to the 'arcstart' value \, so does the 'reset' message., f 65;
 #X connect 1 0 18 0;
 #X connect 2 0 18 0;
 #X connect 3 0 18 0;
@@ -315,7 +317,7 @@
 #X connect 37 0 18 0;
 #X connect 38 0 18 0;
 #X connect 39 0 19 0;
-#X connect 43 0 19 0;
+#X connect 41 0 19 0;
 #X restore 493 55 pd basic;
 #X text 200 323 -;
 #X text 105 348 numbersize <f>;

@@ -1451,7 +1451,6 @@ static int knob_click(t_gobj *z, struct _glist *glist, int xpix, int ypix, int s
     if(x->x_readonly)
         return(0);
     x->x_shift = shift;
-    x->x_ignore_int = alt;
     if(x->x_ctrl && doit){
         if(x->x_shift)
             knob_forget(x);
@@ -1459,7 +1458,7 @@ static int knob_click(t_gobj *z, struct _glist *glist, int xpix, int ypix, int s
             knob_learn(x);
         return(1);
     }
-    else if(dbl){
+    else if(alt || dbl){
         knob_set(x, x->x_arcstart);
         knob_bang(x);
         return(1);
