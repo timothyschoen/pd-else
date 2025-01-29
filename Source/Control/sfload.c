@@ -37,7 +37,6 @@ void* sfload_read_audio(void *arg){ // read audio into array
     x->x_ic = avformat_alloc_context();
     x->x_ic->probesize = 128;
     x->x_ic->max_probe_packets = 1;
-    int problem = avformat_open_input(&x->x_ic, x->x_path, NULL, NULL);
     if(avformat_open_input(&x->x_ic, x->x_path, NULL, NULL) != 0){
         pd_error(x, "[sfload]: Could not open file '%s'\n", x->x_path);
         return (NULL);
