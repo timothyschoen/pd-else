@@ -49,10 +49,10 @@ fi
 cd "$FFMPEG_DIR"
 ./configure --disable-asm --disable-libxcb --disable-bzlib --disable-lzma --disable-sdl2 --disable-securetransport --disable-libdrm --disable-vaapi --enable-static --disable-shared --enable-optimizations --disable-debug --disable-doc \
             --disable-programs --disable-iconv --disable-avdevice --disable-postproc --disable-network \
-            --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
+            --disable-everything --enable-avcodec --enable-avformat --enable-avutil --enable-swscale \
             --enable-swresample --enable-decoder=mp3*,pcm*,aac*,flac,vorbis,opus --enable-parser=mpegaudio,aac \
             --enable-demuxer=mp3,wav,aiff,flac,aac,ogg,pcm* --enable-filter=aresample --enable-protocol=file \
-            --disable-everything --enable-demuxer=avi --enable-demuxer=mov --enable-demuxer=mp3 \
+            --enable-demuxer=avi --enable-demuxer=mov --enable-demuxer=mp3 \
             --enable-demuxer=flv --enable-demuxer=asf --enable-muxer=avi --enable-muxer=mov --enable-muxer=mp4 \
             --enable-muxer=flv --enable-muxer=asf --enable-decoder=mp3 --enable-decoder=aac --enable-decoder=h264 \
             --enable-decoder=mpeg4 --enable-decoder=mpeg1video --enable-decoder=mpeg2video --enable-decoder=mjpeg --enable-encoder=aac --enable-encoder=mpeg4 \
