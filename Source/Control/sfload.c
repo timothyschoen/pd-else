@@ -10,8 +10,9 @@
 
 static t_class *sfload_class;
 
-typedef struct _sfload{
+typedef struct _sfload {
     t_object        x_obj;
+    t_outlet       *x_info_outlet;
     AVCodecContext *x_stream_ctx;
     int            x_stream_idx;
     AVPacket       *x_pkt;
@@ -28,6 +29,7 @@ typedef struct _sfload{
     _Atomic int     x_result_ready;
     t_clock        *x_result_clock;
     char            x_path[MAXPDSTRING];
+    t_atom          x_sfinfo[6];
 }t_sfload;
 
 void* sfload_read_audio(void *arg){ // read audio into array
@@ -35,6 +37,7 @@ void* sfload_read_audio(void *arg){ // read audio into array
     x->x_ic = avformat_alloc_context();
     x->x_ic->probesize = 128;
     x->x_ic->max_probe_packets = 1;
+    int problem = avformat_open_input(&x->x_ic, x->x_path, NULL, NULL);
     if(avformat_open_input(&x->x_ic, x->x_path, NULL, NULL) != 0){
         pd_error(x, "[sfload]: Could not open file '%s'\n", x->x_path);
         return (NULL);
@@ -86,6 +89,10 @@ void* sfload_read_audio(void *arg){ // read audio into array
         pd_error(x, "[sfload]: Could not initialize the resampling context\n");
         return (NULL);
     }
+
+    AVDictionaryEntry *loop_start_entry = av_dict_get(x->x_ic->metadata, "loop_start", NULL, 0);
+    AVDictionaryEntry *loop_end_entry = av_dict_get(x->x_ic->metadata, "loop_end", NULL, 0);
+
     t_sample* x_out = (t_sample*)av_mallocz(nch * FRAMES * sizeof(t_sample));
     int output_index = 0;
     while(av_read_frame(x->x_ic, x->x_pkt) >= 0) {
@@ -112,6 +119,14 @@ void* sfload_read_audio(void *arg){ // read audio into array
         }
         av_packet_unref(x->x_pkt);
     }
+
+    SETFLOAT(x->x_sfinfo, x->x_stream_ctx->sample_rate);
+    SETFLOAT(x->x_sfinfo + 1, nch);
+    SETFLOAT(x->x_sfinfo + 2, av_get_bytes_per_sample(x->x_stream_ctx->sample_fmt) * 8);
+    SETFLOAT(x->x_sfinfo + 3, output_index);
+    SETFLOAT(x->x_sfinfo + 4, loop_start_entry ? atoi(loop_start_entry->value) : 0);
+    SETFLOAT(x->x_sfinfo + 5, loop_end_entry ? atoi(loop_end_entry->value) : 0);
+
     x->x_result_ready = output_index;
     av_free(x_out);
     return (NULL);
@@ -128,6 +143,7 @@ void sfload_check_done(t_sfload* x){ // result clock
         x->x_result_ready = 0;
         free(x->x_all_out);
         x->x_all_out = NULL;
+        outlet_list(x->x_info_outlet, &s_, 6, x->x_sfinfo);
     }
     else
         clock_delay(x->x_result_clock, 20);
@@ -141,8 +157,9 @@ static void sfload_find_file(t_sfload *x, t_symbol* file, char* dir_out){
         post("[sfload] file '%s' not found", file->s_name);
         return;
     }
-    else{
-        memcpy(dir_out, fname, strlen(bufptr) + 1);
+    else {
+        if(bufptr > fname) bufptr[-1] = '/';
+        strcpy(dir_out, fname);
     }
 }
 
@@ -207,6 +224,7 @@ static void *sfload_new(t_symbol *s, int ac, t_atom *av){
     x->x_result_ready = 0;
     x->x_thread_created = 0;
     x->x_result_clock = clock_new(x, (t_method)sfload_check_done);
+    x->x_info_outlet = outlet_new(x, &s_list);
     return(x);
 }
 
