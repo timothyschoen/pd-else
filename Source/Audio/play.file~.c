@@ -174,6 +174,7 @@ static err_t playfile_load(t_playfile *x, int index) {
         strcpy(url, fname);
     else{
         strcpy(url, x->x_plist.dir->s_name);
+        strcat(url, "/");
         strcat(url, fname);
     }
     if(!x->x_ic || !x->x_ic->url || strncmp(x->x_ic->url, url, MAXPDSTRING) != 0) {
@@ -229,26 +230,32 @@ static void playfile_start(t_playfile *x, t_float f, t_float ms){
     x->x_play = !err_msg;
 }
 
-/*static t_symbol* playfile_doopen(t_playfile *x, t_symbol *file){
-    char path[MAXPDSTRING], *fn;
-    int fd = canvas_open(x->x_cv, file->s_name, "", path, &fn, MAXPDSTRING, 1);
-    if(fd >= 0){
-        sys_close(fd);
-        if(fn > path)
-            fn[-1] = '/';
-        return(gensym(path));
-    }
-    else
-        return(file);
-}*/
+static int playfile_is_network_protocol(const char *filename) {
+    const char *protocols[] = { "http://", "https://", "tcp://", "ftp://", "sftp://", "rtsp://", "rtmp://", "udp://", "data://", "gopher://", "ws://", "wss://" };
+    size_t num_protocols = sizeof(protocols) / sizeof(protocols[0]);
 
-static void playfile_find_file(t_playfile *x, t_symbol* file, char* dir_out, char* filename_out){
-    const char *filename = file->s_name;
-    const char *dirname = canvas_getdir(x->x_canvas)->s_name;
-    char* fileout;
-    open_via_path(dirname, filename, "", dir_out, &fileout, MAXPDSTRING-1, 0);
-    memcpy(filename_out, fileout, strlen(fileout) + 1);
-    strcat(dir_out, "/");
+    for (size_t i = 0; i < num_protocols; i++) {
+        if (strncmp(filename, protocols[i], strlen(protocols[i])) == 0) {
+            return 1; // Match found, it's a network protocol
+        }
+    }
+    return 0; // Not a network protocol
+}
+
+static void playfile_find_file(t_playfile *x, t_symbol* file, char* dir_out, char** filename_out){
+    if(playfile_is_network_protocol(file->s_name))
+    {
+        strcpy(dir_out, file->s_name);
+        *filename_out = NULL;
+        return;
+    }
+
+    char *bufptr;
+    int fd = canvas_open(x->x_canvas, file->s_name, "", dir_out, filename_out, MAXPDSTRING, 1);
+    if(fd < 0){
+        post("[play.file~] file '%s' not found", file->s_name);
+        return;
+    }
 }
 
 static void playfile_openpanel_callback(t_playfile *x, t_symbol *s, int argc, t_atom *argv){
@@ -325,9 +332,9 @@ static void playfile_open(t_playfile *x, t_symbol *s, int ac, t_atom *av){
             playfile_start(x, 1.0f, 0.0f);
         }
         else{
-            char filename[MAXPDSTRING];
             char dirname[MAXPDSTRING];
-            playfile_find_file(x, av->a_w.w_symbol, dirname, filename);
+            char* filename = NULL;
+            playfile_find_file(x, av->a_w.w_symbol, dirname, &filename);
             t_playlist *pl = &x->x_plist;
             pl->dir = gensym(dirname);
             const char *ext = strrchr(filename, '.');
@@ -446,7 +453,7 @@ static t_int *playfile_perform(t_int *w){
             samples_filled++;
         }
     }
-    
+
     FREEA(outs, t_sample*, nch);
     return(w+4);
 }
@@ -541,8 +548,9 @@ static void *playfile_new(t_symbol *s, int ac, t_atom *av){
         av_channel_layout_from_mask(&layout, mask);
     }
     else if(ac && av[0].a_type == A_SYMBOL){ // Num channels from file
-        char dir[MAXPDSTRING], file[MAXPDSTRING];
-        playfile_find_file(x, atom_getsymbol(av), dir, file);
+        char dir[MAXPDSTRING];
+        char* file = NULL;
+        playfile_find_file(x, atom_getsymbol(av), dir, &file);
         layout = playfile_get_channel_layout_for_file(x, dir, file);
         nch = layout.nb_channels;
     }
