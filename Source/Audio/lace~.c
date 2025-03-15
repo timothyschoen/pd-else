@@ -61,7 +61,7 @@ static void *lace_new(t_symbol *s, int ac, t_atom* av){
     t_lace *x = (t_lace *)pd_new(lace_class);
     x->x_ignore = s;
     int n = 2;
-    if(av->a_type == A_SYMBOL){
+    if(ac && av->a_type == A_SYMBOL){
         if(atom_getsymbol(av) == gensym("-z")){
             x->x_zero = 1;
             ac--, av++;
@@ -69,7 +69,7 @@ static void *lace_new(t_symbol *s, int ac, t_atom* av){
         else
             goto errstate;
     }
-    if(av->a_type == A_FLOAT)
+    if(ac)
         n = atom_getint(av);
     x->x_n_ins = n < 2 ? 2 : n;
     x->x_nch = (t_int *)getbytes(x->x_n_ins * sizeof(*x->x_nch));
