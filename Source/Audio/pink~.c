@@ -137,7 +137,13 @@ static void *pink_new(t_symbol *s, int ac, t_atom *av){
                 }
             }
             else{
-                pd_error(x, "[pink~]: improper flag (%s)", atom_getsymbol(av)->s_name);
+                if(ac) {
+                    pd_error(x, "[pink~]: improper flag (%s)", atom_getsymbol(av)->s_name);
+                }
+                else {
+                    pd_error(x, "[pink~]: improper flag");
+                }
+               
                 return(NULL);
             }
         }
