@@ -19,8 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 --]]
 
 -- storage for Pd C<->Lua interaction
-pd._classes = {}   -- take absolute paths and turn them into classes
-pd._pathnames = {} -- look up absolute path by creation name
+pd._classes = {}    -- take absolute paths and turn them into classes
+pd._pathnames = {}  -- look up absolute path by creation name
 pd._objects = {}
 pd._clocks = {}
 pd._receives = {}
@@ -354,7 +354,7 @@ function pd.Class:register(name)
         regname = name
     end
     pd._pathnames[regname] = fullname
-    pd._classes[fullname] = self                      -- record registration
+    pd._classes[fullname] = self                    -- record registration
     self._class, self._class_gfx = pd._register(name) -- register new class
     self._name = name
     self._loadpath = fullpath
@@ -362,7 +362,7 @@ function pd.Class:register(name)
         self._scriptname = "pd.lua"
     else
         self._scriptname = name .. ".pd_lua"
-    end         -- mrpeach 20111027
+    end       -- mrpeach 20111027
     return self -- return new
 end
 
