@@ -172,7 +172,6 @@ static void dir_open(t_dir *x, t_symbol *dirname){
         }
         strcpy(path_with_home, x->x_home->s_name);
         strcat(path_with_home, path_buf);
-        free(path_buf);
         dirname = gensym(path_with_home);
     }
     dir_loadir(x, dirname, 0);
