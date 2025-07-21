@@ -22,7 +22,7 @@ elif [[ $TARGET_OS == "iOS" ]]; then
 elif [[ $TARGET_OS == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
-elif [ "$(expr substr $TARGET_OS 1 10)" == "MINGW64_NT" ]; then
+elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
     ffmpeg_config="--toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
     ffmpeg_cc="cl.exe"
     sed -i.bak '5021c\
