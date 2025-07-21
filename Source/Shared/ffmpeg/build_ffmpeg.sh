@@ -5,6 +5,9 @@ TARGET_OS="$2"
 TARGET_OS_ARCH="$3"
 CC_LAUNCHER="$4"
 
+[ "$TARGET_OS_ARCH" = "none" ] && TARGET_OS_ARCH=""
+[ "$CC_LAUNCHER" = "none" ] && CC_LAUNCHER=""
+
 # Variables
 FFMPEG_DIR="ffmpeg-7.0.1"
 
