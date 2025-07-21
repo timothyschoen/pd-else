@@ -1,24 +1,31 @@
 #!/bin/bash
 
+SRC_DIR="$1"
+TARGET_OS="$2"
+TARGET_OS_ARCH="$3"
+CC_LAUNCHER="$4"
+
 # Variables
 FFMPEG_DIR="ffmpeg-7.0.1"
-OS=$(uname)
-
 
 # Define platform-specific configurations
-if [[ "$OS" == "Darwin" ]]; then
-    ffmpeg_config="--extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
+if [[ $TARGET_OS == "Darwin" ]]; then
+    ffmpeg_config="--enable-securetransport --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
     ffmpeg_cc="clang -arch x86_64 -arch arm64"
-elif [[ "$OS" == "Linux" ]]; then
+elif [[ $TARGET_OS == "iOS" ]]; then
+    SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+    ffmpeg_cc="xcrun --sdk iphoneos gcc -arch arm64"
+    ffmpeg_config="--disable-securetransport --sysroot=$SDK_PATH --enable-cross-compile --arch=arm64"
+elif [[ $TARGET_OS == "Linux" ]]; then
     ffmpeg_config="--enable-pic"
     ffmpeg_cc="${CC:-gcc}"
-elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+elif [ "$(expr substr $TARGET_OS 1 10)" == "MINGW64_NT" ]; then
     ffmpeg_config="--toolchain=msvc --arch=$3 --target-os=win64 --extra-cflags=-MT"
     ffmpeg_cc="cl.exe"
     sed -i.bak '5021c\
             _DEPCMD='\''$(DEP$(1)) $(DEP$(1)FLAGS) $($(1)DEP_FLAGS) $< 2>&1 | grep "^Note:.*file:" | sed -e "s^.*file: *^$@: ^" | tr \\\\\\\\/ \/ > $(@:.o=.d)'\'' '$'\n' "$FFMPEG_DIR/configure"
 else
-    echo "Unsupported OS: $OS"
+    echo "Unsupported OS: $TARGET_OS"
     exit 1
 fi
 
@@ -59,5 +66,4 @@ cd "$FFMPEG_DIR"
             --enable-encoder=mpeg1video --enable-encoder=alac --enable-encoder=pcm_mulaw --enable-encoder=pcm_alaw --enable-parser=mpeg4video --enable-network --enable-protocol=http --enable-protocol=https --enable-protocol=rtmp --enable-protocol=rtmpt --enable-protocol=rtmps --enable-protocol=hls --enable-protocol=tcp --enable-protocol=udp \
             $ffmpeg_config
 
-make CC="$2 $ffmpeg_cc"
-
+make CC="$CC_LAUNCHER $ffmpeg_cc"

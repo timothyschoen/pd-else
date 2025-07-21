@@ -7,6 +7,8 @@ project(sfizz
 )
 
 set(BASEFLAGS
+    "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}"
+    "-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0"
     "-DENABLE_LTO=OFF"
     "-DSFIZZ_JACK=OFF"
     "-DSFIZZ_RENDER=OFF"
@@ -37,8 +39,14 @@ set(BASEFLAGS
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
     "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_CXX_FLAGS=-Wno-missing-template-arg-list-after-template-kw"
     "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
 )
+
+if(APPLE)
+    list(APPEND BASEFLAGS "-GXcode")
+endif()
+
 
 if(MSVC)
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -46,8 +54,6 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
     set(MSVC_TARGET_ARCH "-A Win32")
 endif()
-elseif(APPLE)
-list(APPEND BASEFLAGS "-GUnix\ Makefiles")
 endif()
 
 message(STATUS "Configuring sfizz")
@@ -56,11 +62,11 @@ execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERR
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
 )
 
-if(MSVC)
-# For some reason, it appears in the Debug folder, even when building in release mode...
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
-else()
+if(UNIX AND NOT APPLE)
 set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
+else()
+# For some reason, when building an IDE project, it appears in the current config folder
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
 endif()
 
 if(MSVC)
