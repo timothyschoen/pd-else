@@ -147,11 +147,11 @@ if(WIN32)
     target_compile_options(opus PRIVATE -msse2)
 endif()
 
-target_link_libraries(play.file_tilde PRIVATE ffmpeg)
-target_link_libraries(streamin_tilde PRIVATE ffmpeg)
-target_link_libraries(streamout_tilde PRIVATE ffmpeg)
-target_link_libraries(sfload PRIVATE ffmpeg)
-target_link_libraries(sfinfo PRIVATE ffmpeg)
+target_link_libraries(play.file_tilde PRIVATE winpthread ffmpeg)
+target_link_libraries(streamin_tilde PRIVATE winpthread ffmpeg)
+target_link_libraries(streamout_tilde PRIVATE winpthread ffmpeg)
+target_link_libraries(sfload PRIVATE winpthread ffmpeg)
+target_link_libraries(sfinfo PRIVATE winpthread ffmpeg)
 
 # Add OpenSSL linking for Linux builds
 if(UNIX AND NOT APPLE)
