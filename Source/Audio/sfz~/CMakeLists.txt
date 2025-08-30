@@ -38,16 +38,14 @@ set(BASEFLAGS
     "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
     "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
     "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+    "-DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}"
+    "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}"
+    "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
+    "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+    "-G${CMAKE_GENERATOR}"
 )
 
-if(APPLE)
-    list(APPEND BASEFLAGS "-GXcode")
-    list(APPEND BASEFLAGS "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}") # in case we're building for iOS
-    list(APPEND BASEFLAGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
-endif()
-
-
-if(MSVC)
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(MSVC_TARGET_ARCH "-A x64")
 else()
@@ -61,11 +59,12 @@ execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERR
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
 )
 
-if(UNIX AND NOT APPLE)
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(isMultiConfig)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
 else()
 # For some reason, when building an IDE project, it appears in the current config folder
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
 endif()
 
 if(MSVC)
