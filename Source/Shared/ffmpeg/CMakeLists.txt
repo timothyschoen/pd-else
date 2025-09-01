@@ -39,7 +39,7 @@ add_dependencies(ffmpeg ffmpeg_deps)
 
 if(WIN32)
     target_link_libraries(ffmpeg INTERFACE bcrypt ws2_32 secur32)
-    target_link_libraries(ffmpeg INTERFACE -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic)
+    target_link_libraries(ffmpeg INTERFACE -Wl,-Bstatic -lwinpthread -lz -Wl,-Bdynamic)
 endif()
 
 # Clean up
