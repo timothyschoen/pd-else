@@ -21,6 +21,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <m_pd.h>
 #include <elsefile.h>
+#include <pthread.h>
 
 #include <stdlib.h>
 #include "FluidLite/include/fluidlite.h"
@@ -31,6 +32,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <Windows.h>
 #else
 #include <unistd.h>
+#endif
+
+#ifdef PDINSTANCE
+pthread_mutex_t fluidsynth_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #define MAXSYSEXSIZE 1024 // Size of sysex data list (excluding the F0 [240] and F7 [247] bytes)
@@ -668,7 +673,15 @@ static void *sfont_new(t_symbol *s, int ac, t_atom *av){
     fluid_settings_setnum(x->x_settings, "synth.sample-rate", sys_getsr());
     fluid_settings_setstr(x->x_settings, "synth.midi-bank-select", "mma");
     //  fluid_settings_setint(x->x_settings, "synth.polyphony", 256);
+    
+#ifdef PDINSTANCE
+    // Initting multiple fluidsynth concurrently is unsafe
+    pthread_mutex_lock(&fluidsynth_lock);
+#endif
     x->x_synth = new_fluid_synth(x->x_settings); // Create fluidsynth instance:
+#ifdef PDINSTANCE
+    pthread_mutex_unlock(&fluidsynth_lock);
+#endif
     if(x->x_synth == NULL){
         pd_error(x, "[sfont~]: bug couldn't create fluidsynth instance");
         return(NULL);
