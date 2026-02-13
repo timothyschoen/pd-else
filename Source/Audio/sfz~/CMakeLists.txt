@@ -54,17 +54,16 @@ endif()
 endif()
 
 message(STATUS "Configuring sfizz")
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build")
-execute_process(COMMAND ${CMAKE_COMMAND} .. ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build")
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build
 )
 
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(isMultiConfig)
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
 else()
-# For some reason, when building an IDE project, it appears in the current config folder
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build/library/lib)
 endif()
 
 if(MSVC)
@@ -190,7 +189,7 @@ add_custom_target(
 add_custom_command(
     OUTPUT ${SFIZZ_LIBS}
     COMMAND ${CMAKE_COMMAND} --build . --config $<CONFIG>
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build
     VERBATIM
 )
 
