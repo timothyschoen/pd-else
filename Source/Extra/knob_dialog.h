@@ -1,6 +1,26 @@
 // Based on dialogs from iemguis in Pd Vanilla (by Tim Schoen & Porres)
 
 sys_gui("\n"
+// function called on the C-Side
+"proc color2hex {name} {\n"
+"    if {[catch {winfo rgb . $name} rgb]} {\n"
+"        return \"\"\n"
+"    }\n"
+"    set r [format %02x [expr {[lindex $rgb 0] / 256}]]\n"
+"    set g [format %02x [expr {[lindex $rgb 1] / 256}]]\n"
+"    set b [format %02x [expr {[lindex $rgb 2] / 256}]]\n"
+"    return \"#$r$g$b\"\n"
+"}\n"
+"\n"
+// get symbol from Pd
+"proc get_symbol {text} {\n"
+//"    ::pdwindow::post \"RAW: <$text>\\n\"\n"
+" set sym [subst -nocommands -novariables $text]\n" // unescape backslashes
+" if {$sym eq \"empty\"} {set sym \"\"}\n" // set "empty" to literal empty
+//"    ::pdwindow::post \"Cooked: <$sym>\\n\"\n"
+" return $sym\n"
+"}\n"
+// Actual start of properties
 "namespace eval ::dialog_knob:: {\n"
 "}\n"
 // arrays to store per-dialog values
@@ -44,12 +64,14 @@ sys_gui("\n"
 "array set ::dialog_knob::var_color_bg {} ;\n"
 "array set ::dialog_knob::var_color_fg {} ;\n"
 "array set ::dialog_knob::var_color_arc {} ;\n"
+"array set ::dialog_knob::var_theme {} ;\n"
+"array set ::dialog_knob::var_transp {} ;\n"
 "array set ::dialog_knob::var_colorradio {} ;\n" // radio for what color type we're setting
 "\n"
 
 // ------------------------------------------------------------------------------------------------
+        
 // Get parameters from Pd when asking for properties!
-
 "proc knob_dialog {id \\\n"
 "         size square \\\n"
 "         show_arc arcstart \\\n"
@@ -60,7 +82,7 @@ sys_gui("\n"
 "         readonly jump circular \\\n"
 "         n_mode n_size xpos ypos \\\n"
 "         rcv snd prm var \\\n"
-"         bcol acol fcol} {\n"
+"         bcol acol fcol theme transp} {\n"
 // The vid indicates the instance ID of this dialog
 "    set vid [string trimleft $id .]\n"
 // initialize the array with received values for this dialog instance
@@ -82,30 +104,22 @@ sys_gui("\n"
 "    set ::dialog_knob::var_exp($vid) $exp \n"
 "    set ::dialog_knob::var_readonly($vid) $readonly \n"
 "    set ::dialog_knob::var_jump($vid) $jump \n"
-"    set ::dialog_knob::var_circular($vid) $circular\n"
-"    set ::dialog_knob::var_nmode($vid) [string map {{\\ } \" \"} $n_mode]\n"
-"    set ::dialog_knob::var_n_size($vid) $n_size\n"
-"    set ::dialog_knob::var_xpos($vid) $xpos\n"
-"    set ::dialog_knob::var_ypos($vid) $ypos\n"
+// remove escape backslashes before spaces with "string map"
+"    set ::dialog_knob::var_circular($vid) $circular \n"
+"    set ::dialog_knob::var_nmode($vid) $n_mode] \n"
+"    set ::dialog_knob::var_n_size($vid) $n_size \n"
+"    set ::dialog_knob::var_xpos($vid) $xpos \n"
+"    set ::dialog_knob::var_ypos($vid) $ypos \n"
 "\n" // attached symbols
-"    set rcv [::pdtk_text::unescape $rcv]\n"
-"    set snd [::pdtk_text::unescape $snd]\n"
-"    set prm [::pdtk_text::unescape $prm]\n"
-"    set var [::pdtk_text::unescape $var]\n"
-"    if {$rcv==\"empty\"} {\n"
-"       set rcv \"\"\n"
-"    }\n"
-"    if {$snd==\"empty\"} {\n"
-"       set snd \"\"\n"
-"    }\n"
-"    if {$prm==\"empty\"} {\n"
-"       set prm \"\"\n"
-"    }\n"
-"    if {$var==\"empty\"} {\n"
-"       set var \"\"\n"
-"    }\n"
-"\n"
+"    set rcv [get_symbol $rcv] \n"
+"    set snd [get_symbol $snd] \n"
+"    set prm [get_symbol $prm] \n"
+"    set var [get_symbol $var] \n"
+"\n" // more mapping needed for some reason, but why??? I thought get_symbol had already unescaped this
+//"    ::pdwindow::post \"before: <$rcv>\\n\"\n"
 "    set ::dialog_knob::var_rcv($vid) [string map {{\\ } \" \"} $rcv]\n"
+//"    set tmp $::dialog_knob::var_rcv($vid)\n"
+//"    ::pdwindow::post \"after: <$tmp>\\n\"\n"
 "    set ::dialog_knob::var_snd($vid) [string map {{\\ } \" \"} $snd]\n"
 "    set ::dialog_knob::var_prm($vid) [string map {{\\ } \" \"} $prm]\n"
 "    set ::dialog_knob::var_var($vid) [string map {{\\ } \" \"} $var]\n"
@@ -113,12 +127,26 @@ sys_gui("\n"
 "    set ::dialog_knob::var_color_bg($vid) $bcol\n"
 "    set ::dialog_knob::var_color_fg($vid) $fcol\n"
 "    set ::dialog_knob::var_color_arc($vid) $acol\n"
+"    set ::dialog_knob::var_theme($vid) $theme \n"
+"    set ::dialog_knob::var_transp($vid) $transp \n"
 "    set ::dialog_knob::var_colorradio($vid) 0\n" // init to 'bg'
 "\n"
 
 // ------------------------------------------------------------------------------------------------
         
 // HELPER PROCEDURES/FUNCTIONS:
+        
+// set a string to send it to Pd:
+//   - Remove: semicolons, commas, backslashes (but allow curlies, unlike vanilla)
+//   - Escape spaces and dollar signs
+//   - If the string is empty, set to "empty"
+"proc sanitize_string {x} {\n"
+"    set y [string map {\" \" {\\ } \";\" \"\" \",\" \"\" \"\\\\\" \"\" \"$\" {\\$}} $x]\n"
+"    if {$y eq \"\"} {set y \"empty\"}\n"
+"    concat $y\n"
+"}\n"
+               
+// clip values
 "proc ::dialog_knob::clip {val min {max {}}} {\n"
 "    if {$min ne {} && $val < $min} {return $min}\n"
 "    if {$max ne {} && $val > $max} {return $max}\n"
@@ -137,8 +165,15 @@ sys_gui("\n"
 "    set pad [expr {(7 - [string length $text]) / 2}]\n"
 "    return [format \"%*s%s%*s\" $pad \"\" $text $pad \"\"]\n"
 "}\n"
-        
-"proc ::dialog_knob::menucheck {option id} {\n"
+
+"proc ::dialog_knob::cmenucheck {option id} {\n"
+"    set centeredText [::dialog_knob::centerText $option]\n"
+"    $id.mouse.move.mb configure -text $centeredText\n"
+"    ::dialog_knob::applymacos $id\n"
+"}\n"
+"\n"
+
+"proc ::dialog_knob::nmenucheck {option id} {\n"
 "    set centeredText [::dialog_knob::centerText $option]\n"
 "    $id.num.show.mb configure -text $centeredText\n"
 "    ::dialog_knob::applymacos $id\n"
@@ -275,6 +310,7 @@ sys_gui("\n"
 "    pack $id.load.loadbang $id.load.savestate $id.load.load -side left -anchor center\n"        
 "    $id.load config -padx 20\n"
 "\n"
+        
 // Frame for discrete section
 "    labelframe $id.discrete\n"
 "    pack $id.discrete -side top -fill x\n"
@@ -379,20 +415,33 @@ sys_gui("\n"
 "    label $id.mouse.jump.lab -text [_ \"Jump on Click: \"]\n"
 "    checkbutton $id.mouse.jump.ent -variable ::dialog_knob::var_jump($vid) -width 5\n"
 "    pack $id.mouse.jump.ent $id.mouse.jump.lab -side right -anchor e\n"
-        // Checkbox for Circular
-"    frame $id.mouse.move\n"
-"    label $id.mouse.move.lab -text [_ \"Circular Drag: \"]\n"
-"    checkbutton $id.mouse.move.ent -variable ::dialog_knob::var_circular($vid) -width 5\n"
-"    pack $id.mouse.move.ent $id.mouse.move.lab -side right -anchor e\n"
-// When read only is selected, disbale jump/circular
-"    if { $::dialog_knob::var_readonly($vid) == 1 } {\n"
+        // Dropdown menu for Circular Mode:
+"   frame $id.mouse.move\n"
+"   label $id.mouse.move.lab -text [_ \"Circular Drag: \"]\n"
+"   menubutton $id.mouse.move.mb -text [::dialog_knob::centerText $::dialog_knob::var_circular($vid)] \\\n"
+"       -menu $id.mouse.move.mb.menu -width 7\n"
+"   menu $id.mouse.move.mb.menu -tearoff 0\n"
+"   $id.mouse.move.mb configure -menu $id.mouse.move.mb.menu\n"
+        // Add radiobuttons using foreach
+"   set cmodes { No Loop Infinite }\n"
+"   foreach cmode_selection $cmodes {\n"
+"       $id.mouse.move.mb.menu add radiobutton -label $cmode_selection \\\n"
+"           -variable ::dialog_knob::var_circular($vid) -value $cmode_selection \\\n"
+"           -command \"::dialog_knob::cmenucheck $cmode_selection $id\"\n"
+"   }\n"
+"    pack $id.mouse.move.lab $id.mouse.move.mb -side left\n"
+        
+/* When read only is selected, disbale jump/circular
+"    if { $::dialog_knob::var_readonly($vid) >= 1 } {\n"
 "       $id.mouse.jump.ent configure -state disabled\n"
 "       $id.mouse.move.ent configure -state disabled\n"
-"    }\n"
+"    }\n"*/
         // Position of items
-"    pack $id.mouse.readonly $id.mouse.jump $id.mouse.move -side left -anchor center\n"
+"    pack $id.mouse.readonly $id.mouse.jump -side left\n"
+"    pack $id.mouse.move -side left\n"
 "    $id.mouse config -padx 30\n"
 "\n"
+        
 // Frame for Number settings
 "    labelframe $id.num\n"
 "    pack $id.num -side top -fill x\n"
@@ -405,11 +454,11 @@ sys_gui("\n"
 "   menu $id.num.show.mb.menu -tearoff 0\n"
 "   $id.num.show.mb configure -menu $id.num.show.mb.menu\n"
     // Add radiobuttons using foreach
-"   set nmodes { Never Always Active Typing }\n"
-"   foreach mode_selection $nmodes {\n"
-"       $id.num.show.mb.menu add radiobutton -label $mode_selection \\\n"
-"           -variable ::dialog_knob::var_nmode($vid) -value $mode_selection \\\n"
-"           -command \"::dialog_knob::menucheck $mode_selection $id\"\n"
+"   set nmodes { Never Always Active Typing Hovering }\n"
+"   foreach nmode_selection $nmodes {\n"
+"       $id.num.show.mb.menu add radiobutton -label $nmode_selection \\\n"
+"           -variable ::dialog_knob::var_nmode($vid) -value $nmode_selection \\\n"
+"           -command \"::dialog_knob::nmenucheck $nmode_selection $id\"\n"
 "   }\n"
 "    pack $id.num.show.lab $id.num.show.mb -side left\n"
         // Number Size:
@@ -429,7 +478,6 @@ sys_gui("\n"
 "    pack $id.num.ypos.ent $id.num.ypos.lab -side right -anchor w\n"
 "    pack $id.num.show $id.num.size -side left -anchor center\n"
 "    pack $id.num.xpos $id.num.ypos -side left -anchor center\n"
-        
 "    $id.num config -padx 35\n"
 "\n"
 // Frame for attached symbols
@@ -479,7 +527,25 @@ sys_gui("\n"
 // Frame for colors section
 "    labelframe $id.colors -borderwidth 1 -text [_ \"Colors:\"] -padx 5 -pady 8\n"
 "    pack $id.colors -fill x\n"
-        // Color Radiobuttons and "Compose" button
+// Container frame for checkboxes
+"    frame $id.colors.checkboxes\n"
+"    pack $id.colors.checkboxes -side top -fill x\n"
+        // Checkbox for Theme
+"    frame $id.colors.checkboxes.theme\n"
+"    label $id.colors.checkboxes.theme.lab -text [_ \"Use Theme: \"]\n"
+"    checkbutton $id.colors.checkboxes.theme.ent -variable ::dialog_knob::var_theme($vid) -width 5\\\n"
+"       -command \"::dialog_knob::applymacos $id\"\n"
+"    pack $id.colors.checkboxes.theme.ent $id.colors.checkboxes.theme.lab -side right -anchor e\n"
+        // Checkbox for Transparent
+"    frame $id.colors.checkboxes.transp\n"
+"    label $id.colors.checkboxes.transp.lab -text [_ \"Transparent Background: \"]\n"
+"    checkbutton $id.colors.checkboxes.transp.ent -variable ::dialog_knob::var_transp($vid) -width 5\\\n"
+"       -command \"::dialog_knob::applymacos $id\"\n"
+"    pack $id.colors.checkboxes.transp.ent $id.colors.checkboxes.transp.lab -side right -anchor e\n"
+        // Pack checkboxes horizontally within their container
+"    pack $id.colors.checkboxes.theme $id.colors.checkboxes.transp -side left -anchor center\n"
+"    $id.colors.checkboxes config -padx 80\n"
+// Color Radiobuttons and "Compose" button
 "    frame $id.colors.radio\n"
 "    pack $id.colors.radio -side top\n"
 "    radiobutton $id.colors.radio.bg -value 0 -variable ::dialog_knob::var_colorradio($vid)\\\n"
@@ -492,7 +558,7 @@ sys_gui("\n"
 "    button $id.colors.radio.but -text [_ \"Compose\"] -command \"::dialog_knob::compose_color $id\"\n"
 "    pack $id.colors.radio.bg $id.colors.radio.arc $id.colors.radio.fg $id.colors.radio.dummy $id.colors.radio.but -side left\n"
 "\n"
-        // Preset colors, color scheme by Mary Ann Benedetto http://piR2.org
+// Preset colors, color scheme by Mary Ann Benedetto http://piR2.org
 "    frame $id.colors.presets -pady 8\n"
 "    pack $id.colors.presets -fill x\n"
 "    foreach r {r1 r2 r3} hexcols {\n"
@@ -629,16 +695,17 @@ sys_gui("\n"
 "                $::dialog_knob::var_n_size($vid) \\\n"
 "                $::dialog_knob::var_xpos($vid) \\\n"
 "                $::dialog_knob::var_ypos($vid) \\\n"
-"                [string map {\"$\" {\\$}} [unspace_text $rcv_name]] \\\n"
-"                [string map {\"$\" {\\$}} [unspace_text $snd_name]] \\\n"
-"                [string map {\"$\" {\\$}} [unspace_text $prm_name]] \\\n" // clean?
-"                [string map {\"$\" {\\$}} [unspace_text $var_name]] \\\n" // clean?
+"                [sanitize_string $rcv_name] \\\n"
+"                [sanitize_string $snd_name] \\\n"
+"                [sanitize_string $prm_name] \\\n"
+"                [sanitize_string $var_name] \\\n"
 "                [string tolower $::dialog_knob::var_color_bg($vid)] \\\n"
 "                [string tolower $::dialog_knob::var_color_arc($vid)] \\\n"
 "                [string tolower $::dialog_knob::var_color_fg($vid)] \\\n"
+"                $::dialog_knob::var_theme($vid) \\\n"
+"                $::dialog_knob::var_transp($vid) \\\n"
 "            ]\n"
 "}\n"
-        
 // Bind and unbind enter key to Apply button on macOS for entry widgets
 "    if {$::windowingsystem eq \"aqua\"} {\n"
 // call apply on Return in entry boxes that are in focus & rebind Return to ok button

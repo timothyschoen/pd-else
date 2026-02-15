@@ -4,9 +4,9 @@
 
 ### for the Pure Data programming language
 
-### Version: 1.0-0 RC-13 (release candidate #13) With Live Electronics Tutorial - Revision 2!
+### Version: 1.0-0 RC-15 (release candidate #15) With Live Electronics Tutorial!
 
-### Released May 5th 2025
+### Scheduled Release: October 29th 2025
 
 Copyright © 2017-2025 Alexandre Torres Porres and others
 
@@ -29,7 +29,7 @@ For copies of the licenses and the terms, please check the 'license' subfolder.
 
 ###   About ELSE
 
-This version of ELSE needs **Pd 0.55-2** or above.
+This version of ELSE needs **Pd 0.56-1** or above.
 
 ELSE is a big library of externals that extends the performance Pure Data (Pd) - Miller S. Puckette's realtime computer music environment (download Pd from: http://msp.ucsd.edu/software.html).
 
@@ -99,15 +99,19 @@ ELSE has been in active development since early 2017 for real, but it hasn't sta
 
 Flávio Luis Schiavoni helped me out in a few things when I first started coding and collaborated with the objects: [median~] and [keyboard].
 
-I'd also like to thank my Cyclone buddies Derek Kwan and Matt Barber, cause I started learning how to code externals with them as part of the cyclone team. Other developers of cyclone need to be praised, like Czaja, the original author, as I did steal quite a bit from cyclone into ELSE. I'd like to give a special thanks for Matt Barber for developing the "magic" in cyclone that I'm using here and also collaborating to ELSE with the objects: [float2bits], [brown~], [gray~], [perlin~], [pink~] and [blip~].
+I'd also like to thank my Cyclone buddies Derek Kwan and Matt Barber, cause I started learning how to code externals with them as part of the cyclone team. Other developers of cyclone need to be praised, like Czaja, the original author, as I did steal quite a bit from cyclone into ELSE and learned a lot from its code. I'd like to give a special thanks for Matt Barber for developing the "magic" in cyclone that I'm using here and also collaborating to ELSE with the objects: [float2bits], [brown~], [gray~], [perlin~], [pink~] and [blip~].
 
-Lucarda helped countless times with testing and compilation issues for windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object. I stole [scope3d~] from Ben Wesh. AI is also helping me to code, but fuck them.
+Lucarda helped countless times with testing and compilation issues for windows and more. Seb shader is a tcl/tk master that helped me a lot with this (which I know next to nothing) and is responsible for the [keycode] object. Ben Wesh also "gave me" [scope3d~]. AI is also helping me to code, but fuck them.
 
 Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of ELSE for other systems as well as ELSE for Camomile and libpd projects, which opened the way for PlugData by Timothy Schoen, who's doing an amazing jaw dropping job with this project based on camomile that includes ELSE. Timothy has also helped me fix many ELSE related issues and has made incredible and countless contributions to ELSE with fixes, improvements and new objects. Other folks from the PlugData gang are being very helpful like Alex Mitchell and Amy. PlugData is a fork of Pd with a revamped GUI and comes with the ELSE library. See: <https://github.com/timothyschoen/PlugData>.
 
+Some objects in ELSE shamelessly "stolen" from other authors. Some were based on Vanilla objects so if not for everything ELSE I need to acknowledge and thank Miller Puckette for those. The [conv~] object is based on William Brent's [convolve~]. Some reverbs are famous open source algorithms, like "freeverb" and "gigaverb". I also included reverb implementations by Tom Erbe. 
+
+Some objects are simply based (or better, depend on) on other software and are just a port for Pd using things like Mutable Instruments' PLAITS, FluidSynth, SFZ sampler, and more. None of this is a secret and it's all mentioned in the source code and original licenses are respected... and I'm probably forgetting worthy mentions here.
+
 --------------------------------------------------------------------------
 
-## Current Object list (573 objects):
+## Current Object list (595 objects):
 
 #assorted
     else
@@ -125,16 +129,16 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
     buffer tabgen tabreader tabreader~
 
 #tuning/notes
-    scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2midi midi2note notedur2ratio
+    scales scale2freq scala autotune autotune2 makenote2 retune eqdiv cents2scale scale2cents cents2frac frac2cents dec2frac frac2dec freq2midi midi2freq note2midi midi2note notedur2ratio intervals notes.on sortnote
 
 #patch/subpatch management
-    loadbanger args meter presets dollsym sender receiver retrieve dispatch var send2~ blocksize~ nop~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom abs.pd~ sendmidi
+    loadbanger closebang args meter presets dollsym sender receiver retrieve dispatch var send2~ blocksize~ nop~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom abs.pd~ sendmidi
 
 #message management
     format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2
 
 #list management
-    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean list.inc
+    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean list.inc rand.dev list.harm unique filter reorder
 
 #file management
     dir
@@ -158,16 +162,16 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
     loop
 
 #audio multichannel tools
-    nchs~ sigs~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~ lace~ delace~
+    nchs~ mix~ group~ repeat~ select~ pick~ get~ sum~ merge~ unmerge~ slice~ lace~ delace~
 
 #analog circuitry emulation
     circuit~
 
 #fx: assorted
-    downsample~ conv~ chorus~ shaper~ crusher~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
+    vca~ vca2~ downsample~ conv~ chorus~ shaper~ crush~ drive~ power~ flanger~ freq.shift~ pitch.shift~ stretch.shift~ stretch.shift~ ping.pong~ rm~ tremolo~ vibrato~ vocoder~ morph~ freeze~ pvoc.freeze~ phaser~
 
 #fx: delay
-    del~ fbdelay~ ffdelay~ revdelay~ filterdelay~
+    del.in~ del.out~ fbdelay~ ffdelay~ revdelay~ filterdelay~
 
 #fx: dynamics
     compress~ duck~ expand~ noisegate~ norm~
@@ -191,7 +195,7 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
     pluck~
 
 #synthesis: oscillators
-    cosine~ impulse~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ fm~ pm~ wavetable~ wt2d~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~ damp.osc~
+    cosine~ impulse~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ superosc~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ fm~ pm~ wavetable~ wt2d~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~ damp.osc~
 
 #synthesis: chaotic, stochastic, noise
     white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ rampnoise~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~ velvet~
@@ -200,10 +204,10 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
     mouse canvas.mouse keycode keymap keypress
 
 #control: fade/pan/routing
-    euclid fader~ autofade~ autofade.mc~ autofade2~ autofade2.mc~ balance~ pan~ pan.mc~ pan2~ pan4~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~  xfade.mc~ xgate~ xgate.mc~ xgate2~ xgate2.mc~ xselect~ xselect.mc~ xselect2~ xselect2.mc~ mtx~ mtx.mc~
+    fader~ autofade~ autofade.mc~ autofade2~ autofade2.mc~ balance~ ms.enc~ ms.dec~ width~ pan2~ pan4~ pan.stereo~ pan~ pan.mc~ spread~ spread.mc~ rotate~ rotate.mc~ xfade~  xfade.mc~ xgate~ xgate.mc~ xgate2~ xgate2.mc~ xselect~ xselect.mc~ xselect2~ xselect2.mc~ mtx~ mtx.mc~
 
 #control: sequencers
-    score score2 pattern list.seq sequencer sequencer~ phaseseq~ impseq~ rec rec2 lace delace
+    arpeggiator euclid score score2 pattern list.seq sequencer sequencer~ phaseseq~ impseq~ rec rec2 lace delace
 
 #control: envelopes
     asr~ adsr~ decay~ envelope~ envgen~
@@ -218,13 +222,13 @@ Kudos and thanks to my buddy Esteban Viveros for helping with the compilation of
     lfo phasor pimp impulse pulse
 
 #control: triggers
-    above above~ bangdiv chance chance~ dust~ dust2~ gatehold gatehold~ gaterelease gaterelease~ gatedelay gatedelay~ float2imp~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ trig.delay2~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
+    above above~ bangdiv chance chance~ dust~ dust2~ gatehold gatehold~ gaterelease gaterelease~ gatedelay gatedelay~ float2imp~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
 
 #control: triggers, clock
     clock metronome metronome~ polymetro polymetro~ speed tempo tempo~
 
 #analysis
-    changed~ changed2~ detect~ lastvalue~ median~ peak~ tap range range~ maxpeak~ rms~ mov.rms~ vu~ zerocross~ beat~
+    changed~ changed2~ detect~ lastvalue~ median~ peak~ tap range range~ maxpeak~ follow~ rms~ mov.rms~ vu~ zerocross~ beat~
 
 --------------------------------------------------------------------------
 
@@ -236,13 +240,13 @@ A submodule of ELSE by Porres (this is also by Porres).
 ## Modules list (20 objects):
 
 #classic
-    adsr.m~ lfo.m~ seq8.m~ vca.m~ vcf.m~ vco.m~
+    adsr.m~ lfo.m~ seq8.m~ vca.m~ vca2.m~ vcf.m~ vco.m~
 
 #FX
-    chorus.m~ crusher.m~ delay.m~ drive.m~ flanger.m~ phaser.m~ plate.rev.m~ rm.m~
+    bob.m~ chorus.m~ crusher.m~ delay.m~ drive.m~ flanger.m~ phaser.m~ plate.rev.m~ rm.m~
 
 #generators
-    gendyn.m~ plaits.m~ pluck.m~ pm6.m~ sfont.m~
+    superosc.m~ gendyn.m~ plaits.m~ pluck.m~ pm6.m~ sfont.m~
 
 #tools
     presets.m sig.m~ level.m~

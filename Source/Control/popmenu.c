@@ -8,9 +8,9 @@
 #define MAX_ITEMS 1024
 
 #if __APPLE__
-char def_font[100] = "Menlo";
+static char def_font[100] = "Menlo";
 #else
-char def_font[100] = "DejaVu Sans Mono";
+static char def_font[100] = "DejaVu Sans Mono";
 #endif
 
 static t_class *menu_class, *edit_proxy_class;
@@ -703,7 +703,7 @@ static void menu_properties(t_gobj *z, t_glist *owner){
         position = gensym("Right");
     else if(x->x_outmode == 2)
         position = gensym("Over");
-    pdgui_stub_vnew(&x->x_obj.ob_pd, "menu_dialog", owner,
+    pdgui_stub_vnew(&x->x_obj.ob_pd, "menu_dialog", x,
         "ii iis iiiis sssssss",
         x->x_width, x->x_height,
         x->x_fontsize, x->x_outline, outmode->s_name,

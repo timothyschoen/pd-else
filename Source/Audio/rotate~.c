@@ -106,4 +106,5 @@ void rotate_tilde_setup(void){
             (t_method)rotate_free, sizeof(t_rotate), 0, A_DEFFLOAT, A_DEFFLOAT, 0);
     class_addmethod(rotate_class, nullfn, gensym("signal"), 0);
     class_addmethod(rotate_class, (t_method)rotate_dsp, gensym("dsp"), A_CANT, 0);
+    init_sine_table();
 }

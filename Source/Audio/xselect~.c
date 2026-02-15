@@ -140,4 +140,5 @@ void xselect_tilde_setup(void){
     class_addmethod(xselect_class, nullfn, gensym("signal"), 0);
     class_addmethod(xselect_class, (t_method)xselect_dsp, gensym("dsp"), A_CANT, 0);
     class_addmethod(xselect_class, (t_method)xselect_time, gensym("time"), A_FLOAT, 0);
+    init_sine_table();
 }

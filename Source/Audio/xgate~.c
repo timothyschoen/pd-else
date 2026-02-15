@@ -111,4 +111,5 @@ void xgate_tilde_setup(void){
     class_addmethod(xgate_class, nullfn, gensym("signal"), 0);
     class_addmethod(xgate_class, (t_method)xgate_dsp, gensym("dsp"), A_CANT, 0);
     class_addmethod(xgate_class, (t_method)xgate_time, gensym("time"), A_FLOAT, 0);
+    init_sine_table();
 }

@@ -14,17 +14,17 @@ typedef struct else_obj{
 t_class *else_obj_class;
 
 static int min_major = 0;
-static int min_minor = 55;
+static int min_minor = 56;
 static int min_bugfix = 1;
 
 static int else_major = 1;
 static int else_minor = 0;
 static int else_bugfix = 0;
 
-#define STATUS "rc"
-static int status_number = 13;
+#define STATUS "rc test"
+static int status_number = 15;
 
-extern void lua_setup();
+extern void pdlua_setup();
 
 static void else_obj_dir(t_else_obj *x){
     outlet_symbol(x->x_out4, else_obj_class->c_externdir);
@@ -67,7 +67,7 @@ void else_obj_about(t_else_obj *x){
     post("-------------------------------------------------------------------");
     post("  -----> ELSE - EL Locus Solus' Externals for Pure Data <-----");
     post("-------------------------------------------------------------------");
-    post("- Version: %d.%d-%d %s-%d (revision 2); Released May 5th 2025", else_major, else_minor, else_bugfix, STATUS, status_number);
+    post("- Version: %d.%d-%d %s-%d test 1; Released October 29th 2025", else_major, else_minor, else_bugfix, STATUS, status_number);
     post("- Author: Alexandre Torres Porres & others");
     post("ELSE binary loaded from: %s", else_obj_class->c_externdir->s_name);
     post("- Repository: https://github.com/porres/pd-else");
@@ -93,13 +93,14 @@ void else_obj_about(t_else_obj *x){
     post("\"Live-Electronics-Tutorial\" folder inside the ELSE folder.");
     post("It has a CC license. Please check its README on how to install it!");
     post("-------------------------------------------------------------------");
-    post("- ALSO NOTE: Loading this binary did not install the ELSE library,");
-    post("you must add it to the \"path preferences\" or use");
-    post("[declare -path else] to load objects without a prefix");
+    post("- ALSO NOTE: Loading this binary did partially install the ELSE");
+    post("library, but you also must add it to the \"path preferences\" or");
+    post("use [declare -path else] to load objects without a prefix.");
     post("-------------------------------------------------------------------");
     post("- ALSO ALSO NOTE: Loading this binary did install an object browser");
     post("plugin for Vanilla and ELSE objects when right clicking on a canvas.");
-    post("This binary also loads a simplified version of pdlua.");
+    post("This binary also loads a simplified version of pdlua & dependencies.");
+    post("for many objects.");
     post("-------------------------------------------------------------------");
     post("-------------------------------------------------------------------");
     post("- ALSO ALSO ALSO NOTE: ELSE has a sublibrary called MERDA, for");

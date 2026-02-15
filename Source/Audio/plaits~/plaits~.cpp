@@ -4,11 +4,13 @@
 // Liscense: MIT Liscense (which is the original liscense of plaits)
 
 #include <stdint.h>
-#include <m_pd.h>
+
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/voice.h"
 #include "else_alloca.h"
+
+#include <m_pd.h>
 
 static t_class *plaits_class;
 

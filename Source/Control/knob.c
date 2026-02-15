@@ -1,15 +1,12 @@
 // By Porres and Tim Schoen
-// Primarily based on the knob proposal for vanilla by Ant1, Porres and others
+// Primarily based on the knob proposal for Vanilla by Ant1, Porres and others
 
 #include <m_pd.h>
 #include <g_canvas.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-
-#define NAN_V   0x7FFFFFFFul
-#define POS_INF 0x7F800000ul
-#define NEG_INF 0xFF800000ul
+#include "mouse_gui.h"
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -25,20 +22,20 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-#define MAX_NUMBOX_LEN 32
-
 #define HALF_PI (M_PI / 2)
-
-#define MIN_SIZE 16
+#define MAX_NUMBOX_LEN  32
+#define MIN_SIZE        16
+#define HANDLE_SIZE     12
+#define KNOB_SELBDWIDTH 2
+#define NAN_V           0x7FFFFFFFul
+#define POS_INF         0x7F800000ul
+#define NEG_INF         0xFF800000ul
 
 #if __APPLE__
 static char def_font[100] = "Menlo";
 #else
 static char def_font[100] = "DejaVu Sans Mono";
 #endif
-
-t_widgetbehavior knob_widgetbehavior;
-static t_class *knob_class, *edit_proxy_class;
 
 typedef struct _edit_proxy{
     t_object      p_obj;
@@ -51,6 +48,7 @@ typedef struct _knob{
     t_object        x_obj;
     t_edit_proxy   *x_proxy;
     t_glist        *x_glist;
+    t_canvas       *x_cv;
     int             x_ctrl;
     int             x_size;
     double          x_pos;          // 0-1 normalized position
@@ -58,17 +56,20 @@ typedef struct _knob{
     int             x_expmode;
     int             x_log;
     t_float         x_load;         // value when loading patch
-    t_float         x_arcstart;        // arc start value
-    t_float         x_radius;   
+    t_float         x_arcstart;     // arc start value
+    t_float         x_radius;
+    float           x_start_angle;
+    float           x_drag_start_pos;
     int             x_arcstart_angle;
-    int             x_fill_bg;
     int             x_end_angle;
     int             x_angle_range;
     int             x_angle_offset;
     int             x_steps;
     int             x_square;
+    int             x_setted;
     double          x_lower;
     double          x_upper;
+    int             x_select;
     int             x_clicked;
     int             x_typing;
     int             x_shownum;
@@ -80,15 +81,20 @@ typedef struct _knob{
     int             x_sel;
     int             x_shift;
     int             x_edit;
+    int             x_hover;
     int             x_jump;
     int             x_readonly;
+    int             x_theme;
+    int             x_transparent;
     double          x_fval;
+    double          x_lastval;
     t_symbol       *x_fg;
     t_symbol       *x_mg;
     t_symbol       *x_bg;
     t_symbol       *x_param;
     t_symbol       *x_var;
     t_symbol       *x_var_raw;
+    t_symbol       *x_cname;
     int            x_var_set;
     int            x_savestate;
     int            x_lb;
@@ -106,7 +112,9 @@ typedef struct _knob{
     int             x_arc;
     int             x_zoom;
     int             x_discrete;
+    char            x_tag_fg[32];
     char            x_tag_obj[32];
+    char            x_tag_handle[32];
     char            x_tag_base_circle[32];
     char            x_tag_bg_arc[32];
     char            x_tag_arc[32];
@@ -116,477 +124,56 @@ typedef struct _knob{
     char            x_tag_ticks[32];
     char            x_tag_outline[32];
     char            x_tag_square[32];
+    char            x_tag_hover[32];
     char            x_tag_in[32];
+    char            x_tag_IO[32];
     char            x_tag_out[32];
     char            x_tag_sel[32];
     char            x_tag_number[32];
     char            x_buf[MAX_NUMBOX_LEN]; // number buffer
     t_symbol       *x_ignore;
     int             x_ignore_int;
+    t_symbol       *x_bindname;
+// handle
+    t_pd           *x_handle;
 }t_knob;
+
+typedef struct _handle{
+    t_pd            h_pd;
+    t_knob         *h_master;
+    t_symbol       *h_bindsym;
+    char            h_pathname[64], h_outlinetag[64];
+    int             h_dragon, h_drag_delta;
+//    int             h_dragx, h_dragy;
+}t_handle; // resizing handle
+
+t_widgetbehavior knob_widgetbehavior;
+static t_class *knob_class, *handle_class, *edit_proxy_class;
 
 // ---------------------- Helper functions ----------------------
 
+static t_float knob_wrap(t_knob *x, t_float f){
+    float result;
+    float min = x->x_lower, max = x->x_upper;
+    if(min == max)
+        result = min;
+    else if(f < max && f >= min)
+        result = f; // if f range, = in
+    else{ // wrap
+        float range = max - min;
+        if(f < min){
+            result = f;
+            while(result < min)
+                result += range;
+        }
+        else
+            result = fmod(f - min, range) + min;
+    }
+    return(result);
+}
+
 static int knob_vis_check(t_knob *x){
     return(glist_isvisible(x->x_glist) && gobj_shouldvis((t_gobj *)x, x->x_glist));
-}
-
-static char* knob_get_number(t_knob *x) {
-    static char nbuf[16];  // Make nbuf static so it persists after the function returns
-    float absv = fabs(x->x_fval);
-    if(absv == 0)
-        sprintf(nbuf, "%g", x->x_fval);
-    else if(absv < 1){
-        sprintf(nbuf, "%.3f", x->x_fval);
-        int l = strlen(nbuf);
-        while(--l >= 0 && nbuf[l] == '0')
-            nbuf[l] = '\0';
-        if(nbuf[l] == '.')
-            sprintf(nbuf, "%.3f", x->x_fval);
-    }
-    else if(absv < 100)
-        sprintf(nbuf, "%.4g", x->x_fval);
-    else if(absv < 1000)
-        sprintf(nbuf, "%.5g", x->x_fval);
-    else
-        sprintf(nbuf, "%g", x->x_fval);
-    return(nbuf);  // Return the pointer to the string
-}
-
-static void knob_update_number(t_knob *x){
-    if(knob_vis_check(x))
-        pdgui_vmess(0, "crs rs", glist_getcanvas(x->x_glist),
-            "itemconfigure", x->x_tag_number, "-text", knob_get_number(x));
-}
-
-// get value from motion/position
-t_float knob_getfval(t_knob *x){
-    double fval;
-    double pos = x->x_pos;
-    if(x->x_discrete){ // later just 1 tick case
-        t_float steps = (x->x_steps < 2 ? 2 : (float)x->x_steps) - 1;
-        pos = rint(pos * steps) / steps;
-    }
-    if(x->x_log == 1){ // log
-        if((x->x_lower <= 0 && x->x_upper >= 0) || (x->x_lower >= 0 && x->x_upper <= 0)){
-            pd_error(x, "[knob]: range can't contain '0' in log mode");
-            fval = x->x_lower;
-        }
-        else
-            fval = exp(pos * log(x->x_upper / x->x_lower)) * x->x_lower;
-    }
-    else{
-        if(x->x_exp != 0){
-            if(x->x_exp > 0)
-                pos = pow(pos, x->x_exp);
-            else
-                pos = 1 - pow(1 - pos, -x->x_exp);
-        }
-        fval = pos * (x->x_upper - x->x_lower) + x->x_lower;
-    }
-    if((fval < 1.0e-10) && (fval > -1.0e-10))
-        fval = 0.0;
-    return(fval);
-}
-
-// get position from value
-static t_float knob_getpos(t_knob *x, t_floatarg fval) {
-    double pos;
-    if(x->x_log == 1){ // log
-        if((x->x_lower <= 0 && x->x_upper >= 0) || (x->x_lower >= 0 && x->x_upper <= 0))
-            pos = 0;
-        else
-            pos = (double)log(fval/x->x_lower) / (double)log(x->x_upper/x->x_lower);
-    }
-    else{
-        pos = (double)(fval - x->x_lower) / (double)(x->x_upper - x->x_lower);
-        if(x->x_exp != 0){
-            if(x->x_exp > 0)
-                pos = pow(pos, 1.0/x->x_exp);
-            else
-                pos = 1-pow(1-pos, 1.0/(-x->x_exp));
-        }
-    }
-    if(x->x_discrete){
-        t_float steps = (float)(x->x_steps) -1;
-        if(steps <= 0)
-            pos = (x->x_load - x->x_lower) / (x->x_upper - x->x_lower); // ?????
-        else
-            pos = rint(pos * steps) / steps;
-    }
-    return(pos);
-}
-
-// get clipped float value
-static t_float knob_clipfloat(t_knob *x, t_floatarg f){
-    if(x->x_upper < x->x_lower)
-        f = f < x->x_upper ? x->x_upper : f > x->x_lower ? x->x_lower : f;
-    else
-        f = f > x->x_upper ? x->x_upper : f < x->x_lower ? x->x_lower : f;
-    return(f);
-}
-
-// ---------------------- Configure / Update GUI ----------------------
-
-// configure colors
-static void knob_config_fg(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure",  x->x_tag_arc,
-        "-outline", x->x_fg->s_name, "-fill", x->x_fg->s_name);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_number,
-        "-fill", x->x_fg->s_name);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_ticks,
-        "-fill", x->x_fg->s_name);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_wiper,
-        "-fill", x->x_fg->s_name);
-    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_wpr_c,
-        "-outline", x->x_fg->s_name, "-fill", x->x_fg->s_name);
-}
-
-static void knob_config_bg_arc(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure",  x->x_tag_bg_arc,
-        "-outline", x->x_mg->s_name, "-fill", x->x_mg->s_name);
-}
-
-static void knob_config_number(t_knob *x){ // show or hide number value
-    t_atom at[2];
-    SETSYMBOL(at, gensym(def_font));
-    SETFLOAT(at+1, -x->n_size*x->x_zoom);
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rA", cv, "itemconfigure", x->x_tag_number, "-font", 2, at);
-    int x1 = text_xpix(&x->x_obj, x->x_glist), y1 = text_ypix(&x->x_obj, x->x_glist);
-    pdgui_vmess(0, "crs ii", cv, "moveto", x->x_tag_number,
-        x1 + x->x_xpos*x->x_zoom, y1 + x->x_ypos*x->x_zoom);
-}
-
-static void show_number(t_knob *x, int force){ // show or hide number value
-    if(x->x_number_mode == 1 || (x->x_number_mode == 2 && x->x_clicked))
-        x->x_shownum = 1; // mode 1 or mode 2 and clicked
-    else if(x->x_number_mode == 3 && x->x_typing)
-        x->x_shownum = 1; // mode 3 and typing
-    else
-        x->x_shownum = 0;
-    if((knob_vis_check(x)) || force){
-        pdgui_vmess(0, "crs rs", glist_getcanvas(x->x_glist), "itemconfigure",
-            x->x_tag_number, "-state", x->x_shownum ? "normal" : "hidden");
-    }
-}
-
-static void knob_config_bg(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_base_circle,
-        "-fill", x->x_bg->s_name);
-    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_center_circle,
-        "-outline", x->x_bg->s_name, "-fill", x->x_bg->s_name);
-    if(x->x_square)
-        pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_square,
-            "-fill", x->x_bg->s_name);
-}
-
-// configure size
-static void knob_config_size(t_knob *x){
-    int z = x->x_zoom;
-    int x1 = text_xpix(&x->x_obj, x->x_glist);
-    int y1 = text_ypix(&x->x_obj, x->x_glist);
-    int x2 = x1 + x->x_size * z;
-    int y2 = y1 + x->x_size * z;
-    int circle_width = x->x_size * (x->x_square ? x->x_radius : 1);
-    int offset = (x->x_size - circle_width) * 0.5;
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-// inlet, outlet, square/outline
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_in,
-        x1, y1, x1 + IOWIDTH*z, y1 + IHEIGHT*z);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_out,
-        x1, y2 - OHEIGHT*z, x1 + IOWIDTH*z, y2);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_square,
-        x1, y1, x2, y2);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_outline,
-        x1, y1, x2, y2);
-    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_outline,
-        "-width", z);
-// wiper's width, wiper's center circle
-    int w_width = circle_width * z / 20; // wiper width is 1/20 of circle size
-    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_wiper,
-        "-width", w_width < z ? z : w_width); // wiper width
-    int half_size = x->x_size * z / 2; // half_size
-    int xc = x1 + half_size, yc = y1 + half_size; // center coords
-    int wx1 = rint(xc - w_width), wy1 = rint(yc - w_width);
-    int wx2 = rint(xc + w_width), wy2 = rint(yc + w_width);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_wpr_c,
-        wx1, wy1, wx2, wy2); // wiper center circle
-// knob circle stuff
-    // knob arc
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_bg_arc,
-        x1 + offset + z, y1 + offset + z,
-        x2 - offset - z, y2 - offset - z);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_arc,
-        x1 + offset + z, y1 + offset + z,
-        x2 - offset - z, y2 - offset - z);
-    // knob circle (base)
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_base_circle,
-        x1 + offset, y1 + offset, x2 - offset, y2 - offset);
-    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_base_circle,
-        "-width", z);
-    // knob center
-    int arcwidth = circle_width * z * 0.1; // arc width is 1/10 of circle
-    if(arcwidth < 1)
-        arcwidth = 1;
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_center_circle,
-        x1 + arcwidth + offset * z, y1 + arcwidth + offset * z,
-        x2 - arcwidth - offset * z, y2 - arcwidth - offset * z);
-}
-
-// configure wiper center
-static void knob_config_wcenter(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_wpr_c,
-        "-state", x->x_clicked ? "normal" : "hidden");
-}
-
-// configure inlet outlet and outline/square
-static void knob_config_io(t_knob *x){
-    int inlet = (x->x_rcv == &s_ || x->x_rcv == gensym("empty")) && x->x_edit;
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_in,
-        "-state", inlet ? "normal" : "hidden");
-    int outlet = (x->x_snd == &s_ || x->x_snd == gensym("empty")) && x->x_edit;
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_out,
-        "-state", outlet ? "normal" : "hidden");
-    int outline = x->x_edit || x->x_square;
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_outline,
-        "-state", outline ? "normal" : "hidden");
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_square,
-        "-state", x->x_square ? "normal" : "hidden");
-}
-
-// configure arc
-static void knob_config_arc(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_arc,
-        "-state", x->x_arc && x->x_fval != x->x_arcstart ? "normal" : "hidden");
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_bg_arc,
-        "-state", x->x_arc ? "normal" : "hidden");
-}
-
-// Update Arc/Wiper according to position
-static void knob_update(t_knob *x){
-    t_float pos = x->x_pos;
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    if(x->x_discrete){ // later just 1 tick case
-        t_float steps = (x->x_steps < 2 ? 2 : (float)x->x_steps) -1;
-        pos = rint(pos * steps) / steps;
-    }
-    float start = (x->x_arcstart_angle / 90.0 - 1) * HALF_PI;
-    float range = x->x_angle_range / 180.0 * M_PI;
-    float angle = start + pos * range; // pos angle
-// configure arc
-    knob_config_arc(x);
-    pdgui_vmess(0, "crs sf sf", cv, "itemconfigure", x->x_tag_bg_arc,
-        "-start", start * -180.0 / M_PI,
-        "-extent", range * -179.99 / M_PI);
-    start += (knob_getpos(x, x->x_arcstart) * range);
-    pdgui_vmess(0, "crs sf sf", cv, "itemconfigure", x->x_tag_arc,
-        "-start", start * -180.0 / M_PI,
-        "-extent", (angle - start) * -179.99 / M_PI);
-// set wiper
-    int radius = (int)(x->x_size*x->x_zoom / 2.0);
-    int x0 = text_xpix(&x->x_obj, x->x_glist);
-    int y0 = text_ypix(&x->x_obj, x->x_glist);
-    int xc = x0 + radius, yc = y0 + radius; // center coords
-    if(x->x_square)
-        radius = (radius * x->x_radius);
-    radius += x->x_zoom;
-    int xp = xc + rint(radius * cos(angle)); // circle point x coordinate
-    int yp = yc + rint(radius * sin(angle)); // circle point x coordinate
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_wiper, xc, yc, xp, yp);
-}
-
-//---------------------- DRAW STUFF ----------------------------//
-
-// redraw ticks
-static void knob_draw_ticks(t_knob *x){
-    t_canvas *cv = glist_getcanvas(x->x_glist);
-    pdgui_vmess(0, "crs", cv, "delete", x->x_tag_ticks);
-    if(!x->x_steps || !x->x_ticks)
-        return;
-    int z = x->x_zoom;
-    int divs = x->x_steps;
-    if((divs > 1) && ((x->x_angle_range + 360) % 360 != 0)) // ????
-        divs = divs - 1;
-    float delta_w = x->x_angle_range / (float)divs;
-    int x0 = text_xpix(&x->x_obj, x->x_glist), y0 = text_ypix(&x->x_obj, x->x_glist);
-    float half_size = (float)x->x_size*z / 2.0; // half_size
-    int xc = x0 + half_size, yc = y0 + half_size; // center coords
-    int start = x->x_arcstart_angle - 90.0;
-    if(x->x_square)
-        half_size *= x->x_radius;
-    if(x->x_steps == 1){
-        int width = (x->x_size / 40);
-        if(width < 1)
-            width = 1;
-        width *= 1.5;
-        double pos = knob_getpos(x, x->x_arcstart) * x->x_angle_range;
-        float w = pos + start; // tick angle
-        w *= M_PI/180.0; // in radians
-        float dx = half_size * cos(w), dy = half_size * sin(w);
-        int x1 = xc + (int)(dx);
-        int y1 = yc + (int)(dy);
-        int x2 = xc + (int)(dx * 0.65);
-        int y2 = yc + (int)(dy * 0.65);
-        char *tags_ticks[] = {x->x_tag_ticks, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii ri rs rS",
-            cv, "create", "line",
-            x1, y1, x2, y2,
-            "-width", width * z,
-            "-fill", x->x_fg->s_name,
-            "-tags", 2, tags_ticks);
-    }
-    else for(int t = 1; t <= x->x_steps; t++){
-        int thicker = (t == 1 || t == x->x_steps);
-        int width = (x->x_size / 40);
-        if(width < 1)
-            width = 1;
-        if(thicker)
-            width *= 1.5;
-        float w = (t-1)*delta_w + start; // tick angle
-        w *= M_PI/180.0; // in radians
-        float dx = half_size * cos(w), dy = half_size * sin(w);
-        int x1 = xc + (int)(dx);
-        int y1 = yc + (int)(dy);
-        int x2 = xc + (int)(dx * (thicker ? 0.65 : 0.75));
-        int y2 = yc + (int)(dy * (thicker ? 0.65 : 0.75));
-        char *tags_ticks[] = {x->x_tag_ticks, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii ri rs rS",
-            cv, "create", "line",
-            x1, y1, x2, y2,
-            "-width", width * z,
-            "-fill", x->x_fg->s_name,
-            "-tags", 2, tags_ticks);
-    }
-}
-
-// draw all and initialize stuff
-static void knob_draw_new(t_knob *x, t_glist *glist){
-    int x1 = text_xpix(&x->x_obj, glist);
-    int y1 = text_ypix(&x->x_obj, glist);
-    t_canvas *cv = glist_getcanvas(glist);
-// square
-    char *tags_square[] = {x->x_tag_square, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
-        x1, y1, 0, 0, "-tags", 2, tags_square);
-// outline
-    char *tags_outline[] = {x->x_tag_outline, x->x_tag_obj, x->x_tag_sel};
-    pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
-        x1, y1, 0, 0, "-tags", 3, tags_outline);
-// base circle
-    char *tags_circle[] = {x->x_tag_base_circle, x->x_tag_obj, x->x_tag_sel};
-    pdgui_vmess(0, "crr iiii rS", cv, "create", "oval",
-        x1, y1, 0, 0, "-tags", 3, tags_circle);
-// arc
-    char *tags_arc_bg[] = {x->x_tag_bg_arc, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii rS", cv, "create", "arc",
-        x1, y1, 0, 0,
-        "-tags", 2, tags_arc_bg);
-    char *tags_arc[] = {x->x_tag_arc, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii rS", cv, "create", "arc",
-        x1, y1, 0, 0,
-        "-tags", 2, tags_arc);
-// center circle on top of arc
-char *tags_center[] = {x->x_tag_center_circle, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rS", cv, "create", "oval",
-    x1, y1, 0, 0, "-tags", 2, tags_center);
-// wiper and wiper center
-    char *tags_wiper_center[] = {x->x_tag_wpr_c, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii rS", cv, "create", "oval",
-        x1, y1, 0, 0,
-        "-tags", 2, tags_wiper_center);
-    char *tags_wiper[] = {x->x_tag_wiper, x->x_tag_obj};
-        pdgui_vmess(0, "crr iiii rS", cv, "create", "line",
-        x1, y1, 0, 0,
-        "-tags", 2, tags_wiper);
-    
-// number
-    char *tags_number[] = {x->x_tag_number, x->x_tag_obj};
-    pdgui_vmess(0, "crr ii rs rs rS", cv, "create", "text",
-        x1, y1,
-        "-text", knob_get_number(x),
-        "-anchor", "w",
-        "-tags", 2, tags_number);
-// inlet
-    char *tags_in[] = {x->x_tag_in, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rs rS", cv, "create", "rectangle",
-        x1, y1, 0, 0,
-        "-fill", "black",
-        "-tags", 2, tags_in);
-// outlet
-    char *tags_out[] = {x->x_tag_out, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rs rS", cv, "create", "rectangle",
-        x1, y1, 0, 0,
-        "-fill", "black",
-        "-tags", 2, tags_out);
-// config and set
-    knob_draw_ticks(x);
-    knob_config_size(x);
-    knob_config_io(x);
-    knob_config_bg(x);
-    knob_config_bg_arc(x);
-    knob_config_fg(x);
-    knob_config_arc(x);
-    knob_config_wcenter(x);
-    knob_config_number(x);
-    knob_update(x);
-    show_number(x, 1);
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_sel,
-        "-outline", x->x_sel ? "blue" : "black");       // ??????
-    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_number,
-        "-fill", x->x_sel ? "blue" : x->x_fg->s_name);  // ??????
-}
-
-// ------------------------ knob widgetbehaviour-----------------------------
-static void knob_getrect(t_gobj *z, t_glist *glist, int *xp1, int *yp1, int *xp2, int *yp2){
-    t_knob *x = (t_knob *)z;
-    *xp1 = text_xpix(&x->x_obj, glist);
-    *yp1 = text_ypix(&x->x_obj, glist);
-    *xp2 = text_xpix(&x->x_obj, glist) + x->x_size*x->x_zoom;
-    *yp2 = text_ypix(&x->x_obj, glist) + x->x_size*x->x_zoom;
-}
-
-static void knob_displace(t_gobj *z, t_glist *glist, int dx, int dy){
-    t_knob *x = (t_knob *)z;
-    x->x_obj.te_xpix += dx, x->x_obj.te_ypix += dy;
-    dx *= x->x_zoom, dy *= x->x_zoom;
-    pdgui_vmess(0, "crs ii", glist_getcanvas(glist), "move", x->x_tag_obj, dx, dy);
-    canvas_fixlinesfor(glist, (t_text*)x);
-}
-
-static void knob_select(t_gobj *z, t_glist *glist, int sel){
-    t_knob* x = (t_knob*)z;
-    t_canvas *cv = glist_getcanvas(glist);
-    if(sel){
-        pdgui_vmess(0, "crs rs", cv, "itemconfigure",
-            x->x_tag_sel, "-outline", "blue");
-        pdgui_vmess(0, "crs rs",  cv, "itemconfigure",
-            x->x_tag_number, "-fill", "blue");
-    }
-    else{
-        pdgui_vmess(0, "crs rs", cv, "itemconfigure",
-            x->x_tag_number, "-fill", x->x_fg->s_name);
-        pdgui_vmess(0, "crs rs", cv, "itemconfigure",
-            x->x_tag_sel, "-outline", "black");
-    }
-}
-
-void knob_vis(t_gobj *z, t_glist *glist, int vis){
-    t_knob* x = (t_knob*)z;
-    if(vis)
-        knob_draw_new(x, glist);
-    else
-        pdgui_vmess(0, "crs", glist_getcanvas(glist), "delete", x->x_tag_obj);
-}
-
-static void knob_delete(t_gobj *z, t_glist *glist){
-    canvas_deletelinesfor(glist, (t_text *)z);
 }
 
 static void knob_get_var(t_knob* x){
@@ -685,6 +272,611 @@ void knob_get_rcv(t_knob* x){
         x->x_rcv_raw = gensym("empty");
 }
 
+static void get_cname(t_knob *x, t_floatarg depth){
+    t_canvas *canvas = canvas_getrootfor(canvas_getcurrent());
+    while(depth-- && canvas->gl_owner)
+        canvas = canvas_getrootfor(canvas->gl_owner);
+    char buf[MAXPDSTRING];
+    snprintf(buf, MAXPDSTRING, ".x%lx-link", (long unsigned int)canvas);
+    x->x_cname = gensym(buf);
+}
+
+static char* knob_get_number(t_knob *x) {
+    static char nbuf[16];  // Make nbuf static so it persists after the function returns
+    float absv = fabs(x->x_fval);
+    if(absv < 10)
+        sprintf(nbuf, "% .3f", x->x_fval);
+    else if(absv < 100)
+        sprintf(nbuf, "% .2f", x->x_fval);
+    else if(absv < 1000)
+        sprintf(nbuf, "% .1f", x->x_fval);
+    else
+        sprintf(nbuf, "% d", x->x_fval);
+    return(nbuf);  // Return the pointer to the string
+}
+
+static void knob_update_number(t_knob *x){
+    if(knob_vis_check(x))
+        pdgui_vmess(0, "crs rs", glist_getcanvas(x->x_glist),
+            "itemconfigure", x->x_tag_number, "-text", knob_get_number(x));
+}
+
+// get value from motion/position
+t_float knob_getfval(t_knob *x){
+    double fval;
+    double pos = x->x_pos;
+    if(x->x_discrete){ // later just 1 tick case
+        t_float steps = (x->x_steps < 2 ? 2 : (float)x->x_steps) - 1;
+        pos = rint(pos * steps) / steps;
+    }
+    if(x->x_log == 1){ // log
+        if((x->x_lower <= 0 && x->x_upper >= 0) || (x->x_lower >= 0 && x->x_upper <= 0)){
+            pd_error(x, "[knob]: range can't contain '0' in log mode");
+            fval = x->x_lower;
+        }
+        else
+            fval = exp(pos * log(x->x_upper / x->x_lower)) * x->x_lower;
+    }
+    else{
+        if(x->x_exp != 0){
+            if(x->x_exp > 0)
+                pos = pow(pos, x->x_exp);
+            else
+                pos = 1 - pow(1 - pos, -x->x_exp);
+        }
+        fval = pos * (x->x_upper - x->x_lower) + x->x_lower;
+    }
+    if((fval < 1.0e-10) && (fval > -1.0e-10))
+        fval = 0.0;
+    return(fval);
+}
+
+// get position from value
+static t_float knob_getpos(t_knob *x, t_floatarg fval){
+    double pos;
+    if(x->x_circular == 2)
+        fval = knob_wrap(x, fval);
+    if(x->x_log == 1){ // log
+        if((x->x_lower <= 0 && x->x_upper >= 0) || (x->x_lower >= 0 && x->x_upper <= 0))
+            pos = 0;
+        else
+            pos = (double)log(fval/x->x_lower) / (double)log(x->x_upper/x->x_lower);
+    }
+    else{
+        pos = (double)(fval - x->x_lower) / (double)(x->x_upper - x->x_lower);
+        if(x->x_exp != 0){
+            if(x->x_exp > 0)
+                pos = pow(pos, 1.0/x->x_exp);
+            else
+                pos = 1-pow(1-pos, 1.0/(-x->x_exp));
+        }
+    }
+    if(x->x_discrete){
+        t_float steps = (float)(x->x_steps) -1;
+        if(steps <= 0)
+            pos = (x->x_load - x->x_lower) / (x->x_upper - x->x_lower); // ?????
+        else
+            pos = rint(pos * steps) / steps;
+    }
+    return(pos);
+}
+
+// get clipped float value
+static t_float knob_clipfloat(t_knob *x, t_floatarg f){
+    if(x->x_upper < x->x_lower)
+        f = f < x->x_upper ? x->x_upper : f > x->x_lower ? x->x_lower : f;
+    else
+        f = f > x->x_upper ? x->x_upper : f < x->x_lower ? x->x_lower : f;
+    return(f);
+}
+
+// ---------------------- Configure / Update GUI ----------------------
+
+// configure colors
+static void knob_config_fg(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    char fg[32];
+    if(x->x_theme)
+        snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+    else
+        snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_fg, "-fill", fg);
+    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_wpr_c,
+        "-outline", fg, "-fill", fg);
+    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_arc,
+        "-outline", fg, "-fill", fg);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_IO,
+        "-outline", fg);
+}
+
+static void knob_config_mg(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    char mg[32];
+    if(x->x_theme)
+        snprintf(mg, sizeof(mg), "#%06x", THISGUI->i_foregroundcolor);
+    else
+        snprintf(mg, sizeof(mg), "%s", x->x_mg->s_name);
+    pdgui_vmess(0, "crs rsrs", cv, "itemconfigure",  x->x_tag_bg_arc,
+        "-outline", mg, "-fill", mg);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_base_circle,
+        "-outline", x->x_transparent > 0 ? mg : x->x_arc ? "" : mg);
+}
+
+static void knob_config_bg(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    char bg[32];
+    if(x->x_theme)
+        snprintf(bg, sizeof(bg), "#%06x", THISGUI->i_backgroundcolor);
+    else
+        snprintf(bg, sizeof(bg), "%s", x->x_bg->s_name);
+    pdgui_vmess(0, "crs rsrsrs", cv, "itemconfigure", x->x_tag_center_circle,
+        "-outline", bg, "-fill", bg, "-state", x->x_transparent > 0 ? "hidden" : "normal");
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_base_circle, "-fill",
+        x->x_transparent > 0 ? "" : bg);
+    if(x->x_square)
+        pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_square, "-fill",
+            x->x_transparent > 0 ? "" : bg);
+}
+
+static void knob_config_number(t_knob *x){ // show or hide number value
+    t_atom at[2];
+    SETSYMBOL(at, gensym(def_font));
+    SETFLOAT(at+1, -x->n_size*x->x_zoom);
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    pdgui_vmess(0, "crs rA", cv, "itemconfigure", x->x_tag_number, "-font", 2, at);
+    int x1 = text_xpix(&x->x_obj, x->x_glist), y1 = text_ypix(&x->x_obj, x->x_glist);
+    pdgui_vmess(0, "crs ii", cv, "moveto", x->x_tag_number,
+        x1 + x->x_xpos*x->x_zoom, y1 + x->x_ypos*x->x_zoom);
+}
+
+static void show_number(t_knob *x, int force){ // show or hide number value
+    if(x->x_number_mode == 1 || (x->x_number_mode == 2 && x->x_clicked))
+        x->x_shownum = 1; // mode 1 or mode 2 and clicked
+    else if(x->x_number_mode == 3 && x->x_typing)
+        x->x_shownum = 1; // mode 3 and typing
+    else if(x->x_number_mode == 4 // mode 4 (hovering)
+    && (x->x_hover || x->x_clicked)
+    && !x->x_edit){
+        x->x_shownum = 1;
+    }
+    else
+        x->x_shownum = 0;
+    if((knob_vis_check(x)) || force){
+        pdgui_vmess(0, "crs rs", glist_getcanvas(x->x_glist), "itemconfigure",
+            x->x_tag_number, "-state", x->x_shownum ? "normal" : "hidden");
+    }
+}
+
+// configure size
+static void knob_config_size(t_knob *x){
+    int z = x->x_zoom;
+    int x1 = text_xpix(&x->x_obj, x->x_glist);
+    int y1 = text_ypix(&x->x_obj, x->x_glist);
+    int x2 = x1 + x->x_size * z;
+    int y2 = y1 + x->x_size * z;
+    int circle_width = x->x_size * (x->x_square ? x->x_radius : 1);
+    int offset = (x->x_size - circle_width) * 0.5;
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+// inlet, outlet, square/outline
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_in,
+        x1, y1, x1 + IOWIDTH*z, y1 + IHEIGHT*z);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_out,
+        x1, y2 - OHEIGHT*z, x1 + IOWIDTH*z, y2);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_square,
+        x1, y1, x2, y2);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_outline,
+        x1, y1, x2, y2);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_hover,
+        x1, y1, x2, y2);
+    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_outline,
+        "-width", z);
+// wiper's width, wiper's center circle
+    int w_width = circle_width * z / 20; // wiper width is 1/20 of circle size
+    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_wiper,
+        "-width", w_width < z ? z : w_width); // wiper width
+    int half_size = x->x_size * z / 2; // half_size
+    int xc = x1 + half_size, yc = y1 + half_size; // center coords
+    int wx1 = rint(xc - w_width), wy1 = rint(yc - w_width);
+    int wx2 = rint(xc + w_width), wy2 = rint(yc + w_width);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_wpr_c,
+        wx1, wy1, wx2, wy2); // wiper center circle
+// knob circle stuff
+    // knob arc
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_bg_arc,
+        x1 + offset + z, y1 + offset + z,
+        x2 - offset - z, y2 - offset - z);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_arc,
+        x1 + offset + z, y1 + offset + z,
+        x2 - offset - z, y2 - offset - z);
+    // knob circle (base)
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_base_circle,
+        x1 + offset, y1 + offset, x2 - offset, y2 - offset);
+    pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_base_circle,
+        "-width", z);
+    // knob center
+    int arcwidth = circle_width * z * 0.1; // arc width is 1/10 of circle
+    if(arcwidth < 1)
+        arcwidth = 1;
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_center_circle,
+        x1 + arcwidth + offset * z, y1 + arcwidth + offset * z,
+        x2 - arcwidth - offset * z, y2 - arcwidth - offset * z);
+}
+
+// configure wiper center
+static void knob_config_wcenter(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_wpr_c,
+        "-state", x->x_clicked ? "normal" : "hidden");
+}
+
+// configure inlet outlet and outline/square
+static void knob_config_io(t_knob *x){
+    int inlet = (x->x_rcv == &s_ || x->x_rcv == gensym("empty")) && x->x_edit;
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_in,
+        "-state", inlet ? "normal" : "hidden");
+    int outlet = (x->x_snd == &s_ || x->x_snd == gensym("empty")) && x->x_edit;
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_out,
+        "-state", outlet ? "normal" : "hidden");
+    int outline = x->x_edit || x->x_square;
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_outline,
+        "-state", outline ? "normal" : "hidden");
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_square,
+        "-state", x->x_square ? "normal" : "hidden");
+}
+
+// configure arc
+static void knob_config_arc(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_arc,
+        "-state", x->x_arc && !x->x_transparent > 0 ? "normal" : "hidden");
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_bg_arc,
+        "-state", x->x_arc && !x->x_transparent > 0 ? "normal" : "hidden");
+}
+
+// Update Arc/Wiper according to position
+static void knob_update(t_knob *x){
+    t_float pos = x->x_pos;
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+//    post("knob_update cv = glist_getcanvas(x->x_glist) = %d", cv);
+//    t_canvas *cv = x->x_cv;
+    if(x->x_discrete){ // later just 1 tick case
+        t_float steps = (x->x_steps < 2 ? 2 : (float)x->x_steps) -1;
+        pos = rint(pos * steps) / steps;
+    }
+    float start = (x->x_arcstart_angle / 90.0 - 1) * HALF_PI;
+    float range = x->x_angle_range / 180.0 * M_PI;
+    float angle = start + pos * range; // pos angle
+// configure arc
+//    knob_config_arc(x);
+    pdgui_vmess(0, "crs sf sf", cv, "itemconfigure", x->x_tag_bg_arc,
+        "-start", start * -180.0 / M_PI,
+        "-extent", range * -179.99 / M_PI);
+    start += (knob_getpos(x, x->x_arcstart) * range);
+    pdgui_vmess(0, "crs sf sf", cv, "itemconfigure", x->x_tag_arc,
+        "-start", start * -180.0 / M_PI,
+        "-extent", (angle - start) * -179.99 / M_PI);
+// set wiper
+    int radius = (int)(x->x_size*x->x_zoom / 2.0);
+    int x0 = text_xpix(&x->x_obj, x->x_glist);
+    int y0 = text_ypix(&x->x_obj, x->x_glist);
+    int xc = x0 + radius, yc = y0 + radius; // center coords
+    if(x->x_square)
+        radius = (radius * x->x_radius);
+    radius += x->x_zoom;
+    int xp = xc + rint(radius * cos(angle)); // circle point x coordinate
+    int yp = yc + rint(radius * sin(angle)); // circle point x coordinate
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_wiper, xc, yc, xp, yp);
+}
+
+//---------------------- DRAW STUFF ----------------------------//
+
+static void knob_getrect(t_gobj *z, t_glist *glist, int *xp1, int *yp1, int *xp2, int *yp2){
+    t_knob *x = (t_knob *)z;
+    *xp1 = text_xpix(&x->x_obj, glist);
+    *yp1 = text_ypix(&x->x_obj, glist);
+    *xp2 = text_xpix(&x->x_obj, glist) + x->x_size*x->x_zoom;
+    *yp2 = text_ypix(&x->x_obj, glist) + x->x_size*x->x_zoom;
+}
+
+static void knob_displace(t_gobj *z, t_glist *glist, int dx, int dy){
+    t_knob *x = (t_knob *)z;
+    x->x_obj.te_xpix += dx, x->x_obj.te_ypix += dy;
+    dx *= x->x_zoom, dy *= x->x_zoom;
+    pdgui_vmess(0, "crs ii", glist_getcanvas(glist), "move", x->x_tag_obj, dx, dy);
+    canvas_fixlinesfor(glist, (t_text*)x);
+}
+
+static void knob_select(t_gobj *z, t_glist *glist, int sel){
+    t_knob* x = (t_knob*)z;
+//    t_handle *sh = (t_handle *)x->x_handle;
+    t_canvas *cv = glist_getcanvas(glist);
+    x->x_select = sel;
+    if(x->x_select){
+        pdgui_vmess(0, "crs rk", cv, "itemconfigure",
+            x->x_tag_sel, "-outline", THISGUI->i_selectcolor);
+        pdgui_vmess(0, "crs rk",  cv, "itemconfigure",
+            x->x_tag_number, "-fill", THISGUI->i_selectcolor);
+        pdgui_vmess(0, "crs rk",  cv, "itemconfigure",
+            x->x_tag_wiper, "-fill", THISGUI->i_selectcolor);
+        pdgui_vmess(0, "crs rk",  cv, "itemconfigure",
+            x->x_tag_arc, "-fill", THISGUI->i_selectcolor);
+        pdgui_vmess(0, "crs rk rk",  cv, "itemconfigure",
+            x->x_tag_IO, "-outline", THISGUI->i_selectcolor,
+            "-fill", THISGUI->i_selectcolor);
+//        pdgui_vmess(0, "rr rk",  sh->h_pathname, "configure",
+//            "-highlightcolor", THISGUI->i_selectcolor);
+    }
+    else{
+        char fg[32];
+        if(x->x_theme)
+            snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+        else
+            snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
+        pdgui_vmess(0, "crs rs", cv, "itemconfigure",
+            x->x_tag_number, "-fill", fg);
+        pdgui_vmess(0, "crs rs",  cv, "itemconfigure",
+            x->x_tag_wiper, "-fill", fg);
+        pdgui_vmess(0, "crs rs rs",  cv, "itemconfigure",
+            x->x_tag_IO, "-outline", fg, "-fill", fg);
+        pdgui_vmess(0, "crs rs",  cv, "itemconfigure",
+            x->x_tag_arc, "-fill", fg);
+        pdgui_vmess(0, "crs rk", cv, "itemconfigure",
+            x->x_tag_sel, "-outline", THISGUI->i_foregroundcolor);
+//        pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_base_circle,
+//            "-outline", fg);
+//        pdgui_vmess(0, "rr rk",  sh->h_pathname, "configure",
+//            "-highlightcolor", THISGUI->i_foregroundcolor);
+    }
+}
+
+static void knob_draw_handle(t_knob *x, int state){
+    t_handle *sh = (t_handle *)x->x_handle;
+// always destroy
+    pdgui_vmess(0, "rs", "destroy", sh->h_pathname);
+//    sys_vgui("destroy %s\n", sh->h_pathname);
+    if(state){
+        sys_vgui("canvas %s -width %d -height %d -bg #%06x -highlightcolor #%06x -highlightbackground #%06x -highlightthickness %d -cursor bottom_right_corner\n",
+            sh->h_pathname, HANDLE_SIZE, HANDLE_SIZE,
+            THISGUI->i_selectcolor, // bg
+            THISGUI->i_foregroundcolor, // highlightcolor
+            THISGUI->i_gopcolor, // highlightbackground
+            2*x->x_zoom);
+        int x1, y1, x2, y2;
+        knob_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
+        sys_vgui(".x%lx.c create window %d %d -anchor nw -width %d -height %d -window %s -tags {%s %s}\n",
+            x->x_cv,
+            x2 - HANDLE_SIZE*x->x_zoom + 1,
+            y2 - HANDLE_SIZE*x->x_zoom + 1,
+            HANDLE_SIZE*x->x_zoom,
+            HANDLE_SIZE*x->x_zoom,
+            sh->h_pathname,
+            x->x_tag_handle,
+            x->x_tag_obj);
+        sys_vgui("bind %s <Button> {pdsend [concat %s _click 1 \\;]}\n", sh->h_pathname, sh->h_bindsym->s_name);
+        sys_vgui("bind %s <ButtonRelease> {pdsend [concat %s _click 0 \\;]}\n", sh->h_pathname, sh->h_bindsym->s_name);
+        sys_vgui("bind %s <Motion> {pdsend [concat %s _motion %%x %%y \\;]}\n", sh->h_pathname, sh->h_bindsym->s_name);
+        sys_vgui("focus %s\n", sh->h_pathname); // because of a damn weird bug where it drew all over the canvas
+    }
+}
+
+// Draw ticks
+static void knob_draw_ticks(t_knob *x){
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+    char fg[32];
+    if(x->x_theme)
+        snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+    else
+        snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
+    pdgui_vmess(0, "crs", cv, "delete", x->x_tag_ticks);
+    if(!x->x_steps || !x->x_ticks)
+        return;
+    int z = x->x_zoom;
+    int divs = x->x_steps;
+    if((divs > 1) && ((x->x_angle_range + 360) % 360 != 0)) // ????
+        divs = divs - 1;
+    float delta_w = x->x_angle_range / (float)divs;
+    int x0 = text_xpix(&x->x_obj, x->x_glist), y0 = text_ypix(&x->x_obj, x->x_glist);
+    float half_size = (float)x->x_size*z / 2.0; // half_size
+    int xc = x0 + half_size, yc = y0 + half_size; // center coords
+    int start = x->x_arcstart_angle - 90.0;
+    if(x->x_square)
+        half_size *= x->x_radius;
+    if(x->x_steps == 1){
+        int width = (x->x_size / 40);
+        if(width < 1)
+            width = 1;
+        width *= 1.5;
+        double pos = knob_getpos(x, x->x_arcstart) * x->x_angle_range;
+        float w = pos + start; // tick angle
+        w *= M_PI/180.0; // in radians
+        float dx = half_size * cos(w), dy = half_size * sin(w);
+        int x1 = xc + (int)(dx);
+        int y1 = yc + (int)(dy);
+        int x2 = xc + (int)(dx * 0.65);
+        int y2 = yc + (int)(dy * 0.65);
+        char *tags_ticks[] = {x->x_tag_ticks, x->x_tag_fg, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii ri rs rS",
+            cv, "create", "line",
+            x1, y1, x2, y2,
+            "-width", width * z,
+            "-fill", fg,
+            "-tags", 3, tags_ticks);
+    }
+    else for(int t = 1; t <= x->x_steps; t++){
+        int thicker = (t == 1 || t == x->x_steps);
+        int width = (x->x_size / 40);
+        if(width < 1)
+            width = 1;
+        if(thicker)
+            width *= 1.5;
+        float w = (t-1)*delta_w + start; // tick angle
+        w *= M_PI/180.0; // in radians
+        float dx = half_size * cos(w), dy = half_size * sin(w);
+        int x1 = xc + (int)(dx);
+        int y1 = yc + (int)(dy);
+        int x2 = xc + (int)(dx * (thicker ? 0.65 : 0.75));
+        int y2 = yc + (int)(dy * (thicker ? 0.65 : 0.75));
+        char *tags_ticks[] = {x->x_tag_ticks, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii ri rs rS",
+            cv, "create", "line",
+            x1, y1, x2, y2,
+            "-width", width * z,
+            "-fill", fg,
+            "-tags", 2, tags_ticks);
+    }
+}
+
+// draw all and initialize stuff
+static void knob_draw_new(t_knob *x, t_glist *glist){
+    int z = x->x_zoom;
+    int x1 = text_xpix(&x->x_obj, glist);
+    int y1 = text_ypix(&x->x_obj, glist);
+    int x2 = x1 + x->x_size * z;
+    int y2 = y1 + x->x_size * z;
+    int circle_width = x->x_size * (x->x_square ? x->x_radius : 1);
+    int offset = (x->x_size - circle_width) * 0.5;
+    int half_size = x->x_size * z / 2; // half_size
+    int xc = x1 + half_size, yc = y1 + half_size; // center coords
+    int w_width = circle_width * z / 20; // wiper width is 1/20 of circle size
+    int wx1 = rint(xc - w_width), wy1 = rint(yc - w_width);
+    int wx2 = rint(xc + w_width), wy2 = rint(yc + w_width);
+    int arcwidth = circle_width * z * 0.1; // arc width is 1/10 of circle
+    if(arcwidth < 1)
+        arcwidth = 1;
+    float pos = x->x_pos;
+    if(x->x_discrete){ // later just 1 tick case
+        t_float steps = (x->x_steps < 2 ? 2 : (float)x->x_steps) -1;
+        pos = rint(pos * steps) / steps;
+    }
+    float start = (x->x_arcstart_angle / 90.0 - 1) * HALF_PI;
+    float range = x->x_angle_range / 180.0 * M_PI;
+    float angle = start + pos * range; // pos angle
+    // set wiper
+    int radius = (int)(x->x_size*z / 2.0);
+    if(x->x_square)
+        radius = (radius * x->x_radius);
+    radius += z;
+    int xp = xc + rint(radius * cos(angle)); // circle point x coordinate
+    int yp = yc + rint(radius * sin(angle)); // circle point x coordinate
+    
+    t_canvas *cv = glist_getcanvas(glist);
+// square
+    char *tags_square[] = {x->x_tag_square, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
+        x1, y1, x2, y2, "-tags", 2, tags_square);
+// outline
+    char *tags_outline[] = {x->x_tag_outline, x->x_tag_obj, x->x_tag_sel};
+    pdgui_vmess(0, "crr iiii ri rS", cv, "create", "rectangle",
+        x1, y1, x2, y2, "-width", z, "-tags", 3, tags_outline);
+// base circle
+    char *tags_circle[] = {x->x_tag_base_circle, x->x_tag_obj, x->x_tag_sel};
+    pdgui_vmess(0, "crr iiii ri rS", cv, "create", "oval",
+        x1 + offset, y1 + offset, x2 - offset, y2 - offset,
+        "-width", z, "-tags", 2, tags_circle); // removed x->x_tag_sel
+// arc
+    char *tags_arc_bg[] = {x->x_tag_bg_arc, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii rS", cv, "create", "arc",
+        x1 + offset + z, y1 + offset + z,
+        x2 - offset - z, y2 - offset - z,
+        "-tags", 2, tags_arc_bg);
+    char *tags_arc[] = {x->x_tag_arc, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii rS", cv, "create", "arc",
+        x1 + offset + z, y1 + offset + z,
+        x2 - offset - z, y2 - offset - z,
+        "-tags", 2, tags_arc);
+// center circle on top of arc
+    char *tags_center[] = {x->x_tag_center_circle, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii rS", cv, "create", "oval",
+        x1 + arcwidth + offset * z, y1 + arcwidth + offset * z,
+        x2 - arcwidth - offset * z, y2 - arcwidth - offset * z,
+        "-tags", 2, tags_center);
+// wiper and wiper center
+    char *tags_wiper_center[] = {x->x_tag_wpr_c, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii rS", cv, "create", "oval",
+        wx1, wy1, wx2, wy2,
+        "-tags", 2, tags_wiper_center);
+    char *tags_wiper[] = {x->x_tag_wiper, x->x_tag_fg, x->x_tag_obj};
+        pdgui_vmess(0, "crr iiii ri rS", cv, "create", "line",
+        xc, yc, xp, yp,
+        "-width", w_width < z ? z : w_width,
+        "-tags", 3, tags_wiper);
+// number
+    t_atom at[2];
+    SETSYMBOL(at, gensym(def_font));
+    SETFLOAT(at+1, -x->n_size*z);
+    char *tags_number[] = {x->x_tag_number, x->x_tag_fg, x->x_tag_obj};
+    pdgui_vmess(0, "crr ii rs rs rA rS", cv, "create", "text",
+        x1 + x->x_xpos*x->x_zoom, y1 + x->x_ypos*x->x_zoom,
+        "-text", knob_get_number(x),
+        "-anchor", "w",
+        "-font", 2, at,
+        "-tags", 3, tags_number);
+// inlet
+    char *tags_in[] = {x->x_tag_in, x->x_tag_fg, x->x_tag_IO, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
+        x1, y1, x1 + IOWIDTH*z, y1 + IHEIGHT*z,
+        "-outline", x->x_fg->s_name,
+        "-fill", x->x_fg->s_name,
+        "-tags", 4, tags_in);
+// outlet
+    char *tags_out[] = {x->x_tag_out, x->x_tag_fg, x->x_tag_IO, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
+        x1, y2 - OHEIGHT*z, x1 + IOWIDTH*z, y2,
+        "-outline", x->x_fg->s_name,
+        "-fill", x->x_fg->s_name,
+        "-tags", 4, tags_out);
+// hover area
+    char *tags_hover[] = {x->x_tag_hover, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
+        x1, y1, x2, y2,
+        "-outline", "", "-fill", "",
+        "-tags", 2, tags_hover);
+// config and set
+    knob_draw_ticks(x);
+//    knob_config_size(x);
+    knob_config_io(x);
+    knob_config_bg(x);
+    knob_config_mg(x);
+    knob_config_arc(x);
+    knob_config_fg(x);
+    knob_config_wcenter(x);
+//    knob_config_number(x);
+    knob_update(x);
+    show_number(x, 1);
+}
+
+void knob_vis(t_gobj *z, t_glist *glist, int vis){
+    t_knob* x = (t_knob*)z;
+    t_canvas *cv = glist_getcanvas(glist);
+//    post("vis cv = glist_getcanvas(glist) = %d", cv);
+    x->x_cv = glist_getcanvas(glist); // stupid
+//    post("stupid x->x_cv = %d", x->x_cv);
+    t_handle *sh = (t_handle *)x->x_handle;
+    if(x->x_edit)// bug hack, destroying even though 'draw_handle' also destroys it
+    // maybe it just should be with the 'else' "delete all" message
+    // we can just destroy this even if it doesn;t exist anyway,
+    // this was needed to avooid some tcl erros
+    pdgui_vmess(0, "rs", "destroy",  sh->h_pathname);
+//    sys_vgui("destroy %s\n", sh->h_pathname);
+    if(vis){
+        knob_draw_new(x, glist);
+        sys_vgui(".x%lx.c bind %s <Enter> {pdsend [concat %s _mouse_enter \\;]}\n",
+            cv, x->x_tag_hover, x->x_bindname->s_name);
+        sys_vgui(".x%lx.c bind %s <Leave> {pdsend [concat %s _mouse_leave \\;]}\n",
+            cv, x->x_tag_hover, x->x_bindname->s_name);
+    // handle
+        sprintf(sh->h_pathname, ".x%lx.h%lx", (unsigned long)cv, (unsigned long)sh);
+        knob_draw_handle(x, x->x_edit);
+    }
+    else
+        pdgui_vmess(0, "crs", cv, "delete", x->x_tag_obj);
+}
+
+static void knob_delete(t_gobj *z, t_glist *glist){
+    canvas_deletelinesfor(glist, (t_text *)z);
+}
+
 static void knob_save(t_gobj *z, t_binbuf *b){
     t_knob *x = (t_knob *)z;
     binbuf_addv(b, "ssiis",
@@ -698,7 +890,7 @@ static void knob_save(t_gobj *z, t_binbuf *b){
     knob_get_rcv(x);
     if(x->x_savestate)
         x->x_load = x->x_fval;
-    binbuf_addv(b, "iffffsssssiiiiiiiifssiiiiiiii", // 29 args
+    binbuf_addv(b, "iffffsssssiiiiiiiifssiiiiiiiiii", // 31 args
         x->x_size, // 01: i SIZE
         (float)x->x_lower, // 02: f lower
         (float)x->x_upper, // 03: f upper
@@ -727,7 +919,9 @@ static void knob_save(t_gobj *z, t_binbuf *b){
         x->x_savestate, // 26: i savestate
         x->x_lb, // 27: i loadbang
         x->x_ticks, // 28: i show ticks
-        x->x_readonly); // 29: i read only
+        x->x_readonly, // 29: i read only
+        x->x_theme, // 30: i color theme
+        x->x_transparent); // 31: i transparent background
     binbuf_addv(b, ";");
 }
 
@@ -736,18 +930,41 @@ static void knob_save(t_gobj *z, t_binbuf *b){
 static void knob_set(t_knob *x, t_floatarg f){
     if(isnan(f) || isinf(f))
         return;
+    x->x_setted = 1;
     double old = x->x_pos;
-    x->x_fval = knob_clipfloat(x, f);
+    x->x_fval = x->x_circular == 2 ? f : knob_clipfloat(x, f);
     x->x_pos = knob_getpos(x, x->x_fval);
-    x->x_fval = knob_getfval(x);
     if(x->x_pos != old){
         if(knob_vis_check(x))
             knob_update(x);
         knob_update_number(x);
     }
+    
+}
+
+static void knob_ping(t_knob *x){
+    if(x->x_cname->s_thing && x->x_snd_raw != gensym("empty")){
+        t_atom at[1];
+        SETSYMBOL(at, x->x_snd_raw);
+        typedmess(x->x_cname->s_thing, x->x_cname, 1, at);
+    }
 }
 
 static void knob_bang(t_knob *x){
+    knob_get_snd(x);
+    knob_ping(x);
+    if(x->x_circular == 2 && !x->x_setted){ // infinite
+        double delta = x->x_fval - x->x_lastval;
+        double range = x->x_upper - x->x_lower;
+        double halfrange = range * 0.5;
+        if(fabs(delta) > halfrange){
+            delta = fmod(delta + halfrange, range);
+            if(delta < 0)
+                delta += range;
+            delta -= halfrange;
+        }
+        x->x_fval = x->x_lastval + delta;
+    }
     if(x->x_param != gensym("empty")){
         t_atom at[1];
         SETFLOAT(at, x->x_fval);
@@ -761,12 +978,18 @@ static void knob_bang(t_knob *x){
         outlet_float(x->x_obj.ob_outlet, x->x_fval);
         if(x->x_snd == gensym("empty") || x->x_snd == &s_)
             goto empty;
-        if(x->x_snd->s_thing)
-            pd_float(x->x_snd->s_thing, x->x_fval);
+        if(x->x_snd->s_thing){
+            if(x->x_snd == x->x_rcv)
+                pd_error(x, "[knob]: same send/receive names (infinite loop)");
+            else
+                pd_float(x->x_snd->s_thing, x->x_fval);
+        }
     }
 empty:
     if(x->x_var != gensym("empty"))
         value_setfloat(x->x_var, x->x_fval);
+    x->x_lastval = x->x_fval;
+    x->x_setted = 0;
 }
 
 static void knob_float(t_knob *x, t_floatarg f){
@@ -780,8 +1003,14 @@ static void knob_load(t_knob *x, t_symbol *s, int ac, t_atom *av){
     x->x_ignore = s;
     if(!ac)
         x->x_load = x->x_fval;
-    else if(ac == 1 && av->a_type == A_FLOAT)
-        x->x_load = knob_clipfloat(x, atom_getfloat(av));
+    else if(ac == 1 && av->a_type == A_FLOAT){
+        float f = atom_getfloat(av);
+        x->x_load = x->x_circular == 2 ? f : knob_clipfloat(x, f);
+    }
+}
+
+static void knob_reload(t_knob *x){
+    knob_float(x, x->x_load);
 }
 
 static void knob_arcstart(t_knob *x, t_symbol *s, int ac, t_atom *av){
@@ -836,6 +1065,7 @@ static void knob_start_end(t_knob *x, t_floatarg f1, t_floatarg f2){
         knob_draw_ticks(x);
         knob_update(x);
     }
+    x->x_setted = 0;
 }
 
 static void knob_angle(t_knob *x, t_floatarg f){
@@ -855,6 +1085,7 @@ static void knob_size(t_knob *x, t_floatarg f){
             knob_draw_ticks(x);
             knob_update(x);
             canvas_fixlinesfor(x->x_glist, (t_text *)x);
+            knob_draw_handle(x, x->x_edit);
         }
     }
 }
@@ -875,11 +1106,12 @@ static void knob_arc(t_knob *x, t_floatarg f){
         x->x_arc = arc;
         if(knob_vis_check(x))
             knob_config_arc(x);
+            knob_config_mg(x);
     }
 }
 
 static void knob_circular(t_knob *x, t_floatarg f){
-    x->x_circular = (f != 0);
+    x->x_circular = f < 0 ? 0 : f > 2 ? 2 : (int)f;
 }
 
 static void knob_discrete(t_knob *x, t_floatarg f){
@@ -904,7 +1136,7 @@ static void knob_steps(t_knob *x, t_floatarg f){
     }
 }
 
-static t_symbol *getcolor(int ac, t_atom *av){
+static t_symbol *knob_getcolor(int ac, t_atom *av){
     if((av)->a_type == A_SYMBOL)
         return(atom_getsymbol(av));
     else{
@@ -915,8 +1147,41 @@ static t_symbol *getcolor(int ac, t_atom *av){
         g = g < 0 ? 0 : g > 255 ? 255 : g;
         b = b < 0 ? 0 : b > 255 ? 255 : b;
         char color[20];
-        sprintf(color, "#%2.2x%2.2x%2.2x", r, g, b);
+        sprintf(color, "#%.2x%.2x%.2x", r, g, b);
         return(gensym(color));
+    }
+}
+
+static void knob_validate(t_knob *x, t_floatarg v, t_symbol *color, t_floatarg t){
+    int valid = (int)v;
+    int type = (int)t;
+    switch (type) {
+        case 0:
+            if (valid){
+                x->x_bg = color;
+                knob_config_bg(x);
+            }
+            else
+                pd_error(0, "[knob] invalid background color '%s'", color->s_name);
+            break;
+
+        case 1:
+            if (valid){
+                x->x_mg = color;
+                knob_config_mg(x);
+            }
+            else
+                pd_error(0, "[knob] invalid arc color '%s'", color->s_name);
+            break;
+
+        case 2:
+            if (valid){
+                x->x_fg = color;
+                knob_config_fg(x);
+            }
+            else
+                pd_error(0, "[knob] invalid background color '%s'", color->s_name);
+            break;
     }
 }
 
@@ -924,42 +1189,59 @@ static void knob_bgcolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
     x->x_ignore = s;
     if(!ac)
         return;
-    t_symbol *color = getcolor(ac, av);
-    if(x->x_bg != color){
-        x->x_bg = color;
-        if(knob_vis_check(x))
-            knob_config_bg(x);
-    }
+    sys_vgui("set color_name {%s}\n", knob_getcolor(ac, av)->s_name);
+    sys_vgui("set color_escaped [string map {{ } {\\ }} $color_name]\n");
+    sys_vgui("set hex_color [color2hex $color_name]\n");
+    sys_vgui("if {$hex_color eq \"\"} {pdsend \"%s _validate 0 $color_escaped 0\"} else {pdsend \"%s _validate 1 $hex_color 0\"}\n", x->x_bindname->s_name, x->x_bindname->s_name);
 }
 
-/*static void knob_fill_bg(t_knob *x, t_floatarg f){
-    x->x_fill_bg = (f != 0);
-    if(knob_vis_check(x))
-        knob_config_bg(x);
-}*/
+static void knob_setbgcolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
+    x->x_ignore = s;
+    x->x_theme = 0;
+    knob_bgcolor(x, NULL, ac, av);
+}
 
 static void knob_arccolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
     x->x_ignore = s;
     if(!ac)
         return;
-    t_symbol *color = getcolor(ac, av);
-    if(x->x_mg != color){
-        x->x_mg = color;
-        if(knob_vis_check(x))
-            knob_config_bg_arc(x);
-    }
+    sys_vgui("set color_name {%s}\n", knob_getcolor(ac, av)->s_name);
+    sys_vgui("set color_escaped [string map {{ } {\\ }} $color_name]\n");
+    sys_vgui("set hex_color [color2hex $color_name]\n");
+    sys_vgui("if {$hex_color eq \"\"} {pdsend \"%s _validate 0 $color_escaped 1\"} else {pdsend \"%s _validate 1 $hex_color 1\"}\n", x->x_bindname->s_name, x->x_bindname->s_name);
+}
+
+static void knob_setarccolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
+    x->x_ignore = s;
+    x->x_theme = 0;
+    knob_arccolor(x, NULL, ac, av);
 }
 
 static void knob_fgcolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
     x->x_ignore = s;
     if(!ac)
         return;
-    t_symbol *color = getcolor(ac, av);
-    if(x->x_fg != color){
-        x->x_fg = color;
-        if(knob_vis_check(x))
-            knob_config_fg(x);
-    }
+    sys_vgui("set color_name {%s}\n", knob_getcolor(ac, av)->s_name);
+    sys_vgui("set color_escaped [string map {{ } {\\ }} $color_name]\n");
+    sys_vgui("set hex_color [color2hex $color_name]\n");
+    sys_vgui("if {$hex_color eq \"\"} {pdsend \"%s _validate 0 $color_escaped 2\"} else {pdsend \"%s _validate 1 $hex_color 2\"}\n", x->x_bindname->s_name, x->x_bindname->s_name);
+}
+
+static void knob_setfgcolor(t_knob *x, t_symbol *s, int ac, t_atom *av){
+    x->x_ignore = s;
+    x->x_theme = 0;
+    knob_fgcolor(x, NULL, ac, av);
+}
+
+static void knob_colors(t_knob *x, t_symbol *bg, t_symbol *mg, t_symbol *fg){
+    x->x_theme = 0;
+    t_atom at[1];
+    SETSYMBOL(at, bg);
+    knob_bgcolor(x, NULL, 1, at);
+    SETSYMBOL(at, mg);
+    knob_arccolor(x, NULL, 1, at);
+    SETSYMBOL(at, fg);
+    knob_fgcolor(x, NULL, 1, at);
 }
 
 static void knob_param(t_knob *x, t_symbol *s){
@@ -1016,8 +1298,10 @@ static void knob_range(t_knob *x, t_floatarg f1, t_floatarg f2){
     }
     x->x_lower = (double)f1;
     x->x_upper = (double)f2;
-    x->x_fval = knob_clipfloat(x, x->x_fval);
-    x->x_load = knob_clipfloat(x, x->x_load);
+    if(x->x_circular != 2){
+        x->x_fval = knob_clipfloat(x, x->x_fval);
+        x->x_load = knob_clipfloat(x, x->x_load);
+    }
     x->x_arcstart = knob_clipfloat(x, x->x_arcstart);
     if(x->x_lower == x->x_upper)
         x->x_fval = x->x_load = x->x_arcstart = x->x_lower;
@@ -1075,7 +1359,7 @@ static void knob_lb(t_knob *x, t_floatarg f){
 }
 
 static void knob_number_mode(t_knob *x, t_floatarg f){
-    x->x_number_mode = f < 0 ? 0 : f > 3 ? 3 : (int)f;
+    x->x_number_mode = f < 0 ? 0 : f > 4 ? 4 : (int)f;
     show_number(x, 0);
 }
 
@@ -1091,6 +1375,25 @@ static void knob_numberpos(t_knob *x, t_floatarg xpos, t_floatarg ypos){
 
 static void knob_readonly(t_knob *x, t_floatarg f){
     x->x_readonly = (int)(f != 0);
+}
+
+static void knob_theme(t_knob *x, t_floatarg f){
+    x->x_theme = (int)(f != 0);
+    if(knob_vis_check(x)){
+        knob_config_bg(x);
+        knob_config_arc(x);
+        knob_config_mg(x);
+        knob_config_fg(x);
+    }
+}
+
+static void knob_transparent(t_knob *x, t_floatarg f){
+    x->x_transparent = (int)f;
+    if(knob_vis_check(x)){
+        knob_config_bg(x);
+        knob_config_arc(x);
+        knob_config_mg(x);
+    }
 }
 
 static void knob_square(t_knob *x, t_floatarg f){
@@ -1113,37 +1416,55 @@ static void knob_zoom(t_knob *x, t_floatarg f){
     x->x_zoom = (int)f;
 }
 
+static t_symbol *get_nmode(t_knob *x){
+    if(x->x_number_mode == 0)
+        return(gensym("Never"));
+    else if(x->x_number_mode == 1)
+        return(gensym("Always"));
+    else if(x->x_number_mode == 2)
+        return(gensym("Active"));
+    else if(x->x_number_mode == 3)
+        return(gensym("Typing"));
+    else // x->x_number_mode == 4
+        return(gensym("Hovering"));
+}
+
+static t_symbol * get_cmode(t_knob *x){
+    if(x->x_circular == 0)
+        return(gensym("No"));
+    else if(x->x_circular == 1)
+        return(gensym("Loop"));
+    else // x->x_circular == 2
+        return(gensym("Infinite"));
+}
+
 // --------------- properties stuff --------------------
-static void knob_properties(t_gobj *z, t_glist *owner){
+void knob_properties(t_gobj *z, t_glist *owner){
     t_knob *x = (t_knob *)z;
     knob_get_rcv(x);
     knob_get_snd(x);
     knob_get_var(x);
-    t_symbol *mode = gensym("Never");
-    if(x->x_number_mode == 1)
-        mode = gensym("Always");
-    else if(x->x_number_mode == 2)
-        mode = gensym("Active");
-    else if(x->x_number_mode == 3)
-        mode = gensym("Typing");
-    pdgui_stub_vnew(&x->x_obj.ob_pd, "knob_dialog", owner,
-        "ii if iif iii ii ffif iii siii ss ss sss",
+    t_symbol *n_mode = get_nmode(x);
+    t_symbol *c_mode = get_cmode(x);
+    pdgui_stub_vnew(&x->x_obj.ob_pd, "knob_dialog", x,
+        "ii if iif iii ii ffif iis siii ss ss sss ii",
         x->x_size, x->x_square, // ii
         x->x_arc, x->x_arcstart, // if
         x->x_lb, x->x_savestate, x->x_load, // iif
         x->x_discrete, x->x_ticks, x->x_steps, // iii
         x->x_angle_range, x->x_angle_offset, // ii
         x->x_lower, x->x_upper, x->x_expmode, x->x_exp, // ffif
-        x->x_readonly, x->x_jump, x->x_circular, // iii
-        mode->s_name, x->n_size, x->x_xpos, x->x_ypos, // siii
+        x->x_readonly, x->x_jump, c_mode->s_name, // iis
+        n_mode->s_name, x->n_size, x->x_xpos, x->x_ypos, // siii
         x->x_rcv_raw->s_name, x->x_snd_raw->s_name, // ss
-        x->x_param->s_name, x->x_var_raw->s_name, // sss
-        x->x_bg->s_name, x->x_mg->s_name, x->x_fg->s_name); // sss
+        x->x_param->s_name, x->x_var_raw->s_name, // ss
+        x->x_bg->s_name, x->x_mg->s_name, x->x_fg->s_name, // sss
+        x->x_theme, x->x_transparent); // ii
 }
 
 static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     x->x_ignore = s;
-    t_atom undo[30];
+    t_atom undo[32];
     SETFLOAT(undo+0, x->x_size);
     SETFLOAT(undo+1, x->x_square);
     SETFLOAT(undo+2, x->x_arc);
@@ -1162,8 +1483,8 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     SETFLOAT(undo+15, x->x_log ? 1 : x->x_exp);
     SETFLOAT(undo+16, x->x_readonly);
     SETFLOAT(undo+17, x->x_jump);
-    SETFLOAT(undo+18, x->x_circular);
-    SETFLOAT(undo+19, x->x_number_mode);
+    SETSYMBOL(undo+18, get_cmode(x));
+    SETSYMBOL(undo+19, get_nmode(x));
     SETFLOAT(undo+20, x->n_size);
     SETFLOAT(undo+21, x->x_xpos);
     SETFLOAT(undo+22, x->x_ypos);
@@ -1174,7 +1495,9 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     SETSYMBOL(undo+27, x->x_bg);
     SETSYMBOL(undo+28, x->x_mg);
     SETSYMBOL(undo+29, x->x_fg);
-    pd_undo_set_objectstate(x->x_glist, (t_pd*)x, gensym("dialog"), 30, undo, ac, av);
+    SETFLOAT(undo+30, x->x_theme);
+    SETFLOAT(undo+31, x->x_transparent);
+    pd_undo_set_objectstate(x->x_glist, (t_pd*)x, gensym("dialog"), 32, undo, ac, av);
     int size = (int)atom_getintarg(0, ac, av);
     int square = atom_getintarg(1, ac, av);
     int arc = atom_getintarg(2, ac, av) != 0;
@@ -1193,8 +1516,8 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     float exp = atom_getfloatarg(15, ac, av);
     x->x_readonly = atom_getintarg(16, ac, av);
     x->x_jump = atom_getintarg(17, ac, av);
-    x->x_circular = atom_getintarg(18, ac, av);
-    t_symbol *mode = atom_getsymbolarg(19, ac, av);
+    t_symbol *cmode = atom_getsymbolarg(18, ac, av);
+    t_symbol *nmode = atom_getsymbolarg(19, ac, av);
     int nsize = atom_getintarg(20, ac, av);
     int xpos = atom_getintarg(21, ac, av);
     int ypos = atom_getintarg(22, ac, av);
@@ -1205,6 +1528,8 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     t_symbol *bg = atom_getsymbolarg(27, ac, av);
     t_symbol *mg = atom_getsymbolarg(28, ac, av);
     t_symbol *fg = atom_getsymbolarg(29, ac, av);
+    x->x_theme = atom_getintarg(30, ac, av);
+    x->x_transparent = atom_getintarg(31, ac, av);
     knob_config_io(x); // for outline/square
     if(expmode == 0){
         knob_log(x, 0);
@@ -1244,14 +1569,25 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
     knob_var(x, var);
     knob_nsize(x, nsize);
     knob_numberpos(x, xpos, ypos);
-    int nmode = 0;
-    if(mode == gensym("Always"))
-        nmode = 1;
-    else if(mode == gensym("Active"))
-        nmode = 2;
-    else if(mode == gensym("Typing"))
-        nmode = 3;
-    knob_number_mode(x, nmode);
+    int n_mode = 0;
+    if(nmode == gensym("Always"))
+        n_mode = 1;
+    else if(nmode == gensym("Active"))
+        n_mode = 2;
+    else if(nmode == gensym("Typing"))
+        n_mode = 3;
+    else if(nmode == gensym("Hovering"))
+        n_mode = 4;
+    x->x_circular = 0;
+    if(cmode == gensym("Loop"))
+        x->x_circular = 1;
+    else if(cmode == gensym("Infinite"))
+        x->x_circular = 2;
+    knob_number_mode(x, n_mode);
+    knob_config_fg(x); // rethink
+    knob_config_mg(x);
+    knob_config_arc(x);
+    knob_config_bg(x);
     canvas_dirty(x->x_glist, 1);
 }
 
@@ -1260,23 +1596,37 @@ static void knob_apply(t_knob *x, t_symbol *s, int ac, t_atom *av){
 static void knob_activecheck(t_knob *x){
     show_number(x, 0);
     knob_config_wcenter(x);
-    if(x->x_snd == gensym("empty") || x->x_snd == &s_)
-        return;
-    char buff[512];
-    sprintf(buff, "%s-active", x->x_snd->s_name);
-    t_symbol *snd_active = gensym(buff);
-    if(snd_active->s_thing)
-        pd_float(snd_active->s_thing, x->x_clicked);
+    char namebuf[512];
+    if(x->x_var != gensym("empty") && x->x_var != &s_){
+        sprintf(namebuf, "%s-active", x->x_var->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_float(snd->s_thing, x->x_clicked);
+    }
+    if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+        sprintf(namebuf, "%s-active", x->x_snd->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_float(snd->s_thing, x->x_clicked);
+    }
 }
 
 static int xm, ym;
 
-static void knob_arrow_motion(t_knob *x, t_floatarg dir){
+static void knob_arrow_motion(t_knob *x, int dir){
     float old = x->x_pos, pos;
     if(x->x_discrete){
         t_float ticks = (x->x_steps < 2 ? 2 : (float)x->x_steps) - 1;
         old = rint(old * ticks) / ticks;
         pos = old + dir/ticks;
+        if(x->x_circular){
+            if(pos > 1)
+                pos = 0;
+            if(pos < 0)
+                pos = 1;
+        }
+        else
+            pos = pos > 1 ? 1 : pos < 0 ? 0 : pos;
     }
     else{
         float delta = dir;
@@ -1284,19 +1634,18 @@ static void knob_arrow_motion(t_knob *x, t_floatarg dir){
         if(x->x_shift)
             delta *= 0.01;
         pos = x->x_pos + delta;
+        if(x->x_circular){
+            if(pos > 1)
+                pos -= 1;
+            if(pos < 0)
+                pos += 1;
+        }
+        else
+            pos = pos > 1 ? 1 : pos < 0 ? 0 : pos;
     }
-    if(x->x_circular){
-        if(pos > 1)
-            pos = 0;
-        if(pos < 0)
-            pos = 1;
-    }
-    else
-        pos = pos > 1 ? 1 : pos < 0 ? 0 : pos;
     x->x_pos = pos;
-    t_float fval = x->x_fval;
     x->x_fval = knob_getfval(x);
-    if(fval != x->x_fval){
+    if(x->x_lastval != x->x_fval){
         knob_bang(x);
         knob_update_number(x);
     }
@@ -1306,32 +1655,123 @@ static void knob_arrow_motion(t_knob *x, t_floatarg dir){
     }
 }
 
+static void knob_up(t_knob *x){
+    knob_arrow_motion(x, 1);
+}
+
+static void knob_down(t_knob *x){
+    knob_arrow_motion(x, -1);
+}
+
+static void knob_shift(t_knob *x, t_floatarg f){
+    knob_arrow_motion(x, (int)f);
+}
+
+static void knob_dowheel(t_knob *x, t_floatarg delta, t_floatarg h){
+    if(x->x_clicked && !x->x_edit){
+        #ifdef __APPLE__
+        if(!h)
+            delta = -delta;
+        #else
+            delta /= 120.0;
+        #endif
+        knob_arrow_motion(x, delta);
+    }
+}
+
+void knob_mouse_hover(t_knob *x, int h){
+    if(x->x_edit || x->x_readonly)
+        return;
+    char namebuf[512];
+    if(x->x_var != gensym("empty") && x->x_var != &s_){
+        sprintf(namebuf, "%s-hover", x->x_var->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_float(snd->s_thing, h);
+    }
+    if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+        sprintf(namebuf, "%s-hover", x->x_snd->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_float(snd->s_thing, h);
+    }
+    show_number(x, 0);
+}
+
+void knob_mouse_enter(t_knob *x){
+    if(!x->x_edit)
+        knob_mouse_hover(x, x->x_hover = 1);
+}
+
+void knob_mouse_leave(t_knob *x){
+    if(!x->x_edit)
+        knob_mouse_hover(x, x->x_hover = 0);
+}
+
+static void knob_doup(t_knob *x, t_floatarg up){
+//
+}
+static void knob_getscreen(t_knob *x, t_floatarg f1,  t_floatarg f2){
+//
+}
+static void knob_dobang(t_knob *x, t_floatarg f1,  t_floatarg f2){
+//
+}
+static void knob_dozero(t_knob *x, t_floatarg f1,  t_floatarg f2){
+//
+}
+
 static void knob_motion(t_knob *x, t_floatarg dx, t_floatarg dy){
     if(dx == 0 && dy == 0)
         return;
     float old = x->x_pos, pos;
-    if(!x->x_circular){ // normal mode
+    if(x->x_circular){ // get pos based on mouse coords
+        if(x->x_jump){
+            xm += dx, ym += dy; // update coords
+            int xc = text_xpix(&x->x_obj, x->x_glist) + x->x_size / 2; // center x
+            int yc = text_ypix(&x->x_obj, x->x_glist) + x->x_size / 2; // center y
+            float alphacenter = (x->x_end_angle + x->x_arcstart_angle) / 2; // arc center angle
+            // should be stored
+            float alpha = atan2(xm - xc, -ym + yc) * 180.0 / M_PI; // angle of mouse position
+            float alphadif = alpha - alphacenter; // difference to arc center
+            alphadif = ((int)((alphadif + 180.0 + 360.0) * 100.0) % 36000) * 0.01; // wrap
+            pos = alphadif + (alphacenter - x->x_arcstart_angle - 180.0);
+            pos /= x->x_angle_range; // normalized 0-1
+        }
+        else{
+            int xc = text_xpix(&x->x_obj, x->x_glist) + x->x_size / 2; // center x
+            int yc = text_ypix(&x->x_obj, x->x_glist) + x->x_size / 2; // center y
+            // should be stored
+//            float alphacenter = (x->x_end_angle + x->x_arcstart_angle) / 2; // arc center angle
+            // should also be stored
+            float lastalpha = atan2(xm - xc, -ym + yc) * 180.0 / M_PI; // last angle
+            xm += dx, ym += dy; // update coords
+            float alpha = atan2(xm - xc, -ym + yc) * 180.0 / M_PI; // current angle
+            float alphadif = alpha - lastalpha; // difference to arc center
+            x->x_start_angle += alphadif;
+            pos = x->x_start_angle / x->x_angle_range;
+            if(pos > 1)
+                pos -= 1;
+            if(pos < 0)
+                pos += 1;
+        }
+    }
+    else{ // normal/non circular mode
         float delta = -dy;
         if(fabs(dx) > fabs(dy))
             delta = dx;
-        delta /= (float)(x->x_size) * x->x_zoom * 2; // 2 is 'sensitivity'
+        delta /= (float)(x->x_size) * x->x_zoom * 2; // "2" is 'sensitivity'
         if(x->x_shift)
             delta *= 0.01;
         pos = x->x_pos + delta;
+        if(pos > 1)
+            pos = 1;
+        if(pos < 0)
+            pos = 0;
     }
-    else{ // circular mode
-        xm += dx, ym += dy;
-        int xc = text_xpix(&x->x_obj, x->x_glist) + x->x_size / 2;
-        int yc = text_ypix(&x->x_obj, x->x_glist) + x->x_size / 2;
-        float alphacenter = (x->x_end_angle + x->x_arcstart_angle) / 2;
-        float alpha = atan2(xm - xc, -ym + yc) * 180.0 / M_PI;
-        pos = (((int)((alpha - alphacenter + 180.0 + 360.0) * 100.0) % 36000) * 0.01
-            + (alphacenter - x->x_arcstart_angle - 180.0)) / x->x_angle_range;
-    }
-    x->x_pos = pos > 1 ? 1 : pos < 0 ? 0 : pos; // should go up in non circular (to do)
-    t_float fval = x->x_fval;
+    x->x_pos = pos;
     x->x_fval = knob_getfval(x);
-    if(fval != x->x_fval){
+    if(x->x_lastval != x->x_fval){
         knob_bang(x);
         knob_update_number(x);
     }
@@ -1350,7 +1790,7 @@ static void knob_list(t_knob *x, t_symbol *sym, int ac, t_atom *av){ // get key 
         knob_float(x, atom_getfloat(av));
         return;
     }
-    if(ac != 2)
+    if(ac != 2 || x->x_edit)
         return;
     int flag = (int)atom_getfloat(av); // 1 for press, 0 for release
     sym = atom_getsymbol(av+1); // get key name
@@ -1376,34 +1816,55 @@ static void knob_key(void *z, t_symbol *keysym, t_floatarg fkey){
     char c = fkey, buf[3], namebuf[512];
     buf[1] = 0;
     if(c == 0 || c == '\e'){ // click out
+        knob_update_number(x);
         x->x_clicked = x->x_typing = 0;
         knob_activecheck(x);
         return;
     }
     else if(c == '\t'){ // tab
-        sprintf(namebuf, "%s-tab", x->x_snd->s_name);
-        t_symbol *snd_tab = gensym(namebuf);
-        if(snd_tab->s_thing)
-            pd_bang(snd_tab->s_thing);
+        if(x->x_var != gensym("empty") && x->x_var != &s_){
+            sprintf(namebuf, "%s-tab", x->x_var->s_name);
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing){
+                pd_bang(snd->s_thing);
+                return;
+            }
+        }
+        if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+            sprintf(namebuf, "%s-tab", x->x_snd->s_name);
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing){
+                pd_bang(snd->s_thing);
+                return;
+            }
+        }
+        return;
     }
     else if(((c == '\n') || (c == 13))){ // enter
         float value = x->x_buf[0] == 0 ? x->x_fval : atof(x->x_buf);
-        sprintf(namebuf, "%s-enter", x->x_snd->s_name);
-        t_symbol *snd_enter = gensym(namebuf);
-        if(snd_enter->s_thing)
-            pd_float(snd_enter->s_thing, value);
-        else
+        if(x->x_var != gensym("empty") && x->x_var != &s_){
+            sprintf(namebuf, "%s-enter", x->x_var->s_name); // ???
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing)
+                pd_float(snd->s_thing, value);
+            else
+                knob_float(x, value);
+        }
+        if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+            sprintf(namebuf, "%s-enter", x->x_snd->s_name);
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing)
+                pd_float(snd->s_thing, value);
+            else
+                knob_float(x, value);
+        }
+        else{ // no send
             knob_float(x, value);
+        }
         x->x_buf[0] = 0;
         x->x_typing = 0;
         show_number(x, 0);
         return;
-    }
-    else if(c == '\t'){ // tab
-        sprintf(namebuf, "%s-tab", x->x_snd->s_name);
-        t_symbol *snd_tab = gensym(namebuf);
-        if(snd_tab->s_thing)
-            pd_bang(snd_tab->s_thing);
     }
     else if(((c >= '0') && (c <= '9')) || (c == '.') || (c == '-') ||
     (c == 'e') || (c == '+') || (c == 'E')){ // number characters
@@ -1433,11 +1894,19 @@ update_number:{
         pdgui_vmess(0, "crs rs",glist_getcanvas(x->x_glist),
             "itemconfigure", x->x_tag_number, "-text", cp);
         x->x_buf[sl] = 0;
-        sprintf(namebuf, "%s-typing", x->x_snd->s_name);
-        t_symbol *snd_typing = gensym(namebuf);
-        if(snd_typing->s_thing)
-            pd_symbol(snd_typing->s_thing, gensym(cp));
     
+        if(x->x_var != gensym("empty") && x->x_var != &s_){
+            sprintf(namebuf, "%s-typing", x->x_var->s_name);
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing)
+                pd_symbol(snd->s_thing, gensym(cp));
+        }
+        if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+            sprintf(namebuf, "%s-typing", x->x_snd->s_name);
+            t_symbol *snd = gensym(namebuf);
+            if(snd->s_thing)
+            pd_symbol(snd->s_thing, gensym(cp));
+        }
     }
 }
     
@@ -1458,29 +1927,45 @@ static void knob_reset(t_knob *x){
 }
 
 static void knob_learn(t_knob *x){
-    if(x->x_snd == gensym("empty") || x->x_snd == &s_)
-        return;
-    char buff[512];
-    sprintf(buff, "%s-learn", x->x_snd->s_name);
-    t_symbol *snd_learn = gensym(buff);
-    if(snd_learn->s_thing)
-        pd_bang(snd_learn->s_thing);
+    char namebuf[512];
+    if(x->x_var != gensym("empty") && x->x_var != &s_){
+        sprintf(namebuf, "%s-learn", x->x_var->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_bang(snd->s_thing);
+    }
+    if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+        sprintf(namebuf, "%s-learn", x->x_snd->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_bang(snd->s_thing);
+    }
 }
 
 static void knob_forget(t_knob *x){
-    if(x->x_snd == gensym("empty") || x->x_snd == &s_)
-        return;
-    char buff[512];
-    sprintf(buff, "%s-forget", x->x_snd->s_name);
-    t_symbol *snd_forget = gensym(buff);
-    if(snd_forget->s_thing)
-        pd_bang(snd_forget->s_thing);
+    char namebuf[512];
+    if(x->x_var != gensym("empty") && x->x_var != &s_){
+        sprintf(namebuf, "%s-forget", x->x_var->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_bang(snd->s_thing);
+    }
+    if(x->x_snd != gensym("empty") && x->x_snd != &s_){
+        sprintf(namebuf, "%s-forget", x->x_snd->s_name);
+        t_symbol *snd = gensym(namebuf);
+        if(snd->s_thing)
+            pd_bang(snd->s_thing);
+    }
 }
 
 static int knob_click(t_gobj *z, struct _glist *glist, int xpix, int ypix, int shift, int alt, int dbl, int doit){
     t_knob *x = (t_knob *)z;
     if(x->x_readonly)
         return(0);
+    if(alt && doit){
+        knob_float(x, x->x_load);
+        return(1);
+    }
     x->x_shift = shift;
     if(x->x_ctrl && doit){
         if(x->x_shift)
@@ -1489,45 +1974,33 @@ static int knob_click(t_gobj *z, struct _glist *glist, int xpix, int ypix, int s
             knob_learn(x);
         return(1);
     }
-    else if((alt && doit) || dbl){
-        knob_set(x, x->x_arcstart);
-        knob_bang(x);
+    else if(dbl){
+        knob_reset(x);
         return(1);
     }
     if(doit){
         x->x_buf[0] = 0;
-//        pd_bind(&x->x_obj.ob_pd, gensym("#keyname")); // listen to key events
         x->x_clicked = 1;
         knob_activecheck(x);
-        if(x->x_circular){
-//            if(x->x_jump){
+        if(x->x_jump){
+            int xc = text_xpix(&x->x_obj, x->x_glist) + x->x_size / 2;
+            int yc = text_ypix(&x->x_obj, x->x_glist) + x->x_size / 2;
+            float alphacenter = (x->x_end_angle + x->x_arcstart_angle) / 2;
+            float alpha = atan2(xpix - xc, -ypix + yc) * 180.0 / M_PI;
+            float pos = (((int)((alpha - alphacenter + 180.0 + 360.0) * 100.0) % 36000) * 0.01
+                + (alphacenter - x->x_arcstart_angle - 180.0)) / x->x_angle_range;
+            x->x_pos = pos > 1 ? 1 : pos < 0 ? 0 : pos;
+            x->x_fval = knob_getfval(x);
+            knob_update(x);
+            if(x->x_circular){
                 xm = xpix;
                 ym = ypix;
-/*            }
-            else{ // did not work
-                float start = (x->x_arcstart_angle / 90.0 - 1) * HALF_PI;
-                float range = x->x_angle_range / 180.0 * M_PI;
-                float angle = start + x->x_pos * range; // pos angle
-                int radius = (int)(x->x_size*x->x_zoom / 2.0);
-                int x0 = text_xpix(&x->x_obj, x->x_glist), y0 = text_ypix(&x->x_obj, x->x_glist);
-                int xp = x0 + radius + rint(radius * cos(angle)); // circle point x coordinate
-                int yp = y0 + radius + rint(radius * sin(angle)); // circle point x coordinate
-                xm = xp;
-                ym = yp;
-            }*/
-        }
-        else{
-            if(x->x_jump){
-                int xc = text_xpix(&x->x_obj, x->x_glist) + x->x_size / 2;
-                int yc = text_ypix(&x->x_obj, x->x_glist) + x->x_size / 2;
-                float alphacenter = (x->x_end_angle + x->x_arcstart_angle) / 2;
-                float alpha = atan2(xpix - xc, -ypix + yc) * 180.0 / M_PI;
-                float pos = (((int)((alpha - alphacenter + 180.0 + 360.0) * 100.0) % 36000) * 0.01
-                    + (alphacenter - x->x_arcstart_angle - 180.0)) / x->x_angle_range;
-                x->x_pos = pos > 1 ? 1 : pos < 0 ? 0 : pos;
-                x->x_fval = knob_getfval(x);
-                knob_update(x);
             }
+        }
+        else if(x->x_circular){
+            x->x_start_angle = (x->x_drag_start_pos = x->x_pos) * x->x_angle_range;
+            xm = xpix;
+            ym = ypix;
         }
         knob_bang(x);
         glist_grab(glist, &x->x_obj.te_g, (t_glistmotionfn)(knob_motion), knob_key, xpix, ypix);
@@ -1535,6 +2008,61 @@ static int knob_click(t_gobj *z, struct _glist *glist, int xpix, int ypix, int s
     }
     return(1);
 }
+
+// --------------------- handle ---------------------------------------------------
+static void handle__click_callback(t_handle *sh, t_floatarg f){
+    int click = (int)f;
+    t_knob *x = sh->h_master;
+    if(sh->h_dragon && click == 0){
+        sys_vgui(".x%lx.c delete %s\n", x->x_cv, sh->h_outlinetag);
+        t_atom undo[1];
+        SETFLOAT(undo, x->x_size);
+        t_atom redo[1];
+        int size = (int)((x->x_size+sh->h_drag_delta)/x->x_zoom);
+        SETFLOAT(redo, size);
+        pd_undo_set_objectstate(x->x_glist, (t_pd*)x, gensym("size"), 1, undo, 1, redo);
+        knob_size(x, size);
+        knob_draw_handle(x, 1);
+        knob_select((t_gobj *)x, x->x_glist, x->x_select);
+        canvas_dirty(x->x_cv, 1);
+    }
+    else if(!sh->h_dragon && click){
+        int x1, y1, x2, y2;
+        knob_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
+        sys_vgui(".x%lx.c create rectangle %d %d %d %d -outline #%06x -width %d -tags %s\n",
+            x->x_cv, x1, y1, x2, y2, THISGUI->i_selectcolor,
+            KNOB_SELBDWIDTH*x->x_zoom, sh->h_outlinetag);
+        pdgui_vmess(0, "rr rk",  sh->h_pathname, "configure",
+            "-highlightcolor", THISGUI->i_selectcolor);
+//        sh->h_dragx = sh->h_dragy = sh->h_drag_delta = 0;
+        sh->h_drag_delta = 0;
+    }
+    sh->h_dragon = click;
+}
+
+static void handle__motion_callback(t_handle *sh, t_floatarg f1, t_floatarg f2){
+    if(sh->h_dragon){
+        t_knob *x = sh->h_master;
+        int dx = (int)f1 - HANDLE_SIZE, dy = (int)f2 - HANDLE_SIZE;
+        int x1, y1, x2, y2;
+        knob_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
+    // Average both movements
+        int delta = (dx + dy) / 2;
+        int newx = x2 + delta;
+        int newy = y2 + delta;
+        if(newx < x1 + MIN_SIZE*x->x_zoom)
+            newx = x1 + MIN_SIZE*x->x_zoom;
+        if(newy < y1 + MIN_SIZE*x->x_zoom)
+            newy = y1 + MIN_SIZE*x->x_zoom;
+        sys_vgui(".x%lx.c coords %s %d %d %d %d\n", x->x_cv, sh->h_outlinetag, x1, y1, newx, newy);
+// this breaks... we need to change the strategy altogether...
+//        sys_vgui(".x%lx.c move %s %d %d\n", x->x_cv, x->x_tag_handle, dx, dy);
+//        sh->h_dragx = dx, sh->h_dragy = dy;
+        sh->h_drag_delta = delta;
+    }
+}
+
+//-------------------- EDIT ---------------------------------
 
 static void edit_proxy_any(t_edit_proxy *p, t_symbol *s, int ac, t_atom *av){
     int edit = ac = 0;
@@ -1552,7 +2080,9 @@ static void edit_proxy_any(t_edit_proxy *p, t_symbol *s, int ac, t_atom *av){
             return;
         if(p->p_cnv->x_edit != edit){
             p->p_cnv->x_edit = edit;
+            knob_draw_handle(p->p_cnv, edit);
             knob_config_io(p->p_cnv);
+            show_number(p->p_cnv, 0);
         }
     }
 }
@@ -1580,28 +2110,52 @@ static t_edit_proxy *edit_proxy_new(t_knob *x, t_symbol *s){
 
 static void knob_free(t_knob *x){
     pd_unbind((t_pd *)x, gensym("#keyname"));
-    if(x->x_rcv != gensym("empty"))
+    if(x->x_rcv != gensym("empty") && x->x_rcv != &s_) // ???
         pd_unbind(&x->x_obj.ob_pd, x->x_rcv);
+    pd_unbind(&x->x_obj.ob_pd, x->x_bindname);
+    if(x->x_handle){
+        pd_unbind(x->x_handle, ((t_handle *)x->x_handle)->h_bindsym);
+        pd_free(x->x_handle);
+    }
     x->x_proxy->p_cnv = NULL;
     pdgui_stub_deleteforkey(x);
+#ifndef PDINSTANCE
+    mouse_gui_stoppolling((t_pd *)x);
+    mouse_gui_unbindmouse((t_pd *)x);
+#endif
 }
 
 static void *knob_new(t_symbol *s, int ac, t_atom *av){
     t_knob *x = (t_knob *)pd_new(knob_class);
     x->x_ignore = s;
+// handle
+   x->x_handle = pd_new(handle_class);
+    t_handle *sh = (t_handle *)x->x_handle;
+    sh->h_master = x;
+    char hbuf[64];
+    sprintf(hbuf, "_h%lx", (unsigned long)sh);
+    pd_bind(x->x_handle, sh->h_bindsym = gensym(hbuf));
+    sprintf(sh->h_outlinetag, "h%lx", (unsigned long)sh);
+//
     x->x_buf[0] = 0;
     float loadvalue = 0.0, arcstart = 0.0, exp = 0.0, min = 0.0, max = 127.0;
-    x->n_size = 12, x->x_xpos = 6, x->x_ypos = -15;
+    x->n_size = 12, x->x_xpos = 0, x->x_ypos = -15;
     t_symbol *snd = gensym("empty"), *rcv = gensym("empty");
     t_symbol *param = gensym("empty"), *var = gensym("empty");
-    int size = 50, circular = 0, steps = 0, discrete = 0;
+    int size = 50, steps = 0, discrete = 0;
+    x->x_circular = 0;
     int arc = 1, angle = 320, offset = 0;
     x->x_bg = gensym("#dfdfdf"), x->x_mg = gensym("#7c7c7c"), x->x_fg = gensym("black");
     x->x_clicked = x->x_log = x->x_jump = x->x_number_mode = x->x_savestate = 0;
     x->x_square = x->x_lb = 1;
     x->x_glist = (t_glist *)canvas_getcurrent();
+    x->x_cv = canvas_getcurrent();
+//    post("init x->x_cv = canvas_getcurrent() = %d", x->x_cv);
+    x->x_cv = glist_getcanvas(x->x_glist);
+//    post("init x->x_cv = glist_getcanvas(x->x_glist) = %d", x->x_cv);
     x->x_zoom = x->x_glist->gl_zoom;
-    x->x_flag = x->x_readonly = 0;
+    x->x_flag = x->x_readonly = x->x_transparent = 0;
+    x->x_theme = 1;
     x->x_var_set = x->x_v_flag = 0;
     x->x_snd_set = x->x_s_flag = 0;
     x->x_rcv_set = x->x_r_flag = 0;
@@ -1618,7 +2172,7 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
             x->x_mg = atom_getsymbolarg(8, ac, av); // 09: s arccolorlor
             x->x_fg = atom_getsymbolarg(9, ac, av); // 10: s fgcolor
             x->x_square = atom_getintarg(10, ac, av); // 11: i square
-            circular = atom_getintarg(11, ac, av); // 12: i circular
+            x->x_circular = atom_getintarg(11, ac, av); // 12: i circular
             steps = atom_getintarg(12, ac, av); // 13: i steps
             discrete = atom_getintarg(13, ac, av); // 14: i discrete
             arc = atom_getintarg(14, ac, av); // 15: i arc
@@ -1636,6 +2190,8 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
             x->x_lb = atom_getintarg(26, ac, av); // 27: f loadbang
             x->x_ticks = atom_getintarg(27, ac, av); // 28: f show ticks
             x->x_readonly = atom_getintarg(28, ac, av); // 29: read only
+            x->x_theme = atom_getintarg(29, ac, av); // 30: color theme
+            x->x_transparent = atom_getintarg(30, ac, av); // 31: transparent
         }
         else{
             while(ac){
@@ -1690,6 +2246,14 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
                 else if(sym == gensym("-readonly")){
                     x->x_flag = 1, av++, ac--;
                     x->x_readonly = 1;
+                }
+                else if(sym == gensym("-notheme")){
+                    x->x_flag = 1, av++, ac--;
+                    x->x_theme = 0;
+                }
+                else if(sym == gensym("-transparent")){
+                    x->x_flag = 1, av++, ac--;
+                    x->x_transparent = 1;
                 }
                 else if(sym == gensym("-param")){
                     if(ac >= 2){
@@ -1809,8 +2373,18 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
                         goto errstate;
                 }
                 else if(sym == gensym("-circular")){
-                    x->x_flag = 1, av++, ac--;
-                    circular = 1;
+                    if(ac >= 2){
+                        x->x_flag = 1, av++, ac--;
+                        if(av->a_type == A_FLOAT){
+                            float f = atom_getfloat(av);
+                            x->x_circular = f < 0 ? 0 : f > 2 ? 2 : (int)f;
+                            av++, ac--;
+                        }
+                        else
+                            goto errstate;
+                    }
+                    else
+                        goto errstate;
                 }
                 else if(sym == gensym("-jump")){
                     x->x_flag = 1, av++, ac--;
@@ -1829,7 +2403,7 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
                         x->x_flag = 1, av++, ac--;
                         if(av->a_type == A_FLOAT){
                             int n = atom_getint(av);
-                            x->x_number_mode = n < 0 ? 0 : n > 3 ? 3 : n;
+                            x->x_number_mode = n < 0 ? 0 : n > 4 ? 4 : n;
                             av++, ac--;
                         }
                         else
@@ -1935,7 +2509,6 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     else
         knob_exp(x, exp);
     x->x_arcstart = arcstart;
-    x->x_circular = circular;
     x->x_steps = steps < 0 ? 0 : steps;
     x->x_discrete = discrete;
     x->x_arc = arc;
@@ -1943,16 +2516,18 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     x->x_angle_offset = offset < 0 ? 0 : offset > 360 ? 360 : offset;
     x->x_arcstart_angle = -(x->x_angle_range/2) + x->x_angle_offset;
     x->x_end_angle = x->x_angle_range/2 + x->x_angle_offset;
-    x->x_fval = x->x_load = loadvalue;
-    x->x_pos = knob_getpos(x, x->x_fval);
+    knob_set(x, x->x_fval = x->x_load = loadvalue);
     x->x_edit = x->x_glist->gl_edit;
     x->x_radius = 0.85;
-    x->x_fill_bg = 1;
     char buf[MAXPDSTRING];
     snprintf(buf, MAXPDSTRING-1, ".x%lx", (unsigned long)x->x_glist);
     buf[MAXPDSTRING-1] = 0;
     x->x_proxy = edit_proxy_new(x, gensym(buf));
+    sprintf(buf, "#%lx", (long)x);
+    pd_bind(&x->x_obj.ob_pd, x->x_bindname = gensym(buf));
     sprintf(x->x_tag_obj, "%pOBJ", x);
+    sprintf(x->x_tag_fg, "%pFG", x);
+    sprintf(x->x_tag_handle, "%pHANDLE", x);
     sprintf(x->x_tag_base_circle, "%pBASE_CIRCLE", x);
     sprintf(x->x_tag_sel, "%pSEL", x);
     sprintf(x->x_tag_arc, "%pARC", x);
@@ -1965,10 +2540,24 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     sprintf(x->x_tag_square, "%pSQUARE", x);
     sprintf(x->x_tag_in, "%pIN", x);
     sprintf(x->x_tag_out, "%pOUT", x);
+    sprintf(x->x_tag_IO, "%pIO", x);
     sprintf(x->x_tag_number, "%pNUM", x);
+    sprintf(x->x_tag_hover, "%pHOVER", x);
     if(x->x_rcv != gensym("empty"))
         pd_bind(&x->x_obj.ob_pd, x->x_rcv);
     pd_bind(&x->x_obj.ob_pd, gensym("#keyname")); // listen to key events
+    get_cname(x, 100);
+#ifndef PDINSTANCE
+    mouse_gui_bindmouse((t_pd *)x);
+    mouse_gui_willpoll();
+//    mouse_reset(x);
+//    mouse_updatepos(x);
+    mouse_gui_startpolling((t_pd *)x, 1);
+/*#else
+    x->x_hzero = x->x_vzero = 0;
+    mouse_updatepos(x);*/
+#endif
+//    pd_bind(&x->x_obj.ob_pd, gensym("#mouse_mouse")); // listen to mouse events
     outlet_new(&x->x_obj, &s_float);
     return(x);
 errstate:
@@ -1987,16 +2576,20 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_set, gensym("set"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_size, gensym("size"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_circular, gensym("circular"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_up, gensym("inc"), 0);
+    class_addmethod(knob_class, (t_method)knob_down, gensym("dec"), 0);
+    class_addmethod(knob_class, (t_method)knob_shift, gensym("shift"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_range, gensym("range"), A_FLOAT, A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_jump, gensym("jump"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_exp, gensym("exp"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_log, gensym("log"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_discrete, gensym("discrete"), A_FLOAT, 0);
-    class_addmethod(knob_class, (t_method)knob_bgcolor, gensym("bgcolor"), A_GIMME, 0);
-//    class_addmethod(knob_class, (t_method)knob_fill_bg, gensym("fill_bg"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_reload, gensym("reload"), 0);
 //    class_addmethod(knob_class, (t_method)knob_proportion, gensym("proportion"), A_FLOAT, 0);
-    class_addmethod(knob_class, (t_method)knob_arccolor, gensym("arccolor"), A_GIMME, 0);
-    class_addmethod(knob_class, (t_method)knob_fgcolor, gensym("fgcolor"), A_GIMME, 0);
+    class_addmethod(knob_class, (t_method)knob_setbgcolor, gensym("bgcolor"), A_GIMME, 0);
+    class_addmethod(knob_class, (t_method)knob_setarccolor, gensym("arccolor"), A_GIMME, 0);
+    class_addmethod(knob_class, (t_method)knob_setfgcolor, gensym("fgcolor"), A_GIMME, 0);
+    class_addmethod(knob_class, (t_method)knob_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, A_SYMBOL, 0);
     class_addmethod(knob_class, (t_method)knob_send, gensym("send"), A_DEFSYM, 0);
     class_addmethod(knob_class, (t_method)knob_param, gensym("param"), A_DEFSYM, 0);
     class_addmethod(knob_class, (t_method)knob_var, gensym("var"), A_DEFSYM, 0);
@@ -2015,9 +2608,25 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_nsize, gensym("numbersize"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_numberpos, gensym("numberpos"), A_FLOAT, A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_active, gensym("active"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_theme, gensym("theme"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_transparent, gensym("transparent"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_reset, gensym("reset"), 0);
     class_addmethod(knob_class, (t_method)knob_learn, gensym("learn"), 0);
     class_addmethod(knob_class, (t_method)knob_forget, gensym("forget"), 0);
+    class_addmethod(knob_class, (t_method)knob_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_mouse_enter, gensym("_mouse_enter"), 0);
+    class_addmethod(knob_class, (t_method)knob_mouse_leave, gensym("_mouse_leave"), 0);
+    class_addmethod(knob_class, (t_method)knob_dowheel, gensym("_wheel"), A_FLOAT, A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_doup, gensym("_up"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_getscreen, gensym("_getscreen"),
+        A_FLOAT, A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_dobang, gensym("_bang"), A_FLOAT, A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_dozero, gensym("_zero"), A_FLOAT, A_FLOAT, 0);
+    handle_class = class_new(gensym("_handle"), 0, 0, sizeof(t_handle), CLASS_PD, 0);
+    class_addmethod(handle_class, (t_method)handle__click_callback, gensym("_click"), A_FLOAT, 0);
+    class_addmethod(handle_class, (t_method)handle__motion_callback, gensym("_motion"),
+        A_FLOAT, A_FLOAT, 0);
     edit_proxy_class = class_new(0, 0, 0, sizeof(t_edit_proxy), CLASS_NOINLET | CLASS_PD, 0);
     class_addanything(edit_proxy_class, edit_proxy_any);
     knob_widgetbehavior.w_getrectfn  = knob_getrect;

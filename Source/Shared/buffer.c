@@ -77,7 +77,7 @@ double bias, double tension){
 
 ////////////////////////////////   INIT TABLES!!!! They stays allocated as long as Pd is running
 
-static double *sintable, *partable;
+static double *sintable, *costable, *partable, *sinsqrtable, *gausstable;
 static int fadetables = 0;
 
 static double *tab_fade_sin;
@@ -90,26 +90,64 @@ static double *tab_fade_sqrt;
 void init_sine_table(void){
     if(sintable)
         return;
-    sintable = getbytes((ELSE_SIN_TABSIZE + 1) * sizeof(*sintable));
+    sintable = getbytes((ELSE_GEN_TABSIZE + 1) * sizeof(*sintable));
     double *tp = sintable;
-    double inc = TWO_PI / ELSE_SIN_TABSIZE, phase = 0;
-    for(int i = ELSE_SIN_TABSIZE/4 - 1; i >= 0; i--, phase += inc)
+    double inc = TWO_PI / ELSE_GEN_TABSIZE, phase = 0;
+    for(int i = ELSE_GEN_TABSIZE/4 - 1; i >= 0; i--, phase += inc)
         *tp++ = sin(phase); // populate 1st quarter
     *tp++ = 1;
-    for(int i = ELSE_SIN_TABSIZE/4 - 1; i >= 0; i--)
+    for(int i = ELSE_GEN_TABSIZE/4 - 1; i >= 0; i--)
         *tp++ = sintable[i]; // mirror inverted
-    for(int i = ELSE_SIN_TABSIZE/2 - 1; i >= 0; i--)
+    for(int i = ELSE_GEN_TABSIZE/2 - 1; i >= 0; i--)
         *tp++ = -sintable[i]; // mirror back
+}
+
+void init_cosine_table(void){
+    if(costable)
+        return;
+    costable = getbytes((ELSE_GEN_TABSIZE + 1) * sizeof(*costable));
+    double *tp = costable;
+    double inc = TWO_PI / ELSE_GEN_TABSIZE, phase = 0;
+    for(int i = ELSE_GEN_TABSIZE/4 - 1; i >= 0; i--, phase += inc)
+        *tp++ = cos(phase);   // populate 1st quarter
+    *tp++ = 0;
+    for(int i = ELSE_GEN_TABSIZE/4 - 1; i >= 0; i--)
+        *tp++ = -costable[i]; // mirror inverted
+    for(int i = ELSE_GEN_TABSIZE/2 - 1; i >= 0; i--)
+        *tp++ = costable[i];  // mirror back
+}
+
+void init_gauss_table(void){
+    if(gausstable)
+        return;
+    gausstable = getbytes((ELSE_GEN_TABSIZE + 1) * sizeof(*gausstable));
+    double step = GAUSS_WIDTH / ELSE_GEN_TABSIZE;
+    for(int i = 0; i <= ELSE_GEN_TABSIZE; i++){
+        double x = i * step;
+        gausstable[i] = exp(-(x*x));
+    }
 }
 
 void init_parabolic_table(void){
     if(partable)
         return;
-    partable = getbytes((ELSE_SIN_TABSIZE + 1) * sizeof(*partable));
+    partable = getbytes((ELSE_GEN_TABSIZE + 1) * sizeof(*partable));
     double *tp = partable;
-    double inc = 1.0f / ELSE_SIN_TABSIZE, phase = 0;
-    for(int i = 0; i < ELSE_SIN_TABSIZE; i++, phase += inc)
+    double inc = 1.0f / ELSE_GEN_TABSIZE, phase = 0;
+    for(int i = 0; i < ELSE_GEN_TABSIZE; i++, phase += inc)
         *tp++ = (1 - pow(fmod(phase * 2, 1) * 2 - 1, 2)) * (phase <= 0.5 ? 1 : -1);
+}
+
+void init_sinsqr_table(void){
+    if(sinsqrtable)
+        return;
+    int size = ELSE_GEN_TABSIZE / 2;
+    sinsqrtable = getbytes((size + 1) * sizeof(*sinsqrtable));
+    double *tp = sinsqrtable;
+    double inc = M_PI / (double)size;
+    double phase = 0;
+    for(int i = 0; i < size; i++, phase += inc)
+        *tp++ = sin(phase) * sin(phase);
 }
 
 void init_fade_tables(void){
@@ -180,20 +218,78 @@ double read_fadetab(double phase, int tab){
     return(interp_lin(frac, p1, p2));
 }
 
+double read_pantab(double phase){
+    return(read_fadetab(phase, 4));
+}
+
+double wrap_bufphase(double phase){
+    if(!isfinite(phase) || isnan(phase))
+        phase = 0;
+    while(phase >= 1)
+        phase -= 1;
+    while(phase < 0)
+        phase += 1;
+    return(phase);
+}
+
+double read_gausstab(double x){
+    if(!isfinite(x) || x <= 0)
+        return(1.0);
+    if(x >= GAUSS_WIDTH)
+        x = GAUSS_WIDTH;
+    double tabphase = x * (ELSE_GEN_TABSIZE / GAUSS_WIDTH);
+    int i1 = (int)tabphase;
+    double frac = tabphase - i1;
+    int i2 = i1 + 1;
+    if(i2 > ELSE_GEN_TABSIZE)
+        i2 = ELSE_GEN_TABSIZE;
+    return(interp_lin(frac, gausstable[i1], gausstable[i2]));
+}
+
+double read_sinsqrtab(double phase){
+    phase = wrap_bufphase(phase);
+    int size = ELSE_GEN_TABSIZE / 2;
+    double tabphase = phase * (double)size;
+    int i1 = (int)tabphase;
+    double frac = tabphase - i1;
+    int i2 = i1 + 1;
+    if(i2 > size)
+        i2 = 0;
+    return(interp_lin(frac, sinsqrtable[i1], sinsqrtable[i2]));
+}
+
 double read_sintab(double phase){
-    double tabphase = phase * ELSE_SIN_TABSIZE;
-    int i = (int)tabphase;
-    double frac = tabphase - i, p1 = sintable[i], p2 = sintable[i+1];
-    return(interp_lin(frac, p1, p2));
+    phase = wrap_bufphase(phase);
+    double tabphase = phase * ELSE_GEN_TABSIZE;
+    int i1 = (int)tabphase;
+    double frac = tabphase - i1;
+    int i2 = i1 + 1;
+    if(i2 > ELSE_GEN_TABSIZE)
+        i2 = 0;
+    return(interp_lin(frac, sintable[i1], sintable[i2]));
+}
+
+double read_costab(double phase){
+    phase = wrap_bufphase(phase);
+    double tabphase = phase * ELSE_GEN_TABSIZE;
+    int i1 = (int)tabphase;
+    double frac = tabphase - i1;
+    int i2 = i1 + 1;
+    if(i2 > ELSE_GEN_TABSIZE)
+        i2 = 0;
+    return(interp_lin(frac, costable[i1], costable[i2]));
 }
 
 double read_partab(double phase){
-    double tabphase = phase * ELSE_SIN_TABSIZE;
-    int i = (int)tabphase;
-    double frac = tabphase - i, p1 = partable[i], p2 = partable[i+1];
-    return(interp_lin(frac, p1, p2));
+    phase = wrap_bufphase(phase);
+    double tabphase = phase * ELSE_GEN_TABSIZE;
+    int i1 = (int)tabphase;
+    double frac = tabphase - i1;
+    int i2 = i1 + 1;
+    if(i2 > ELSE_GEN_TABSIZE)
+        i2 = 0;
+    return(interp_lin(frac, partable[i1], partable[i2]));
 }
-
 
 // on failure *bufsize is not modified
 t_word *buffer_get(t_buffer *c, t_symbol * name, int *bufsize, int indsp, int complain){
@@ -219,19 +315,19 @@ t_word *buffer_get(t_buffer *c, t_symbol * name, int *bufsize, int indsp, int co
     return(0);
 }
 
-//making peek~ work with channel number choosing, assuming 1-indexed
+// making "peek~" work with channel number choosing, assuming 1-indexed
 void buffer_getchannel(t_buffer *c, int chan_num, int complain){
     int chan_idx;
     char buf[MAXPDSTRING];
-    t_symbol * curname; //name of the current channel we want
-    int vsz = c->c_npts;  
-    t_word *retvec = NULL;//pointer to the corresponding channel to return
-    //1-indexed bounds checking
-    chan_num = chan_num < 1 ? 1 : (chan_num > buffer_MAXCHANS ? buffer_MAXCHANS : chan_num);
+    t_symbol * curname; // name of the current channel we want
+    int vsz = c->c_npts;
+    t_word *retvec = NULL; // pointer to the corresponding channel to return
+    // 1-indexed bounds checking
+    chan_num = chan_num < 1 ? 1 : (chan_num > BUFFER_MAXCHANS ? BUFFER_MAXCHANS : chan_num);
     c->c_single = chan_num;
-    //convert to 0-indexing, separate steps and diff variable for sanity's sake
+    // convert to 0-indexing, separate steps and diff variable for sanity's sake
     chan_idx = chan_num - 1;
-    //making the buffer channel name string we'll be looking for
+    // making the buffer channel name string we'll be looking for
     if(c->c_bufname != &s_){
         if(chan_idx == 0){
             //if channel idx is 0, check for just plain bufname as well
@@ -251,7 +347,6 @@ void buffer_getchannel(t_buffer *c, int chan_num, int complain){
         c->c_vectors[0] = retvec;
         return;
     };
-
 }
 
 void buffer_bug(char *fmt, ...){ // from loud.c
@@ -293,7 +388,7 @@ void buffer_redraw(t_buffer *c){
         char buf[MAXPDSTRING];
         t_symbol * curname; //name of the current channel we want
         int chan_num = c->c_single; //1-indexed channel number
-        chan_num = chan_num < 1 ? 1 : (chan_num > buffer_MAXCHANS ? buffer_MAXCHANS : chan_num);
+        chan_num = chan_num < 1 ? 1 : (chan_num > BUFFER_MAXCHANS ? BUFFER_MAXCHANS : chan_num);
          //convert to 0-indexing, separate steps and diff variable for sanity's sake
         chan_idx = chan_num - 1;
         //making the buffer channel name string we'll be looking for
@@ -407,7 +502,7 @@ void *buffer_init(t_class *owner, t_symbol *bufname, int numchans, int singlemod
         bufname = &s_;
     c->c_bufname = bufname;
     singlemode = singlemode > 0 ? 1 : 0; // single mode forces numchans = 1
-    numchans = (numchans < 1 || singlemode) ? 1 : (numchans > buffer_MAXCHANS ? buffer_MAXCHANS : numchans);
+    numchans = (numchans < 1 || singlemode) ? 1 : (numchans > BUFFER_MAXCHANS ? BUFFER_MAXCHANS : numchans);
     if(!(vectors = (t_word **)getbytes(numchans* sizeof(*vectors))))
 		return(0);
 	if(!(channames = (t_symbol **)getbytes(numchans * sizeof(*channames)))){

@@ -583,19 +583,19 @@ static t_int *pm6_perform(t_int *w){
             float level6 = ch7 == 1 ? l6[i] : l6[j*n + i];
             
             float mod1 = ((y1n1[j] + y1n2[j]) * 0.5); // fb bus1
-            float op1 = read_sintab(pm6_wrap_phase(ph1[j] + mod1));
+            float op1 = read_sintab(pm6_wrap_phase(ph1[j] + mod1)) * level1;
             float bus1 = op1 * x->x_1to1;
             
             float mod2 = ((y2n1[j] + y2n2[j]) * 0.5); // fb bus2
             mod2 += (op1 * x->x_1to2); // ff
-            float op2 = read_sintab(pm6_wrap_phase(ph2[j] + mod2));
+            float op2 = read_sintab(pm6_wrap_phase(ph2[j] + mod2)) * level2;
             bus1 += (op2 * x->x_2to1);
             float bus2 = (op2 * x->x_2to2);
             
             float mod3 = ((y3n1[j] + y3n2[j]) * 0.5); // fb bus3
             mod3 += (op1 * x->x_1to3);
             mod3 += (op2 * x->x_2to3);
-            float op3 = read_sintab(pm6_wrap_phase(ph3[j] + mod3));;
+            float op3 = read_sintab(pm6_wrap_phase(ph3[j] + mod3)) * level3;
             bus1 += (op3 * x->x_3to1);
             bus2 += (op3 * x->x_3to2);
             float bus3 = op3 * x->x_3to3;
@@ -604,7 +604,7 @@ static t_int *pm6_perform(t_int *w){
             mod4 += (op1 * x->x_1to4);
             mod4 += (op2 * x->x_2to4);
             mod4 += (op3 * x->x_3to4);
-            float op4 = read_sintab(pm6_wrap_phase(ph4[j] + mod4));
+            float op4 = read_sintab(pm6_wrap_phase(ph4[j] + mod4)) * level4;
             bus1 += (op4 * x->x_4to1);
             bus2 += (op4 * x->x_4to2);
             bus3 += (op4 * x->x_4to3);
@@ -615,7 +615,7 @@ static t_int *pm6_perform(t_int *w){
             mod5 += (op2 * x->x_2to5);
             mod5 += (op3 * x->x_3to5);
             mod5 += (op4 * x->x_4to5);
-            float op5 = read_sintab(pm6_wrap_phase(ph5[j] + mod5));
+            float op5 = read_sintab(pm6_wrap_phase(ph5[j] + mod5)) * level5;
             bus1 += (op5 * x->x_5to1);
             bus2 += (op5 * x->x_5to2);
             bus3 += (op5 * x->x_5to3);
@@ -628,7 +628,7 @@ static t_int *pm6_perform(t_int *w){
             mod6 += (op3 * x->x_3to6);
             mod6 += (op4 * x->x_4to6);
             mod6 += (op5 * x->x_5to6);
-            float op6 = read_sintab(pm6_wrap_phase(ph6[j] + mod6));
+            float op6 = read_sintab(pm6_wrap_phase(ph6[j] + mod6)) * level6;
             bus1 += (op6 * x->x_6to1);
             bus2 += (op6 * x->x_6to2);
             bus3 += (op6 * x->x_6to3);
@@ -636,12 +636,12 @@ static t_int *pm6_perform(t_int *w){
             bus5 += (op6 * x->x_6to5);
             float bus6 = (op6 * x->x_6to6);
             
-            double inc1 = (hz + x->x_detune1) * x->x_ratio1 * x->x_sr_rec;
-            double inc2 = (hz + x->x_detune2) * x->x_ratio2 * x->x_sr_rec;
-            double inc3 = (hz + x->x_detune3) * x->x_ratio3 * x->x_sr_rec;
-            double inc4 = (hz + x->x_detune4) * x->x_ratio4 * x->x_sr_rec;
-            double inc5 = (hz + x->x_detune5) * x->x_ratio5 * x->x_sr_rec;
-            double inc6 = (hz + x->x_detune6) * x->x_ratio6 * x->x_sr_rec;
+            double inc1 = (x->x_detune1 + hz * x->x_ratio1) * x->x_sr_rec;
+            double inc2 = (x->x_detune2 + hz * x->x_ratio2) * x->x_sr_rec;
+            double inc3 = (x->x_detune3 + hz * x->x_ratio3) * x->x_sr_rec;
+            double inc4 = (x->x_detune4 + hz * x->x_ratio4) * x->x_sr_rec;
+            double inc5 = (x->x_detune5 + hz * x->x_ratio5) * x->x_sr_rec;
+            double inc6 = (x->x_detune6 + hz * x->x_ratio6) * x->x_sr_rec;
             ph1[j] = pm6_wrap_phase(ph1[j] + inc1); // phase inc
             ph2[j] = pm6_wrap_phase(ph2[j] + inc2); // phase inc
             ph3[j] = pm6_wrap_phase(ph3[j] + inc3); // phase inc
@@ -649,12 +649,12 @@ static t_int *pm6_perform(t_int *w){
             ph5[j] = pm6_wrap_phase(ph5[j] + inc5); // phase inc
             ph6[j] = pm6_wrap_phase(ph6[j] + inc6); // phase inc
             
-            float g1 = op1 * vol1 * level1;
-            float g2 = op2 * vol2 * level2;
-            float g3 = op3 * vol3 * level3;
-            float g4 = op4 * vol4 * level4;
-            float g5 = op5 * vol5 * level5;
-            float g6 = op6 * vol6 * level6;
+            float g1 = op1 * vol1;
+            float g2 = op2 * vol2;
+            float g3 = op3 * vol3;
+            float g4 = op4 * vol4;
+            float g5 = op5 * vol5;
+            float g6 = op6 * vol6;
             float panL = 0;
             panL += (g1 * read_sintab(pan1 + 0.25));
             panL += (g2 * read_sintab(pan2 + 0.25));
@@ -844,7 +844,6 @@ static void *pm6_new(t_symbol *s, int ac, t_atom *av){
     x->x_y5n2 = (float *)getbytes(sizeof(*x->x_y5n2));
     x->x_y6n1 = (float *)getbytes(sizeof(*x->x_y6n1));
     x->x_y6n2 = (float *)getbytes(sizeof(*x->x_y6n2));
-    init_sine_table();
     x->x_ratio1 = x->x_ratio2 = x->x_ratio3 = x->x_ratio4 = x->x_ratio5 = x->x_ratio6 = 1;
     x->x_vol1 = x->x_fvol1 = x->x_fvol2 = x->x_vol2 = 1;
     x->x_vol3 = x->x_fvol3 = x->x_fvol4 = x->x_vol4 = 1;
@@ -1098,4 +1097,5 @@ void pm6_tilde_setup(void){
     class_addmethod(pm6_class, (t_method)pm6_pan4, gensym("pan4"), A_FLOAT, 0);
     class_addmethod(pm6_class, (t_method)pm6_pan5, gensym("pan5"), A_FLOAT, 0);
     class_addmethod(pm6_class, (t_method)pm6_pan6, gensym("pan6"), A_FLOAT, 0);
+    init_sine_table();
 }

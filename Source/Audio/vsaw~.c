@@ -14,6 +14,7 @@ typedef struct _vsaw{
     t_int       x_n;
     t_int       x_sig1;
     t_int       x_sig2;
+    t_int       x_ch1;
     t_int       x_ch2;
     t_int       x_ch3;
     t_int       x_ch4;
@@ -68,7 +69,11 @@ static t_int *vsaw_perform(t_int *w){
 // Magic End
     for(int j = 0; j < x->x_nchans; j++){
         for(int i = 0, n = x->x_n; i < n; i++){
-            double hz = x->x_sig1 ? in1[j*n + i] : x->x_freq_list[j];
+            double hz;
+            if(x->x_ch1 == 1)
+                hz = x->x_sig1 ? in1[i] : x->x_freq_list[0];
+            else
+                hz = x->x_sig1 ? in1[j*n + i] : x->x_freq_list[j];
             if(x->x_midi){
                 if(hz > 127)
                     hz = 127;
@@ -103,11 +108,12 @@ static t_int *vsaw_perform(t_int *w){
             else if(width == 1)
                 output = wraped_phase * 2 - 1;
             else{
-                t_float inc = wraped_phase * width;
-                t_float dec = (wraped_phase - 1) * (width - 1);
-                t_float gain = pow(width * (width - 1), -1);
-                t_float min = (inc < dec ? inc : dec);
-                output = (min * gain) * 2 + 1;
+                float value;
+                if(wraped_phase <= width)
+                    value = wraped_phase / width;
+                else
+                    value = 1 - ((wraped_phase - width) / (1 - width));
+                output = value * 2 - 1;
             }
             out[j*n + i] = output;
             phase[j] = vsaw_wrap_phase(phase[j] + step);
@@ -120,10 +126,18 @@ static t_int *vsaw_perform(t_int *w){
 
 static void vsaw_dsp(t_vsaw *x, t_signal **sp){
     x->x_n = sp[0]->s_n, x->x_sr_rec = 1.0 / (double)sp[0]->s_sr;
-    x->x_ch2 = sp[1]->s_nchans, x->x_ch3 = sp[2]->s_nchans, x->x_ch4 = sp[3]->s_nchans;
     x->x_sig1 = else_magic_inlet_connection((t_object *)x, x->x_glist, 0, &s_signal);
     x->x_sig2 = else_magic_inlet_connection((t_object *)x, x->x_glist, 2, &s_signal);
-    int chs = x->x_sig1 ? sp[0]->s_nchans : x->x_list_size;
+    int chs = x->x_ch1 = x->x_sig1 ? sp[0]->s_nchans : x->x_list_size;
+    x->x_ch2 = sp[1]->s_nchans;
+    if(x->x_ch2 > chs)
+        chs = x->x_ch2;
+    x->x_ch3 = sp[2]->s_nchans;
+    if(x->x_ch3 > chs)
+        chs = x->x_ch3;
+    x->x_ch4 = sp[3]->s_nchans;
+    if(x->x_ch4 > chs)
+        chs = x->x_ch4;
     if(x->x_nchans != chs){
         x->x_phase = (double *)resizebytes(x->x_phase,
             x->x_nchans * sizeof(double), chs * sizeof(double));
@@ -132,7 +146,8 @@ static void vsaw_dsp(t_vsaw *x, t_signal **sp){
         x->x_nchans = chs;
     }
     signal_setmultiout(&sp[4], x->x_nchans);
-    if((x->x_ch2 > 1 && x->x_ch2 != x->x_nchans)
+    if((x->x_ch1 > 1 && x->x_ch1 != x->x_nchans)
+    || (x->x_ch2 > 1 && x->x_ch2 != x->x_nchans)
     || (x->x_ch3 > 1 && x->x_ch3 != x->x_nchans)
     || (x->x_ch4 > 1 && x->x_ch4 != x->x_nchans)){
         dsp_add_zero(sp[4]->s_vec, x->x_nchans*x->x_n);
