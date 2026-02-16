@@ -18,6 +18,10 @@
 #include <libavutil/mem.h>
 #include <libavutil/error.h>  // for av_strerror()*/
 
+#ifdef _MSC_VER
+#define ssize_t int
+#endif
+
 #include <vorbis/codec.h>
 #include <vorbis/vorbisenc.h>
 
@@ -156,7 +160,7 @@ typedef struct _streamout{
 	char*    x_bccopyright;
 	char*    x_bcperformer;
 	char*    x_bccontact;
-    
+
 	char*    x_bcdate;        // system date when broadcast started
 	char*    x_hostname;      // name or IP of host to connect to
 	char*    x_mountpoint;    // mountpoint for IceCast server
@@ -268,7 +272,7 @@ static int streamout_stream(t_streamout *x, t_int fd){
             break;
         // Calculate total size of this chunk (header + body)
         total_chunk_size = x->x_og.header_len + x->x_og.body_len;
-        
+
         // Send chunk size in hexadecimal format
         if(sprintf(chunk_header, "%zx\r\n", total_chunk_size) == -1) {
             pd_error(x, "[streamout~]: error formatting chunk header");
@@ -335,13 +339,13 @@ static int streamout_start_ogg_encoding(t_streamout *x){
     else{
         // handle error
     }*/
-    
+
     x->x_eos = 0;
     x->x_skip = 1;  // assume no resampling
-    
+
     // Initialize vorbis info
     vorbis_info_init(&(x->x_vi));
-    
+
     // Handle sample rate conversion
     if(x->x_samplerate != sys_getsr()){
         float sr_ratio = sys_getsr() / (float)x->x_samplerate;
@@ -384,7 +388,7 @@ static int streamout_start_ogg_encoding(t_streamout *x){
         pd_error(x, "[streamout~]: vorbis encoder init failed with code %d", ret);
         goto cleanup_info;
     }
-    
+
     // Initialize comment structure
     vorbis_comment_init(&(x->x_vc));
     // Add metadata tags (check for null strings to avoid crashes)
@@ -407,7 +411,7 @@ static int streamout_start_ogg_encoding(t_streamout *x){
     if(x->x_bcdate && strlen(x->x_bcdate) > 0)
         vorbis_comment_add_tag(&(x->x_vc), "DATE", x->x_bcdate);
     vorbis_comment_add_tag(&(x->x_vc), "ENCODER", "[streamout~]");
-    
+
     // Initialize analysis state and encoding blocks
     ret = vorbis_analysis_init(&(x->x_vd), &(x->x_vi));
     if(ret != 0) {
@@ -422,22 +426,22 @@ static int streamout_start_ogg_encoding(t_streamout *x){
     // Initialize OGG stream with better random seed
     srand((unsigned int)time(NULL) ^ (unsigned int)getpid());
     ogg_stream_init(&(x->x_os), rand());
-    
+
     // Generate and send headers
     ogg_packet header;
     ogg_packet header_comm;
     ogg_packet header_code;
-    
+
     vorbis_analysis_headerout(&(x->x_vd), &(x->x_vc), &header, &header_comm, &header_code);
     ogg_stream_packetin(&(x->x_os), &header);
     ogg_stream_packetin(&(x->x_os), &header_comm);
     ogg_stream_packetin(&(x->x_os), &header_code);
-    
+
     // Flush headers to server
     while (!x->x_eos) {
         int result = ogg_stream_flush(&(x->x_os), &(x->x_og));
         if(result == 0) break;
-        
+
         ssize_t sent = safe_send(x->x_fd, (const char *)x->x_og.header, x->x_og.header_len, SEND_OPT);
         if(sent < 0 || sent != (ssize_t)x->x_og.header_len) {
             pd_error(x, "[streamout~]: failed to send ogg header to server (%zd/%ld)",
@@ -477,7 +481,7 @@ static void ifstreamout_finish_ogg_encoding(t_streamout *x){
 			ogg_stream_packetin(&(x->x_os),&(x->x_op));
 			streamout_stream(x, x->x_fd);
 		}
-	} 
+	}
 		/* clean up and exit.  vorbis_info_clear() must be called last */
 	ogg_stream_clear(&(x->x_os));
 	vorbis_block_clear(&(x->x_vb));
@@ -522,7 +526,7 @@ static int streamout_encode(t_streamout *x, float *buf, int channels, int fifosi
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
+
 // connect to icecast2 server
 static int streamout_child_connect(t_streamout *x, char *hostname, char *mountpoint, t_int portno,
 char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_int bcpublic, t_int br_nom){
@@ -576,20 +580,20 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
     }
     if(0) // verbose
         post("[streamout~]: logging in to IceCast2 server");
-    
+
     { // Modern Icecast2 server using HTTP/1.1 PUT with chunked encoding
         char auth_string[512];
         char *encoded_auth;
         char response[1024];
         int bytes_received;
-        
+
         // Create authentication string (source:password)
         if(sprintf(auth_string, "source:%s", passwd) == -1) {
             post("[streamout~]: error creating auth string");
             return -1; // or however you handle errors in your code
         }
         encoded_auth = streamout_util_base64_encode(auth_string);
-        
+
         // Send HTTP PUT request line
         buf = "PUT /";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -600,39 +604,39 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = " HTTP/1.1\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send Host header (you'll need to pass hostname/port to this function)
         // For now, assuming you have a hostname variable or can add it
         sprintf(resp, "Host: %s:%ld\r\n", hostname, portno); // You'll need these variables
         if(safe_send(sockfd, resp, strlen(resp), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send authorization header
         sprintf(resp, "Authorization: Basic %s\r\n", encoded_auth);
         if(safe_send(sockfd, resp, strlen(resp), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send User-Agent
         buf = "User-Agent: PD-streamout/2.0\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send content type (corrected for modern standards)
         buf = "Content-Type: audio/ogg\r\n"; // or "audio/mpeg" for MP3
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
-        
+
+
         // Enable chunked encoding
         buf = "Transfer-Encoding: chunked\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send connection keep-alive
         buf = "Connection: keep-alive\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Send ice headers (no ice-password needed with proper HTTP auth)
         // name
         buf = "Ice-Name: ";
@@ -644,7 +648,7 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // url
         buf = "Ice-URL: ";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -655,7 +659,7 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // genre
         buf = "Ice-Genre: ";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -666,7 +670,7 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // description
         buf = "Ice-Description: ";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -677,7 +681,7 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // public
         buf = "Ice-Public: ";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -689,7 +693,7 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // bitrate
         buf = "Ice-Bitrate: ";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
@@ -701,15 +705,15 @@ char *passwd, char *bcname, char *bcgenre, char *bcdescription, char *bcurl, t_i
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // End of headers
         buf = "\r\n";
         if(safe_send(sockfd, buf, strlen(buf), SEND_OPT) < 0)
             post("[streamout~]: send error");
-        
+
         // Clean up encoded auth
         free(encoded_auth);
-        
+
         // Wait for server response and check if connection was successful
         bytes_received = recv(sockfd, response, sizeof(response) - 1, 0);
         if(bytes_received > 0){
@@ -804,7 +808,7 @@ void streamout_banana( void){
 }
 
 #define streamout_cond_wait(a,b) streamout_fakewait(b)
-#define streamout_cond_signal(a) 
+#define streamout_cond_signal(a)
 #endif
 
 static void *streamout_child_main(void *zz){
@@ -825,7 +829,7 @@ static void *streamout_child_main(void *zz){
     		char boo[100];
             int sysrtn;
            // int wantbytes;
-			
+
             /* copy connect stuff out of the data structure so we can
 			relinquish the mutex while we're connecting to server. */
 			char *hostname = x->x_hostname;
@@ -881,7 +885,7 @@ static void *streamout_child_main(void *zz){
 						clock_delay(x->x_clock_connect, 0);
     	    			pute("[streamout~]: initialisation failed\n");
 						goto lost;
-					} 
+					}
 				}
     			x->x_fifotail = fifotail = 0;
 	    			/* set fifosize from bufsize.  fifosize must be a
@@ -1176,7 +1180,7 @@ static void streamout_set(t_streamout *x, t_symbol *s, t_int ac, t_atom* av){
 	binbuf_add(b, ac-1, av+1);
 	binbuf_gettext(b, &comment, &length);
     pthread_mutex_lock(&x->x_mutex);
-    
+
     t_symbol *info = atom_getsymbol(av);
     if(info == gensym("title")){
             free(x->x_bcname);
@@ -1437,7 +1441,7 @@ static void *streamout_new(t_floatarg fnchannels, t_floatarg fbufsize){
     }
     clock_delay(x->x_clock_pages, 0);
     pthread_create(&x->x_childthread, 0, streamout_child_main, x);
-    
+
 /*    post("[streamout~] FFmpeg version: %s", av_version_info());
     post("FFmpeg configured with: %s", avcodec_configuration());
     post("libavcodec version: %u", avcodec_version());
@@ -1462,7 +1466,7 @@ static void *streamout_new(t_floatarg fnchannels, t_floatarg fbufsize){
 }
 
 void streamout_tilde_setup(void){
-    streamout_class = class_new(gensym("streamout~"), (t_newmethod)streamout_new, 
+    streamout_class = class_new(gensym("streamout~"), (t_newmethod)streamout_new,
     	(t_method)streamout_free, sizeof(t_streamout), 0, A_DEFFLOAT, A_DEFFLOAT, 0);
     CLASS_MAINSIGNALIN(streamout_class, t_streamout, x_f); // ????????????????????/
     class_addmethod(streamout_class, (t_method)streamout_dsp, gensym("dsp"), 0);
