@@ -138,8 +138,6 @@ static void do_pvretune(t_pvretune *x, t_fftease *fft){
 }
 
 t_int *pvretune_perform(t_int *w){
-
-    
     t_pvretune *x = (t_pvretune *)(w[1]);
     t_float *input = (t_float *)(w[2]);
     t_float *output = (t_float *)(w[3]);
@@ -160,12 +158,12 @@ t_int *pvretune_perform(t_int *w){
         memcpy(out, fft->internalOutputVector + op*n, n*sizeof(t_float));
         op = ((op + 1) % rep);
         if(op == 0){
-            memcpy(fft->input, fft->input + hop, (size-hop)*sizeof(t_float));
+            memmove(fft->input, fft->input + hop, (size-hop)*sizeof(t_float));
             memcpy(fft->input + (size-hop), fft->internalInputVector, hop*sizeof(t_float));
             do_pvretune(x, fft); // DO IT!!!
             for(int i = 0; i < hop; i++)
                 fft->internalOutputVector[i] = fft->output[i] * fft->mult;
-            memcpy(fft->output, fft->output + hop, (size-hop)*sizeof(t_float));
+            memmove(fft->output, fft->output + hop, (size-hop)*sizeof(t_float));
             memset(fft->output + (size-hop), 0, hop*sizeof(t_float));
         }
         fft->operationCount = op;
@@ -188,6 +186,7 @@ void pvretune_dsp(t_pvretune *x, t_signal **sp){
     if(x->x_n > x->x_hop){
         pd_error(x, "[pvretune~]: hop size can't be smaller than the block size");
         dsp_add_zero(sp[1]->s_vec, x->x_nchs*n);
+        return;
     }
     dsp_add(pvretune_perform, 3, x, sp[0]->s_vec, sp[1]->s_vec);
 }
