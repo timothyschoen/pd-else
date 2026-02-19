@@ -2574,6 +2574,7 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_load, gensym("load"), A_GIMME, 0);
     class_addmethod(knob_class, (t_method)knob_arcstart, gensym("arcstart"), A_GIMME, 0);
     class_addmethod(knob_class, (t_method)knob_set, gensym("set"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_set, gensym("_set"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_size, gensym("size"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_circular, gensym("circular"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_up, gensym("inc"), 0);
