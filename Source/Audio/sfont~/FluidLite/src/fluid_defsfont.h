@@ -477,6 +477,8 @@ int fluid_defpreset_preset_noteon(fluid_preset_t* preset, fluid_synth_t* synth, 
 struct _fluid_defsfont_t
 {
   char* filename;           /* the filename of this soundfont */
+  fluid_fileapi_t* fapi;    /* store so samples can open the file later */
+
   unsigned int samplepos;   /* the position in the file at which the sample data starts */
   unsigned int samplesize;  /* the size of the sample data */
   short* sampledata;        /* the sample data, loaded in ram */

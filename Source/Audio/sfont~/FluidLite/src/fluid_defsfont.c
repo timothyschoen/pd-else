@@ -431,6 +431,8 @@ int fluid_defsfont_load(fluid_defsfont_t* sfont, const char* file, fluid_fileapi
   fluid_defpreset_t* preset;
 
   sfont->filename = FLUID_MALLOC(1 + FLUID_STRLEN(file));
+  sfont->fapi = fapi;
+
   if (sfont->filename == NULL) {
     FLUID_LOG(FLUID_ERR, "Out of memory");
     return FLUID_FAILED;
@@ -449,10 +451,6 @@ int fluid_defsfont_load(fluid_defsfont_t* sfont, const char* file, fluid_fileapi
   sfont->samplepos = sfdata->samplepos;
   sfont->samplesize = sfdata->samplesize;
 
-  /* load sample data in one block */
-  if (fluid_defsfont_load_sampledata(sfont, fapi) != FLUID_OK)
-    goto err_exit;
-
   /* Create all the sample headers */
   p = sfdata->sample;
   while (p != NULL) {
@@ -465,7 +463,6 @@ int fluid_defsfont_load(fluid_defsfont_t* sfont, const char* file, fluid_fileapi
       goto err_exit;
 
     fluid_defsfont_add_sample(sfont, sample);
-    fluid_voice_optimize_sample(sample);
     p = fluid_list_next(p);
   }
 
@@ -593,87 +590,12 @@ fluid_sample_t* fluid_defsfont_get_sample(fluid_defsfont_t* sfont, char *s)
 {
   fluid_list_t* list;
   fluid_sample_t* sample;
-
   for (list = sfont->sample; list; list = fluid_list_next(list)) {
-
     sample = (fluid_sample_t*) fluid_list_get(list);
-
     if (FLUID_STRCMP(sample->name, s) == 0) {
-
-#if SF3_SUPPORT
-      if (sample->sampletype & FLUID_SAMPLETYPE_OGG_VORBIS) {
-        short *sampledata = NULL;
-        int sampleframes = 0;
-
-#if SF3_SUPPORT == SF3_XIPH_VORBIS
-        int sampledata_size = 0;
-        OggVorbis_File vf;
-
-        vorbisData.pos  = 0;
-        vorbisData.data = (char*)sample->data + sample->start;
-        vorbisData.datasize = sample->end + 1 - sample->start;
-
-        if (ov_open_callbacks(&vorbisData, &vf, 0, 0, ovCallbacks) == 0) {
-#define BUFFER_SIZE 4096
-          int bytes_read = 0;
-          int section = 0;
-          for (;;) {
-            // allocate additional memory for samples
-            sampledata = realloc(sampledata, sampledata_size + BUFFER_SIZE);
-            bytes_read = ov_read(&vf, (char*)sampledata + sampledata_size, BUFFER_SIZE, 0, sizeof(short), 1, &section);
-            if (bytes_read > 0) {
-              sampledata_size += bytes_read;
-            } else {
-              // shrink sampledata to actual size
-              sampledata = realloc(sampledata, sampledata_size);
-              break;
-            }
-          }
-
-          ov_clear(&vf);
-        }
-
-        // because we actually need num of frames so we should divide num of bytes to frame size
-        sampleframes = sampledata_size / sizeof(short);
-#endif
-
-#if SF3_SUPPORT == SF3_STB_VORBIS
-        const uint8 *data = (uint8*)sample->data + sample->start;
-        const int datasize = sample->end + 1 - sample->start;
-
-        int channels;
-        sampleframes = stb_vorbis_decode_memory(data, datasize, &channels, NULL, &sampledata);
-#endif
-        // point sample data to uncompressed data stream
-        sample->data = sampledata;
-        sample->start = 0;
-        sample->end = sampleframes - 1;
-
-        /* loop is fowled?? (cluck cluck :) */
-        if (sample->loopend > sample->end ||
-            sample->loopstart >= sample->loopend ||
-            sample->loopstart <= sample->start) {
-          /* can pad loop by 8 samples and ensure at least 4 for loop (2*8+4) */
-          if ((sample->end - sample->start) >= 20) {
-            sample->loopstart = sample->start + 8;
-            sample->loopend = sample->end - 8;
-          } else { /* loop is fowled, sample is tiny (can't pad 8 samples) */
-            sample->loopstart = sample->start + 1;
-            sample->loopend = sample->end - 1;
-          }
-        }
-
-        sample->sampletype &= ~FLUID_SAMPLETYPE_OGG_VORBIS;
-        sample->sampletype |= FLUID_SAMPLETYPE_OGG_VORBIS_UNPACKED;
-
-        fluid_voice_optimize_sample(sample);
-      }
-#endif
-
-      return sample;
+      return sample;  /* just return the pointer, no decoding */
     }
   }
-
   return NULL;
 }
 
@@ -859,6 +781,128 @@ fluid_defpreset_ensure_loaded(fluid_defpreset_t* preset)
 }
 
 
+#define BUFFER_SIZE 4096
+int
+fluid_sample_ensure_loaded(fluid_sample_t* sample, fluid_defsfont_t* sfont)
+{
+  if (sample->data_loaded) {
+    return FLUID_OK;
+  }
+
+#if SF3_SUPPORT
+  if (sample->sampletype & FLUID_SAMPLETYPE_OGG_VORBIS) {
+      if (sfont->sampledata == NULL) {
+          /* load sample data in one block */
+          if (fluid_defsfont_load_sampledata(sfont, sfont->fapi) != FLUID_OK)
+              return FLUID_FAILED;
+      }
+
+    short *sampledata = NULL;
+    int sampleframes = 0;
+
+#if SF3_SUPPORT == SF3_XIPH_VORBIS
+    int sampledata_size = 0;
+    OggVorbis_File vf;
+    vorbisData.pos      = 0;
+    vorbisData.data     = (char*)sfont->sampledata + sample->start;
+    vorbisData.datasize = sample->end + 1 - sample->start;
+    if (ov_open_callbacks(&vorbisData, &vf, 0, 0, ovCallbacks) == 0) {
+      int bytes_read = 0;
+      int section = 0;
+      for (;;) {
+        sampledata = realloc(sampledata, sampledata_size + BUFFER_SIZE);
+        bytes_read = ov_read(&vf, (char*)sampledata + sampledata_size, BUFFER_SIZE, 0, sizeof(short), 1, &section);
+        if (bytes_read > 0) {
+          sampledata_size += bytes_read;
+        } else {
+          sampledata = realloc(sampledata, sampledata_size);
+          break;
+        }
+      }
+      ov_clear(&vf);
+    }
+    sampleframes = sampledata_size / sizeof(short);
+#endif
+
+#if SF3_SUPPORT == SF3_STB_VORBIS
+    const uint8 *data = (uint8*)sfont->sampledata + sample->start;
+    const int datasize = sample->end + 1 - sample->start;
+    int channels;
+    sampleframes = stb_vorbis_decode_memory(data, datasize, &channels, NULL, &sampledata);
+#endif
+
+    sample->data  = sampledata;
+    sample->start = 0;
+    sample->end   = sampleframes - 1;
+
+    if (sample->loopend > sample->end ||
+        sample->loopstart >= sample->loopend ||
+        sample->loopstart <= sample->start) {
+      if ((sample->end - sample->start) >= 20) {
+        sample->loopstart = sample->start + 8;
+        sample->loopend   = sample->end - 8;
+      } else {
+        sample->loopstart = sample->start + 1;
+        sample->loopend   = sample->end - 1;
+      }
+    }
+
+    sample->sampletype &= ~FLUID_SAMPLETYPE_OGG_VORBIS;
+    sample->sampletype |= FLUID_SAMPLETYPE_OGG_VORBIS_UNPACKED;
+    fluid_voice_optimize_sample(sample);
+    sample->data_loaded = 1;
+    return FLUID_OK;
+  }
+#endif
+
+  /* Non-OGG path — seek and read raw PCM */
+  unsigned int byte_offset = sfont->samplepos + sample->start * sizeof(short);
+  unsigned int byte_length = (sample->end - sample->start) * sizeof(short);
+
+  if(!sample->data) {
+      fluid_file fd = sfont->fapi->fopen(sfont->fapi, sfont->filename);
+      if (fd == NULL) {
+          FLUID_LOG(FLUID_ERR, "Can't open soundfont file");
+          return FLUID_FAILED;
+      }
+      if (sfont->fapi->fseek(fd, byte_offset, SEEK_SET) == FLUID_FAILED) {
+          FLUID_LOG(FLUID_ERR, "Failed to seek to sample data");
+          sfont->fapi->fclose(fd);
+          return FLUID_FAILED;
+      }
+      sample->data = (short*) FLUID_MALLOC(byte_length);
+      if (sample->data == NULL) {
+          FLUID_LOG(FLUID_ERR, "Out of memory");
+          sfont->fapi->fclose(fd);
+          return FLUID_FAILED;
+      }
+      if (sfont->fapi->fread(sample->data, byte_length, fd) == FLUID_FAILED) {
+          FLUID_LOG(FLUID_ERR, "Failed to read sample data");
+          FLUID_FREE(sample->data);
+          sample->data = NULL;
+          sfont->fapi->fclose(fd);
+          return FLUID_FAILED;
+      }
+      sfont->fapi->fclose(fd);
+  }
+  /* Byte-swap on big endian machines */
+  unsigned short endian = 0x0100;
+  if (((char*) &endian)[0]) {
+    unsigned char* cbuf = (unsigned char*) sample->data;
+    unsigned int i, j;
+    for (i = 0, j = 0; j < byte_length; i++) {
+      unsigned char lo = cbuf[j++];
+      unsigned char hi = cbuf[j++];
+      sample->data[i] = (hi << 8) | lo;
+    }
+  }
+
+  sample->data_loaded = 1;
+  fluid_voice_optimize_sample(sample);
+  return FLUID_OK;
+}
+
+
 /*
  * fluid_defpreset_noteon
  */
@@ -903,6 +947,7 @@ fluid_defpreset_noteon(fluid_defpreset_t* preset, fluid_synth_t* synth, int chan
 
 	/* make sure this instrument zone has a valid sample */
 	sample = fluid_inst_zone_get_sample(inst_zone);
+
 	if (fluid_sample_in_rom(sample) || (sample == NULL)) {
 	  inst_zone = fluid_inst_zone_next(inst_zone);
 	  continue;
@@ -912,6 +957,10 @@ fluid_defpreset_noteon(fluid_defpreset_t* preset, fluid_synth_t* synth, int chan
 	   instrument */
 
 	if (fluid_inst_zone_inside_range(inst_zone, key, vel) && (sample != NULL)) {
+
+        if (fluid_sample_ensure_loaded(sample, preset->sfont) != FLUID_OK) {
+          return FLUID_FAILED;
+        }
 
 	  /* this is a good zone. allocate a new synthesis process and
              initialize it */
