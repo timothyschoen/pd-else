@@ -519,6 +519,7 @@ fluid_defpreset_t* new_fluid_defpreset(fluid_defsfont_t* sfont);
 int delete_fluid_defpreset(fluid_defpreset_t* preset);
 fluid_defpreset_t* fluid_defpreset_next(fluid_defpreset_t* preset);
 int fluid_defpreset_import_sfont(fluid_defpreset_t* preset, SFPreset* sfpreset, fluid_defsfont_t* sfont);
+int fluid_inst_ensure_loaded(fluid_inst_t* inst);
 int fluid_defpreset_set_global_zone(fluid_defpreset_t* preset, fluid_preset_zone_t* zone);
 int fluid_defpreset_add_zone(fluid_defpreset_t* preset, fluid_preset_zone_t* zone);
 fluid_preset_zone_t* fluid_defpreset_get_zone(fluid_defpreset_t* preset);
@@ -551,6 +552,13 @@ int fluid_preset_zone_import_sfont(fluid_preset_zone_t* zone, SFZone* sfzone, fl
 int fluid_preset_zone_inside_range(fluid_preset_zone_t* zone, int key, int vel);
 fluid_inst_t* fluid_preset_zone_get_inst(fluid_preset_zone_t* zone);
 
+
+typedef struct _fluid_pending_zone_t {
+  fluid_list_t* gen;            /* deep-copied list of SFGen */
+  fluid_list_t* mod;            /* deep-copied list of SFMod */
+  char          sample_name[21]; /* copied from SFSample->name, NULL if no sample */
+} fluid_pending_zone_t;
+
 /*
  * fluid_inst_t
  */
@@ -559,6 +567,11 @@ struct _fluid_inst_t
   char name[21];
   fluid_inst_zone_t* global_zone;
   fluid_inst_zone_t* zone;
+
+   /* --- lazy load fields --- */
+   int zones_loaded;
+   fluid_pending_zone_t* pending_sf_zones;   // raw SFZone* list from the SF2 parser
+   fluid_defsfont_t* pending_sfont;      // held so we can call fluid_inst_zone_import_sfont later
 };
 
 fluid_inst_t* new_fluid_inst(void);
@@ -588,7 +601,7 @@ struct _fluid_inst_zone_t
 fluid_inst_zone_t* new_fluid_inst_zone(char* name);
 int delete_fluid_inst_zone(fluid_inst_zone_t* zone);
 fluid_inst_zone_t* fluid_inst_zone_next(fluid_inst_zone_t* zone);
-int fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, SFZone *sfzone, fluid_defsfont_t* sfont);
+int fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, fluid_pending_zone_t *sfzone, fluid_defsfont_t* sfont);
 int fluid_inst_zone_inside_range(fluid_inst_zone_t* zone, int key, int vel);
 fluid_sample_t* fluid_inst_zone_get_sample(fluid_inst_zone_t* zone);
 

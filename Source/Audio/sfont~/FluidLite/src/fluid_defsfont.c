@@ -821,7 +821,12 @@ fluid_defpreset_noteon(fluid_defpreset_t* preset, fluid_synth_t* synth, int chan
     if (fluid_preset_zone_inside_range(preset_zone, key, vel)) {
 
       inst = fluid_preset_zone_get_inst(preset_zone);
+      if (fluid_inst_ensure_loaded(inst) != FLUID_OK) {
+        return FLUID_FAILED;
+      }
+
       global_inst_zone = fluid_inst_get_global_zone(inst);
+
 
       /* run thru all the zones of this instrument */
       inst_zone = fluid_inst_get_zone(inst);
@@ -1394,12 +1399,36 @@ new_fluid_inst()
   return inst;
 }
 
+void
+delete_fluid_pending_zones(fluid_list_t* pending)
+{
+  fluid_list_t* p = pending;
+  while (p != NULL) {
+    fluid_pending_zone_t* pz = (fluid_pending_zone_t*) p->data;
+    /* free the gen list entries */
+    fluid_list_t* g = pz->gen;
+    while (g != NULL) {
+      FLUID_FREE(g->data);
+      g = fluid_list_next(g);
+    }
+    delete_fluid_list(pz->gen);
+    FLUID_FREE(pz);
+    p = fluid_list_next(p);
+  }
+  delete_fluid_list(pending);
+}
+
+
 /*
  * delete_fluid_inst
  */
 int
 delete_fluid_inst(fluid_inst_t* inst)
 {
+  if (!inst->zones_loaded) {
+    delete_fluid_pending_zones(inst->pending_sf_zones);
+  }
+
   fluid_inst_zone_t* zone;
   int err = FLUID_OK;
   if (inst->global_zone != NULL) {
@@ -1430,43 +1459,118 @@ fluid_inst_set_global_zone(fluid_inst_t* inst, fluid_inst_zone_t* zone)
   return FLUID_OK;
 }
 
+static fluid_pending_zone_t*
+fluid_copy_sfzone(SFZone* sfzone)
+{
+  fluid_pending_zone_t* copy = FLUID_NEW(fluid_pending_zone_t);
+  if (copy == NULL) return NULL;
+
+  copy->gen  = NULL;
+  copy->mod  = NULL;
+  copy->sample_name[0] = '\0';
+
+  /* Copy sample name, resolving the instsamp indirection */
+  if ((sfzone->instsamp != NULL) && (sfzone->instsamp->data != NULL)) {
+    SFSample* sfsample = (SFSample*) sfzone->instsamp->data;
+    FLUID_STRCPY(copy->sample_name, sfsample->name);
+  }
+
+  /* Deep copy gen list */
+  fluid_list_t* r = sfzone->gen;
+  while (r != NULL) {
+    SFGen* src = (SFGen*) r->data;
+    SFGen* dst = FLUID_NEW(SFGen);
+    if (dst == NULL) goto error;
+    dst->id     = src->id;
+    dst->amount = src->amount;
+    copy->gen = fluid_list_append(copy->gen, dst);
+    r = fluid_list_next(r);
+  }
+
+  /* Deep copy mod list */
+  r = sfzone->mod;
+  while (r != NULL) {
+    SFMod* src = (SFMod*) r->data;
+    SFMod* dst = FLUID_NEW(SFMod);
+    if (dst == NULL) goto error;
+    *dst = *src;  /* SFMod is plain value struct, safe shallow copy */
+    copy->mod = fluid_list_append(copy->mod, dst);
+    r = fluid_list_next(r);
+  }
+
+  return copy;
+
+error:
+  /* Free whatever was allocated before the failure */
+  fluid_list_t* g = copy->gen;
+  while (g != NULL) { FLUID_FREE(g->data); g = fluid_list_next(g); }
+  delete_fluid_list(copy->gen);
+
+  fluid_list_t* m = copy->mod;
+  while (m != NULL) { FLUID_FREE(m->data); m = fluid_list_next(m); }
+  delete_fluid_list(copy->mod);
+
+  FLUID_FREE(copy);
+  return NULL;
+}
+
+
 /*
  * fluid_inst_import_sfont
  */
 int
 fluid_inst_import_sfont(fluid_inst_t* inst, SFInst *sfinst, fluid_defsfont_t* sfont)
 {
-  fluid_list_t *p;
-  SFZone* sfzone;
-  fluid_inst_zone_t* zone;
-  char zone_name[256];
-  int count;
-
-  p = sfinst->zone;
   if (FLUID_STRLEN(sfinst->name) > 0) {
     FLUID_STRCPY(inst->name, sfinst->name);
   } else {
     FLUID_STRCPY(inst->name, "<untitled>");
   }
 
-  count = 0;
+  /* Deep copy zone list so we don't depend on parser lifetime */
+  inst->pending_sf_zones = NULL;
+  fluid_list_t* p = sfinst->zone;
   while (p != NULL) {
+    fluid_pending_zone_t* copy = fluid_copy_sfzone((SFZone*) p->data);
+    if (copy == NULL) {
+      return FLUID_FAILED;
+    }
+    inst->pending_sf_zones = fluid_list_append(inst->pending_sf_zones, copy);
+    p = fluid_list_next(p);
+  }
 
-    sfzone = (SFZone *) p->data;
+  inst->pending_sfont = sfont;
+  inst->zones_loaded  = 0;
+
+  return FLUID_OK;
+}
+
+int
+fluid_inst_ensure_loaded(fluid_inst_t* inst)
+{
+  if (inst->zones_loaded) {
+    return FLUID_OK;
+  }
+
+  fluid_list_t* p = inst->pending_sf_zones;
+  char zone_name[256];
+  int count = 0;
+
+  while (p != NULL) {
+    fluid_pending_zone_t* sfzone = (fluid_pending_zone_t*) p->data;
     FLUID_SPRINTF(zone_name, "%s/%d", inst->name, count);
 
-    zone = new_fluid_inst_zone(zone_name);
+    fluid_inst_zone_t* zone = new_fluid_inst_zone(zone_name);
     if (zone == NULL) {
       return FLUID_FAILED;
     }
 
-    if (fluid_inst_zone_import_sfont(zone, sfzone, sfont) != FLUID_OK) {
+    if (fluid_inst_zone_import_sfont(zone, sfzone, inst->pending_sfont) != FLUID_OK) {
       return FLUID_FAILED;
     }
 
     if ((count == 0) && (fluid_inst_zone_get_sample(zone) == NULL)) {
       fluid_inst_set_global_zone(inst, zone);
-
     } else if (fluid_inst_add_zone(inst, zone) != FLUID_OK) {
       return FLUID_FAILED;
     }
@@ -1474,6 +1578,11 @@ fluid_inst_import_sfont(fluid_inst_t* inst, SFInst *sfinst, fluid_defsfont_t* sf
     p = fluid_list_next(p);
     count++;
   }
+
+  inst->zones_loaded     = 1;
+  inst->pending_sf_zones = NULL;
+  inst->pending_sfont    = NULL;
+
   return FLUID_OK;
 }
 
@@ -1524,6 +1633,7 @@ new_fluid_inst_zone(char* name)
 {
   int size;
   fluid_inst_zone_t* zone = NULL;
+
   zone = FLUID_NEW(fluid_inst_zone_t);
   if (zone == NULL) {
     FLUID_LOG(FLUID_ERR, "Out of memory");
@@ -1585,7 +1695,7 @@ fluid_inst_zone_next(fluid_inst_zone_t* zone)
  * fluid_inst_zone_import_sfont
  */
 int
-fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, SFZone *sfzone, fluid_defsfont_t* sfont)
+fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, fluid_pending_zone_t *sfzone, fluid_defsfont_t* sfont)
 {
   fluid_list_t *r;
   SFGen* sfgen;
@@ -1603,8 +1713,6 @@ fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, SFZone *sfzone, fluid_defs
       zone->velhi = (int) sfgen->amount.range.hi;
       break;
     default:
-      /* FIXME: some generators have an unsigned word amount value but
-	 i don't know which ones */
       zone->gen[sfgen->id].val = (fluid_real_t) sfgen->amount.sword;
       zone->gen[sfgen->id].flags = GEN_SET;
       break;
@@ -1612,13 +1720,9 @@ fluid_inst_zone_import_sfont(fluid_inst_zone_t* zone, SFZone *sfzone, fluid_defs
     r = fluid_list_next(r);
   }
 
-  /* FIXME */
-/*    if (zone->gen[GEN_EXCLUSIVECLASS].flags == GEN_SET) { */
-/*      FLUID_LOG(FLUID_DBG, "ExclusiveClass=%d\n", (int) zone->gen[GEN_EXCLUSIVECLASS].val); */
-/*    } */
-
-  if ((sfzone->instsamp != NULL) && (sfzone->instsamp->data != NULL)) {
-    zone->sample = fluid_defsfont_get_sample(sfont, ((SFSample *) sfzone->instsamp->data)->name);
+  /* Use pre-copied sample name instead of dereferencing instsamp */
+  if (sfzone->sample_name[0] != '\0') {
+    zone->sample = fluid_defsfont_get_sample(sfont, sfzone->sample_name);
     if (zone->sample == NULL) {
       FLUID_LOG(FLUID_ERR, "Couldn't find sample name");
       return FLUID_FAILED;
