@@ -123,7 +123,7 @@ Some objects are simply based (or better, depend on) on other software and are j
     chrono datetime
 
 #fft
-    hann~ bin.shift~
+    hann~ bin.shift~ pvretune~
 
 #table
     buffer tabgen tabreader tabreader~
@@ -135,10 +135,10 @@ Some objects are simply based (or better, depend on) on other software and are j
     loadbanger closebang args meter presets dollsym sender receiver retrieve dispatch var send2~ blocksize~ nop~ click properties fontsize canvas.active canvas.bounds canvas.gop canvas.pos canvas.edit canvas.vis canvas.name canvas.setname canvas.zoom abs.pd~ sendmidi
 
 #message management
-    format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2
+    format swap2 nmess unite separate symbol2any any2symbol changed hot initmess message default pack2 pick limit spread router route2 routeall routetype selector stack store morph interpolate sig2float~ float2sig~ pipe2 robin shift messcoll
 
 #list management
-    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean list.inc rand.dev list.harm unique filter reorder
+    break order combine delete remove equal group iterate insert scramble sort reverse rotate replace sum slice stream merge unmerge amean gmean list.inc rand.dev list.harm unique filter reorder listspread
 
 #file management
     dir
@@ -180,10 +180,10 @@ Some objects are simply based (or better, depend on) on other software and are j
     allpass.rev~ comb.rev~ echo.rev~ mono.rev~ stereo.rev~ free.rev~ giga.rev~ plate.rev~ fdn.rev~
 
 #fx: filters
-    allpass.2nd~ allpass.filt~ bitnormal~ comb.filt~ lop.bw~ hip.bw~ biquads~ bandpass~ bandstop~ crossover~ bpbank~ bicoeff2 brickwall~ eq~ highpass~ highshelf~ lop2~ lowpass~ lowshelf~ mov.avg~ resonbank~ resonbank2~ resonant~ resonator~ resonator2~ svfilter~
+    allpass.2nd~ allpass.filt~ bitnormal~ comb.filt~ lop.bw~ hip.bw~ biquads~ bandpass~ bandstop~ crossover~ bpbank~ bicoeff2 brickwall~ eq~ highpass~ highshelf~ lop2~ lowpass~ moog~ lowshelf~ mov.avg~ resonbank~ resonbank2~ resonant~ resonator~ resonator2~ svfilter~
 
 #sampling, playing, granulation
-    player~ gran.player~ pvoc.player~ pvoc.live~ batch.rec~ bach.write~ rec.file~ play.file~ tabplayer~ tabwriter~ sample~ sfload sfinfo
+    player~ gran.player~ pvoc.player~ pvoc.live~ batch.rec~ bach.write~ rec.file~ play.file~ tabplayer~ tabwriter~ sample~ streamin~ streamout~ sfload sfinfo
 
 #synthesis: synthesizers
     pm2~ pm4~ pm6~ sfont~ sfz~ plaits~ synth~
@@ -193,12 +193,15 @@ Some objects are simply based (or better, depend on) on other software and are j
 
 #synthesis: physical modeling
     pluck~
+    
+#synthesis: formant/vowel
+    formlet~ formant~ paf~ vosim~ formfm~ packet~ 
 
 #synthesis: oscillators
     cosine~ impulse~ impulse2~ parabolic~ pulse~ saw~ saw2~ oscbank~ superosc~ oscnoise~ sine~ square~ tri~ gaussian~ vsaw~ fm~ pm~ wavetable~ wt2d~ blip~ bl.osc~ bl.imp~ bl.imp2~ bl.saw~ bl.saw2~ bl.square~ bl.tri~ bl.vsaw~ bl.wavetable~ damp.osc~
 
-#synthesis: chaotic, stochastic, noise
-    white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ rampnoise~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~ velvet~
+#synthesis: chaotic, stochastic, fractal, noise
+    lsystem white~ brown~ perlin~ crackle~ cusp~ fbsine~ fbsine2~ gbman~ gray~ henon~ ikeda~ latoocarfian~ lorenz~ lfnoise~ lincong~ logistic~ quad~ stepnoise~ rampnoise~ randpulse~ randpulse2~ standard~ pink~ xmod~ xmod2~ gendyn~ velvet~
 
 #control: mouse/keyboard
     mouse canvas.mouse keycode keymap keypress
@@ -222,13 +225,13 @@ Some objects are simply based (or better, depend on) on other software and are j
     lfo phasor pimp impulse pulse
 
 #control: triggers
-    above above~ bangdiv chance chance~ dust~ dust2~ gatehold gatehold~ gaterelease gaterelease~ gatedelay gatedelay~ float2imp~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
+    above above~ bangdiv chance chance~ dust~ dust2~ gatehold gatehold~ gaterelease gaterelease~ gatemin~ gatemin gatedelay gatedelay~ float2imp~ gate2imp~ pimp~ pimpmul~ pulsecount~ pulsediv~ sh~ schmitt schmitt~ status status~ trig.delay~ toggleff~ timed.gate timed.gate~ match~ trig2bang trig2bang~ trighold~
 
 #control: triggers, clock
     clock metronome metronome~ polymetro polymetro~ speed tempo tempo~
 
 #analysis
-    changed~ changed2~ detect~ lastvalue~ median~ peak~ tap range range~ maxpeak~ follow~ rms~ mov.rms~ vu~ zerocross~ beat~
+    changed~ changed2~ detect~ lastvalue~ median~ peak~ tap elapsed range range~ maxpeak~ follow~ rms~ mov.rms~ vu~ zerocross~ beat~
 
 --------------------------------------------------------------------------
 
@@ -240,7 +243,7 @@ A submodule of ELSE by Porres (this is also by Porres).
 ## Modules list (20 objects):
 
 #classic
-    adsr.m~ lfo.m~ seq8.m~ vca.m~ vca2.m~ vcf.m~ vco.m~
+    adsr.m~ lfo.m~ seq.m~ vca.m~ vca2.m~ vcf.m~ vco.m~
 
 #FX
     bob.m~ chorus.m~ crusher.m~ delay.m~ drive.m~ flanger.m~ phaser.m~ plate.rev.m~ rm.m~
