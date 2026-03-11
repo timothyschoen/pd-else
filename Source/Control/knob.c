@@ -371,7 +371,7 @@ static void knob_config_fg(t_knob *x){
     t_canvas *cv = glist_getcanvas(x->x_glist);
     char fg[32];
     if(x->x_theme)
-        snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+        snprintf(fg, sizeof(fg), "#%06X", THISGUI->i_foregroundcolor);
     else
         snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
     pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_fg, "-fill", fg);
@@ -387,7 +387,7 @@ static void knob_config_mg(t_knob *x){
     t_canvas *cv = glist_getcanvas(x->x_glist);
     char mg[32];
     if(x->x_theme)
-        snprintf(mg, sizeof(mg), "#%06x", THISGUI->i_foregroundcolor);
+        snprintf(mg, sizeof(mg), "#%06X", THISGUI->i_foregroundcolor);
     else
         snprintf(mg, sizeof(mg), "%s", x->x_mg->s_name);
     pdgui_vmess(0, "crs rsrs", cv, "itemconfigure",  x->x_tag_bg_arc,
@@ -400,7 +400,7 @@ static void knob_config_bg(t_knob *x){
     t_canvas *cv = glist_getcanvas(x->x_glist);
     char bg[32];
     if(x->x_theme)
-        snprintf(bg, sizeof(bg), "#%06x", THISGUI->i_backgroundcolor);
+        snprintf(bg, sizeof(bg), "#%06X", THISGUI->i_backgroundcolor);
     else
         snprintf(bg, sizeof(bg), "%s", x->x_bg->s_name);
     pdgui_vmess(0, "crs rsrsrs", cv, "itemconfigure", x->x_tag_center_circle,
@@ -604,7 +604,7 @@ static void knob_select(t_gobj *z, t_glist *glist, int sel){
     else{
         char fg[32];
         if(x->x_theme)
-            snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+            snprintf(fg, sizeof(fg), "#%06X", THISGUI->i_foregroundcolor);
         else
             snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
         pdgui_vmess(0, "crs rs", cv, "itemconfigure",
@@ -626,60 +626,55 @@ static void knob_select(t_gobj *z, t_glist *glist, int sel){
 
 static void knob_draw_handle(t_knob *x, int state){
     t_handle *sh = (t_handle *)x->x_handle;
-
     pdgui_vmess(0, "rs", "destroy", sh->h_pathname);
-
     if(state){
-        pdgui_vmess(0, "rsdddddd",
-            "canvas_new",
-            sh->h_pathname,
-            HANDLE_SIZE,
-            HANDLE_SIZE,
-            THISGUI->i_selectcolor,
-            THISGUI->i_foregroundcolor,
-            THISGUI->i_gopcolor,
-            2*x->x_zoom);
-
+        pdgui_vmess(0, "rs riri rkrkrk ri rr",
+            "canvas", sh->h_pathname,
+            "-width", HANDLE_SIZE, "-height", HANDLE_SIZE,
+            "-bg", THISGUI->i_selectcolor,
+            "-highlightcolor", THISGUI->i_foregroundcolor,
+            "-highlightbackground", THISGUI->i_gopcolor,
+            "-highlightthickness", 2*x->x_zoom,
+            "-cursor", "bottom_right_corner");
         int x1, y1, x2, y2;
         knob_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
-
-        pdgui_vmess(0, "rcddddss",
-            "canvas_create_window",
-            x->x_cv, /* canvas pointer */
+        t_canvas *cv = (t_canvas *)x->x_cv;
+        char *tags_handle[] = {x->x_tag_handle, x->x_tag_obj};
+        pdgui_vmess(0, "crr ii rs ri ri rs rS",
+            cv, "create", "window",
             x2 - HANDLE_SIZE*x->x_zoom + 1,
             y2 - HANDLE_SIZE*x->x_zoom + 1,
-            HANDLE_SIZE*x->x_zoom,
-            HANDLE_SIZE*x->x_zoom,
-            sh->h_pathname,
-            x->x_tag_handle,
-            x->x_tag_obj);
-
-        pdgui_vmess(0, "rss",
-            "bind_click",
-            sh->h_pathname,
-            sh->h_bindsym->s_name);
-
-        pdgui_vmess(0, "rss",
-            "bind_release",
-            sh->h_pathname,
-            sh->h_bindsym->s_name);
-
-        pdgui_vmess(0, "rss",
-            "bind_motion",
-            sh->h_pathname,
-            sh->h_bindsym->s_name);
-
-        pdgui_vmess(0, "rs", "focus", sh->h_pathname);
+            "-anchor", "nw",
+            "-width", HANDLE_SIZE*x->x_zoom,
+            "-height", HANDLE_SIZE*x->x_zoom,
+            "-window", sh->h_pathname,
+            "-tags", 2, tags_handle);
+        char buf[512];
+        snprintf(buf, sizeof(buf),
+            "bind %s <Button> {pdsend [concat %s _click 1 \\;]}",
+            sh->h_pathname, sh->h_bindsym->s_name);
+        pdgui_vmess(buf, NULL);
+        snprintf(buf, sizeof(buf),
+            "bind %s <ButtonRelease> {pdsend [concat %s _click 0 \\;]}",
+            sh->h_pathname, sh->h_bindsym->s_name);
+        pdgui_vmess(buf, NULL);
+        snprintf(buf, sizeof(buf),
+            "bind %s <Motion> {pdsend [concat %s _motion %%x %%y \\;]}",
+            sh->h_pathname, sh->h_bindsym->s_name);
+        pdgui_vmess(buf, NULL);
+        snprintf(buf, sizeof(buf),
+            "focus %s",
+            sh->h_pathname); // coz of damn weird bug
+        pdgui_vmess(buf, NULL);
     }
 }
-
 
 // Draw ticks
 static void knob_draw_ticks(t_knob *x){
     t_canvas *cv = glist_getcanvas(x->x_glist);
     char fg[32];
     if(x->x_theme)
-        snprintf(fg, sizeof(fg), "#%06x", THISGUI->i_foregroundcolor);
+        snprintf(fg, sizeof(fg), "#%06X", THISGUI->i_foregroundcolor);
     else
         snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
     pdgui_vmess(0, "crs", cv, "delete", x->x_tag_ticks);
@@ -1473,8 +1468,12 @@ static void knob_properties(t_gobj *z, t_glist *owner){
     knob_get_var(x);
     t_symbol *n_mode = get_nmode(x);
     t_symbol *c_mode = get_cmode(x);
+    char pd_bg[32];
+    snprintf(pd_bg, sizeof(pd_bg), "#%06X", THISGUI->i_backgroundcolor);
+    char pd_fg[32];
+    snprintf(pd_fg, sizeof(pd_fg), "#%06X", THISGUI->i_foregroundcolor);
     pdgui_stub_vnew(&x->x_obj.ob_pd, "knob_dialog", x,
-        "ii if iif iii ii ffif iis siii ss ss sss ii",
+        "ii if iif iii ii ffif iis siii ss ss sss ss ii",
         x->x_size, x->x_square, // ii
         x->x_arc, x->x_arcstart, // if
         x->x_lb, x->x_savestate, x->x_load, // iif
@@ -1486,6 +1485,7 @@ static void knob_properties(t_gobj *z, t_glist *owner){
         x->x_rcv_raw->s_name, x->x_snd_raw->s_name, // ss
         x->x_param->s_name, x->x_var_raw->s_name, // ss
         x->x_bg->s_name, x->x_mg->s_name, x->x_fg->s_name, // sss
+        pd_bg, pd_fg, // ss
         x->x_theme, x->x_transparent); // ii
 }
 
@@ -2048,13 +2048,11 @@ static void handle__click_callback(t_handle *sh, t_floatarg f){
     int click = (int)f;
     t_knob *x = sh->h_master;
     if(sh->h_dragon && click == 0){
-        
         char buf[128];
         snprintf(buf, sizeof(buf),
             ".x%lx.c delete %s",
             (unsigned long)x->x_cv, sh->h_outlinetag);
         pdgui_vmess(buf, NULL);
-    
         t_atom undo[1];
         SETFLOAT(undo, x->x_size);
         t_atom redo[1];
@@ -2069,13 +2067,15 @@ static void handle__click_callback(t_handle *sh, t_floatarg f){
     else if(!sh->h_dragon && click){
         int x1, y1, x2, y2;
         knob_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
+        
         t_canvas *cv = (t_canvas *)x->x_cv;
-        pdgui_vmess(0, "crs riii ri rs",
+        pdgui_vmess(0, "crr iiii rk ri rs",
             cv, "create", "rectangle",
             x1, y1, x2, y2,
             "-outline", THISGUI->i_selectcolor,
             "-width", KNOB_SELBDWIDTH * x->x_zoom,
             "-tags", sh->h_outlinetag);
+        
         pdgui_vmess(0, "rr rk",  sh->h_pathname, "configure",
             "-highlightcolor", THISGUI->i_selectcolor);
 //        sh->h_dragx = sh->h_dragy = sh->h_drag_delta = 0;
@@ -2591,7 +2591,7 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     sprintf(x->x_tag_IO, "%pIO", x);
     sprintf(x->x_tag_number, "%pNUM", x);
     sprintf(x->x_tag_hover, "%pHOVER", x);
-    if(x->x_rcv != gensym("empty") && x->x_rcv != &s_)
+    if(x->x_rcv != gensym("empty"))
         pd_bind(&x->x_obj.ob_pd, x->x_rcv);
     pd_bind(&x->x_obj.ob_pd, gensym("#keyname")); // listen to key events
     get_cname(x, 100);

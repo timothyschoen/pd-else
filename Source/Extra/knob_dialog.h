@@ -20,7 +20,9 @@ static const char *knob_dialog_tcl =
 //"    ::pdwindow::post \"Cooked: <$sym>\\n\"\n"
 " return $sym\n"
 "}\n"
-// Actual start of properties
+
+// ---------------------- Actual start of properties ---------------------- \\
+// 
 "namespace eval ::dialog_knob:: {\n"
 "}\n"
 // arrays to store per-dialog values
@@ -64,14 +66,24 @@ static const char *knob_dialog_tcl =
 "array set ::dialog_knob::var_color_bg {} ;\n"
 "array set ::dialog_knob::var_color_fg {} ;\n"
 "array set ::dialog_knob::var_color_arc {} ;\n"
+"array set ::dialog_knob::var_saved_bg {} ;\n"
+"array set ::dialog_knob::var_saved_arc {} ;\n"
+"array set ::dialog_knob::var_saved_fg {} ;\n"
+"array set ::dialog_knob::var_pd_bg {} ;\n"
+"array set ::dialog_knob::var_pd_fg {} ;\n"
+
+"array set ::dialog_knob::var_hex_bgcolor_text {} ;\n"
+"array set ::dialog_knob::var_hex_arccolor_text {} ;\n"
+"array set ::dialog_knob::var_hex_fgcolor_text {} ;\n"
+
+
 "array set ::dialog_knob::var_theme {} ;\n"
 "array set ::dialog_knob::var_transp {} ;\n"
 "array set ::dialog_knob::var_colorradio {} ;\n" // radio for what color type we're setting
 "\n"
 
-// ------------------------------------------------------------------------------------------------
-        
-// Get parameters from Pd when asking for properties!
+// ------------------ Get parameters from Pd when asking for properties! ------------------ \\
+//
 "proc knob_dialog {id \\\n"
 "         size square \\\n"
 "         show_arc arcstart \\\n"
@@ -82,7 +94,8 @@ static const char *knob_dialog_tcl =
 "         readonly jump circular \\\n"
 "         n_mode n_size xpos ypos \\\n"
 "         rcv snd prm var \\\n"
-"         bcol acol fcol theme transp} {\n"
+"         bcol acol fcol pd_bg pd_fg\\\n"
+"         theme transp} {\n"
 // The vid indicates the instance ID of this dialog
 "    set vid [string trimleft $id .]\n"
 // initialize the array with received values for this dialog instance
@@ -127,15 +140,22 @@ static const char *knob_dialog_tcl =
 "    set ::dialog_knob::var_color_bg($vid) $bcol\n"
 "    set ::dialog_knob::var_color_fg($vid) $fcol\n"
 "    set ::dialog_knob::var_color_arc($vid) $acol\n"
+
+"    set ::dialog_knob::var_pd_bg($vid) $pd_bg\n"
+"    set ::dialog_knob::var_pd_fg($vid) $pd_fg\n"
+
 "    set ::dialog_knob::var_theme($vid) $theme \n"
 "    set ::dialog_knob::var_transp($vid) $transp \n"
 "    set ::dialog_knob::var_colorradio($vid) 0\n" // init to 'bg'
+
+"    set ::dialog_knob::var_hex_bgcolor_text($vid) [string toupper $bcol]\n"
+"    set ::dialog_knob::var_hex_arccolor_text($vid) [string toupper $acol]\n"
+"    set ::dialog_knob::var_hex_fgcolor_text($vid) [string toupper $fcol]\n"
+
 "\n"
 
-// ------------------------------------------------------------------------------------------------
-        
-// HELPER PROCEDURES/FUNCTIONS:
-        
+// ------------------------- HELPER PROCEDURES/FUNCTIONS ------------------------- \\
+  
 // set a string to send it to Pd:
 //   - Remove: semicolons, commas, backslashes (but allow curlies, unlike vanilla)
 //   - Escape spaces and dollar signs
@@ -189,6 +209,73 @@ static const char *knob_dialog_tcl =
 "    }\n"
 "}\n"
 "\n"
+
+"proc ::dialog_knob::transp_check {id} {\n"
+"    set vid [string trimleft $id .]\n"
+"    if { $::dialog_knob::var_transp($vid) == 1 } {\n"
+"       $id.arcsettings.arc.ent configure -state disabled\n"
+"       $id.colors.bgrow.ent configure -state disabled\n"
+"    } else {\n"
+"       $id.arcsettings.arc.ent configure -state normal\n"
+"       # Only enable bg hex if theme is not checked\n"
+"       if { $::dialog_knob::var_theme($vid) == 0 } {\n"
+"           $id.colors.bgrow.ent configure -state normal\n"
+"       }\n"
+"    }\n"
+"    ::dialog_knob::applymacos $id\n"
+"}\n"
+
+"proc ::dialog_knob::theme_check {id} {\n"
+"    set vid [string trimleft $id .]\n"
+"    if { $::dialog_knob::var_theme($vid) == 1 } {\n"
+//      Save current colors
+"       set ::dialog_knob::var_saved_bg($vid) $::dialog_knob::var_color_bg($vid)\n"
+"       set ::dialog_knob::var_saved_arc($vid) $::dialog_knob::var_color_arc($vid)\n"
+"       set ::dialog_knob::var_saved_fg($vid) $::dialog_knob::var_color_fg($vid)\n"
+"       \n"
+//      Show PD theme colors
+"       set ::dialog_knob::var_color_bg($vid) $::dialog_knob::var_pd_bg($vid)\n"
+"       set ::dialog_knob::var_color_arc($vid) $::dialog_knob::var_pd_fg($vid)\n"
+"       set ::dialog_knob::var_color_fg($vid) $::dialog_knob::var_pd_fg($vid)\n"
+"       \n"
+//      Update hex displays
+"       set ::dialog_knob::var_hex_bgcolor_text($vid) [string toupper $::dialog_knob::var_pd_bg($vid)]\n"
+"       set ::dialog_knob::var_hex_arccolor_text($vid) [string toupper $::dialog_knob::var_pd_fg($vid)]\n"
+"       set ::dialog_knob::var_hex_fgcolor_text($vid) [string toupper $::dialog_knob::var_pd_fg($vid)]\n"
+"       \n"
+//      Disable controls\n
+"       $id.colors.radio.bg configure -state disabled\n"
+"       $id.colors.radio.arc configure -state disabled\n"
+"       $id.colors.radio.fg configure -state disabled\n"
+"       $id.colors.radio.but configure -state disabled\n"
+"       $id.colors.bgrow.ent configure -state disabled\n"
+"       $id.colors.arcrow.ent configure -state disabled\n"
+"       $id.colors.fgrow.ent configure -state disabled\n"
+"    } else {\n"
+//      Restore saved colors
+"       if {[info exists ::dialog_knob::var_saved_bg($vid)]} {\n"
+"           set ::dialog_knob::var_color_bg($vid) $::dialog_knob::var_saved_bg($vid)\n"
+"           set ::dialog_knob::var_color_arc($vid) $::dialog_knob::var_saved_arc($vid)\n"
+"           set ::dialog_knob::var_color_fg($vid) $::dialog_knob::var_saved_fg($vid)\n"
+"           \n"
+"           set ::dialog_knob::var_hex_bgcolor_text($vid) [string toupper $::dialog_knob::var_saved_bg($vid)]\n"
+"           set ::dialog_knob::var_hex_arccolor_text($vid) [string toupper $::dialog_knob::var_saved_arc($vid)]\n"
+"           set ::dialog_knob::var_hex_fgcolor_text($vid) [string toupper $::dialog_knob::var_saved_fg($vid)]\n"
+"       }\n"
+"       \n"
+//       Enable controls (with transparency check
+"       $id.colors.radio.bg configure -state normal\n"
+"       $id.colors.radio.arc configure -state normal\n"
+"       $id.colors.radio.fg configure -state normal\n"
+"       $id.colors.radio.but configure -state normal\n"
+"       $id.colors.arcrow.ent configure -state normal\n"
+"       $id.colors.fgrow.ent configure -state normal\n"
+"       if { $::dialog_knob::var_transp($vid) == 0 } {\n"
+"           $id.colors.bgrow.ent configure -state normal\n"
+"       }\n"
+"    }\n"
+"    ::dialog_knob::applymacos $id\n"
+"}\n"
         
 "proc ::dialog_knob::discrete_check {id} {\n"
 "    set vid [string trimleft $id .]\n"
@@ -215,18 +302,15 @@ static const char *knob_dialog_tcl =
 "    set vid [string trimleft $id .]\n"
 "    if { $::dialog_knob::var_readonly($vid) == 1 } {\n"
 "       $id.mouse.jump.ent configure -state disabled\n"
-"       $id.mouse.move.ent configure -state disabled\n"
+"       $id.mouse.move.mb configure -state disabled\n"
 "    } else {\n"
 "       $id.mouse.jump.ent configure -state normal\n"
-"       $id.mouse.move.ent configure -state normal\n"
+"       $id.mouse.move.mb configure -state normal\n"   
 "    }\n"
 "}\n"
-"\n"
         
-// ----------------------------------------------------------------------------------------------------
-
-// DRAW PROPERTIES' WINDOW:
-        
+// ------------------------------ DRAW PROPERTIES' WINDOW ------------------------------ \\
+  
 // Initialize creation/drawing of properties window
 "    toplevel $id -class DialogWindow\n"
 "    wm title $id {[knob] Properties}\n"
@@ -262,6 +346,7 @@ static const char *knob_dialog_tcl =
         // column 1
 "    grid $id.basic.square -row 0 -column 1 -sticky e -padx {60 0}\n"
 "\n"
+
 // Frame for Arc settings
 "    labelframe $id.arcsettings\n"
 "    pack $id.arcsettings -side top -fill x\n"
@@ -272,6 +357,10 @@ static const char *knob_dialog_tcl =
 "    checkbutton $id.arcsettings.arc.ent -variable ::dialog_knob::var_showarc($vid) -width 5\\\n"
 "       -command \"::dialog_knob::applymacos $id\"\n"
 "    pack $id.arcsettings.arc.ent $id.arcsettings.arc.lab -side right -anchor e\n"
+        // When transparent is selected, disable arc checkbox
+"    if { $::dialog_knob::var_transp($vid) == 1 } {\n"
+"       $id.arcsettings.arc.ent configure -state disabled\n"
+"    }\n"
         // Entry for Arc start value
 "    frame $id.arcsettings.arcstart \n"
 "    label $id.arcsettings.arcstart.lab -text [_ \"Arc Start Value: \"]\n"
@@ -340,6 +429,7 @@ static const char *knob_dialog_tcl =
 "    pack $id.discrete.mode $id.discrete.ticks $id.discrete.steps -side left -anchor center\n"
 "    $id.discrete config -padx 30\n"
 "\n"
+
 // Frame for Angle entry
 "    labelframe $id.angle\n"
 "    pack $id.angle -side top -fill x\n"
@@ -359,47 +449,47 @@ static const char *knob_dialog_tcl =
 "    pack $id.angle.range $id.angle.offset -side left -anchor center\n"
 "    $id.angle config -padx 60\n"
 "\n"
+
 // Frame for output range section
 "    labelframe $id.rng\n"
 "    pack $id.rng -side top -fill x\n"
 "    $id.rng config -borderwidth 1 -pady 8 -text \"Range settings:\"\n"
-        // Range minimum entry
-"    frame $id.rng.range \n"
-"    frame $id.rng.range.min\n"
-"    label $id.rng.range.min.lab -text \"Lower:\"\n"
-"    entry $id.rng.range.min.ent -textvariable ::dialog_knob::var_lower($vid) -width 7\n"
-"    label $id.rng.range.dummy -text \"\" -width 1\n"
-        // Range maximum entry
-"    label $id.rng.range.max_lab -text \"Upper:\"\n"
-"    entry $id.rng.range.max_ent -textvariable ::dialog_knob::var_upper($vid) -width 7\n"
-"    pack $id.rng.range.min\n"
-"    pack $id.rng.range.min.lab $id.rng.range.min.ent -side left \n"
-"    $id.rng config -padx 26\n"
-"    pack configure $id.rng.range.min -side left\n"
-"    pack $id.rng.range.dummy $id.rng.range.max_lab $id.rng.range.max_ent -side left\n"
+        // Single row with everything
+"    frame $id.rng.row\n"
+"    pack $id.rng.row -side top -fill x -padx 10 -pady 2\n"
+        // Lower/Upper
+"    label $id.rng.row.lower_lab -text \"Lower:\"\n"
+"    entry $id.rng.row.lower_ent -textvariable ::dialog_knob::var_lower($vid) -width 6\n"
+"    label $id.rng.row.upper_lab -text \"Upper:\"\n"
+"    entry $id.rng.row.upper_ent -textvariable ::dialog_knob::var_upper($vid) -width 6\n"
+"    label $id.rng.row.spacer -text \"  \" -width 1\n"
         // Logmode radiobuttons
-"    frame $id.rng.logmode\n"
-"    radiobutton $id.rng.logmode.radio0 -value 0 \\\n"
+"    radiobutton $id.rng.row.radio0 -value 0 \\\n"
 "        -text [_ \"linear\" ] \\\n"
 "        -variable ::dialog_knob::var_expmode($vid) \\\n"
-"        -command \"$id.rng.logmode.expmode_entry configure -state disabled\"\n"
-"    radiobutton $id.rng.logmode.radio1 -value 1 \\\n"
+"        -command \"$id.rng.row.expmode_entry configure -state disabled\"\n"
+"    radiobutton $id.rng.row.radio1 -value 1 \\\n"
 "        -text [_ \"log\" ] \\\n"
 "        -variable ::dialog_knob::var_expmode($vid) \\\n"
-"        -command \"$id.rng.logmode.expmode_entry configure -state disabled\"\n"
-"    radiobutton $id.rng.logmode.radio2 -value 2 \\\n"
+"        -command \"$id.rng.row.expmode_entry configure -state disabled\"\n"
+"    radiobutton $id.rng.row.radio2 -value 2 \\\n"
 "        -text [_ \"exp:\" ] \\\n"
 "        -variable ::dialog_knob::var_expmode($vid) \\\n"
-"        -command \"$id.rng.logmode.expmode_entry configure -state normal\"\n"
-"    entry $id.rng.logmode.expmode_entry -width 3 -textvariable ::dialog_knob::var_exp($vid) \n"
+"        -command \"$id.rng.row.expmode_entry configure -state normal\"\n"
+"    entry $id.rng.row.expmode_entry -width 3 -textvariable ::dialog_knob::var_exp($vid)\n"
         // When exp is selected, enable text box
 "    if { $::dialog_knob::var_expmode($vid) != 2 } {\n"
-"       $id.rng.logmode.expmode_entry configure -state disabled\n"
+"       $id.rng.row.expmode_entry configure -state disabled\n"
 "    }\n"
 //
-"    pack $id.rng.logmode.expmode_entry $id.rng.logmode.radio2 $id.rng.logmode.radio1 $id.rng.logmode.radio0 -side right \n"
-"    pack $id.rng.range $id.rng.logmode -side top\n"
+"    pack $id.rng.row.lower_lab $id.rng.row.lower_ent \\\n"
+"         $id.rng.row.upper_lab $id.rng.row.upper_ent \\\n"
+"         $id.rng.row.spacer \\\n"
+"         $id.rng.row.radio0 $id.rng.row.radio1 \\\n"
+"         $id.rng.row.radio2 $id.rng.row.expmode_entry \\\n"
+"         -side left -padx 1\n"
 "\n"
+
 // Frame for Mouse/Click behaviour (Read Only / Jump on click / Circular motion)
 "    labelframe $id.mouse\n"
 "    pack $id.mouse -side top -fill x\n"
@@ -430,12 +520,11 @@ static const char *knob_dialog_tcl =
 "           -command \"::dialog_knob::cmenucheck $cmode_selection $id\"\n"
 "   }\n"
 "    pack $id.mouse.move.lab $id.mouse.move.mb -side left\n"
-        
-/* When read only is selected, disbale jump/circular
-"    if { $::dialog_knob::var_readonly($vid) >= 1 } {\n"
+        // When read only is selected, disable jump and circular
+"    if { $::dialog_knob::var_readonly($vid) == 1 } {\n"
 "       $id.mouse.jump.ent configure -state disabled\n"
-"       $id.mouse.move.ent configure -state disabled\n"
-"    }\n"*/
+"       $id.mouse.move.mb configure -state disabled\n"
+"    }\n"
         // Position of items
 "    pack $id.mouse.readonly $id.mouse.jump -side left\n"
 "    pack $id.mouse.move -side left\n"
@@ -480,6 +569,7 @@ static const char *knob_dialog_tcl =
 "    pack $id.num.xpos $id.num.ypos -side left -anchor center\n"
 "    $id.num config -padx 35\n"
 "\n"
+
 // Frame for attached symbols
 "    labelframe $id.syms -borderwidth 1 -padx 5 -pady 8 -text [_ \"Attached symbols: \"]\n"
 "    pack $id.syms -side top -fill x\n"
@@ -524,9 +614,58 @@ static const char *knob_dialog_tcl =
 "    grid $id.syms.param -row 0 -column 1 -sticky e -padx {5 0}\n"
 "    grid $id.syms.var -row 1 -column 1 -sticky e -padx {5 0}\n"
 "\n"
+
 // Frame for colors section
 "    labelframe $id.colors -borderwidth 1 -text [_ \"Colors:\"] -padx 5 -pady 8\n"
 "    pack $id.colors -fill x\n"
+"\n"
+// Background row
+"    frame $id.colors.bgrow\n"
+"    pack $id.colors.bgrow -side top -fill x -pady 2\n"
+"    label $id.colors.bgrow.lab -text [_ \"Background:\"] -width 12 -anchor e\n"
+"    entry $id.colors.bgrow.ent -textvariable ::dialog_knob::var_hex_bgcolor_text($vid) -width 10\n"
+"    label $id.colors.bgrow.swatch -background white -relief ridge -width 24 -height 1\n"
+"    pack $id.colors.bgrow.lab $id.colors.bgrow.ent $id.colors.bgrow.swatch -side left -padx 2\n"
+"\n"
+// Arc row
+"    frame $id.colors.arcrow\n"
+"    pack $id.colors.arcrow -side top -fill x -pady 2\n"
+"    label $id.colors.arcrow.lab -text [_ \"Arc Background:\"] -width 12 -anchor e\n"
+"    entry $id.colors.arcrow.ent -textvariable ::dialog_knob::var_hex_arccolor_text($vid) -width 10\n"
+"    label $id.colors.arcrow.swatch -background white -relief ridge -width 24 -height 1\n"
+"    pack $id.colors.arcrow.lab $id.colors.arcrow.ent $id.colors.arcrow.swatch -side left -padx 2\n"
+"\n"
+// Front row
+"    frame $id.colors.fgrow\n"
+"    pack $id.colors.fgrow -side top -fill x -pady 2\n"
+"    label $id.colors.fgrow.lab -text [_ \"Front:\"] -width 12 -anchor e\n"
+"    entry $id.colors.fgrow.ent -textvariable ::dialog_knob::var_hex_fgcolor_text($vid) -width 10\n"
+"    label $id.colors.fgrow.swatch -background white -relief ridge -width 24 -height 1\n"
+"    pack $id.colors.fgrow.lab $id.colors.fgrow.ent $id.colors.fgrow.swatch -side left -padx 2\n"
+    // Add traces to update swatches when hex values change
+"    trace add variable ::dialog_knob::var_hex_bgcolor_text($vid) write \\\n"
+"        [list ::dialog_knob::update_swatch $id bg]\n"
+"    trace add variable ::dialog_knob::var_hex_arccolor_text($vid) write \\\n"
+"        [list ::dialog_knob::update_swatch $id arc]\n"
+"    trace add variable ::dialog_knob::var_hex_fgcolor_text($vid) write \\\n"
+"        [list ::dialog_knob::update_swatch $id fg]\n"
+"\n"
+    // Initialize swatches with current colors
+"    $id.colors.bgrow.swatch configure -background $bcol\n"
+"    $id.colors.arcrow.swatch configure -background $acol\n"
+"    $id.colors.fgrow.swatch configure -background $fcol\n"
+"\n"
+        // When theme is selected, disable hex entries
+"    if { $::dialog_knob::var_theme($vid) == 1 } {\n"
+"       $id.colors.bgrow.ent configure -state disabled\n"
+"       $id.colors.arcrow.ent configure -state disabled\n"
+"       $id.colors.fgrow.ent configure -state disabled\n"
+"    }\n"
+        // When transparent is selected, disable background hex entry
+"    if { $::dialog_knob::var_transp($vid) == 1 } {\n"
+"       $id.colors.bgrow.ent configure -state disabled\n"
+"    }\n"
+"\n"
 // Container frame for checkboxes
 "    frame $id.colors.checkboxes\n"
 "    pack $id.colors.checkboxes -side top -fill x\n"
@@ -534,17 +673,18 @@ static const char *knob_dialog_tcl =
 "    frame $id.colors.checkboxes.theme\n"
 "    label $id.colors.checkboxes.theme.lab -text [_ \"Use Theme: \"]\n"
 "    checkbutton $id.colors.checkboxes.theme.ent -variable ::dialog_knob::var_theme($vid) -width 5\\\n"
-"       -command \"::dialog_knob::applymacos $id\"\n"
+"       -command \"::dialog_knob::theme_check $id\"\n"
 "    pack $id.colors.checkboxes.theme.ent $id.colors.checkboxes.theme.lab -side right -anchor e\n"
-        // Checkbox for Transparent
+// Checkbox for Transparent
 "    frame $id.colors.checkboxes.transp\n"
 "    label $id.colors.checkboxes.transp.lab -text [_ \"Transparent Background: \"]\n"
 "    checkbutton $id.colors.checkboxes.transp.ent -variable ::dialog_knob::var_transp($vid) -width 5\\\n"
-"       -command \"::dialog_knob::applymacos $id\"\n"
+"       -command \"::dialog_knob::transp_check $id\"\n"
 "    pack $id.colors.checkboxes.transp.ent $id.colors.checkboxes.transp.lab -side right -anchor e\n"
         // Pack checkboxes horizontally within their container
 "    pack $id.colors.checkboxes.theme $id.colors.checkboxes.transp -side left -anchor center\n"
 "    $id.colors.checkboxes config -padx 80\n"
+"\n"
 // Color Radiobuttons and "Compose" button
 "    frame $id.colors.radio\n"
 "    pack $id.colors.radio -side top\n"
@@ -557,6 +697,13 @@ static const char *knob_dialog_tcl =
 "    label $id.colors.radio.dummy -text \"\" -width 1\n"
 "    button $id.colors.radio.but -text [_ \"Compose\"] -command \"::dialog_knob::compose_color $id\"\n"
 "    pack $id.colors.radio.bg $id.colors.radio.arc $id.colors.radio.fg $id.colors.radio.dummy $id.colors.radio.but -side left\n"
+        // When theme is selected, disable color radio buttons and compose button
+"    if { $::dialog_knob::var_theme($vid) == 1 } {\n"
+"       $id.colors.radio.bg configure -state disabled\n"
+"       $id.colors.radio.arc configure -state disabled\n"
+"       $id.colors.radio.fg configure -state disabled\n"
+"       $id.colors.radio.but configure -state disabled\n"
+"    }\n"
 "\n"
 // Preset colors, color scheme by Mary Ann Benedetto http://piR2.org
 "    frame $id.colors.presets -pady 8\n"
@@ -572,12 +719,15 @@ static const char *knob_dialog_tcl =
 "           {\n"
 "               label $id.colors.presets.$r.c$i -background $hexcol -activebackground $hexcol -relief ridge -padx 7 -pady 0 -width 1\n"
 "               bind $id.colors.presets.$r.c$i <Button> \"::dialog_knob::preset_col $id $hexcol\"\n"
+"               if { $::dialog_knob::var_theme($vid) == 1 } {\n"
+"                   $id.colors.presets.$r.c$i configure -state disabled\n"
+"               }\n"
 "           }\n"
 "       pack $id.colors.presets.$r.c0 $id.colors.presets.$r.c1 $id.colors.presets.$r.c2 $id.colors.presets.$r.c3 \\\n"
 "           $id.colors.presets.$r.c4 $id.colors.presets.$r.c5 $id.colors.presets.$r.c6 $id.colors.presets.$r.c7 \\\n"
 "           $id.colors.presets.$r.c8 $id.colors.presets.$r.c9 -side left\n"
 "    }\n"
-"\n"
+
 // Cancel, Apply and OK buttons
 "    frame $id.cao -pady 4\n"
 "    pack $id.cao -side top\n"
@@ -596,21 +746,55 @@ static const char *knob_dialog_tcl =
 // ----------------------------------------------------------------------------------------------------
 
 // BUTTON FUNCTIONS
-        
-// Preset Colors
-"proc ::dialog_knob::preset_col {id presetcol} {\n"
+
+"proc ::dialog_knob::update_color_from_hex_enter {id target} {\n"
 "    set vid [string trimleft $id .]\n"
-"\n"
-"    switch -- $::dialog_knob::var_colorradio($vid) {\n" // get type from radio and set
-"        0 { set ::dialog_knob::var_color_bg($vid) $presetcol }\n"
-"        1 { set ::dialog_knob::var_color_arc($vid) $presetcol }\n"
-"        2 { set ::dialog_knob::var_color_fg($vid) $presetcol }\n"
+"    switch -- $target {\n"
+"        bg { set hexval $::dialog_knob::var_hex_bgcolor_text($vid) }\n"
+"        arc { set hexval $::dialog_knob::var_hex_arccolor_text($vid) }\n"
+"        fg { set hexval $::dialog_knob::var_hex_fgcolor_text($vid) }\n"
+"    }\n"
+"    # Validate hex color format (#RRGGBB)\n"
+"    if {[regexp {^#[0-9A-Fa-f]{6}$} $hexval]} {\n"
+"        switch -- $target {\n"
+"            bg { set ::dialog_knob::var_color_bg($vid) $hexval }\n"
+"            arc { set ::dialog_knob::var_color_arc($vid) $hexval }\n"
+"            fg { set ::dialog_knob::var_color_fg($vid) $hexval }\n"
+"        }\n"
 "    }\n"
 "    if {$::windowingsystem eq \"aqua\"} {\n" // Apply color change if in MACOS
 "       ::dialog_knob::bind_enter_to_apply $id \n"
 "    }\n"
 "}\n"
+
+// Preset Colors Proc
+"proc ::dialog_knob::preset_col {id presetcol} {\n"
+"    set vid [string trimleft $id .]\n"
+"    # Don't do anything if theme is enabled\n"
+"    if { $::dialog_knob::var_theme($vid) == 1 } {\n"
+"        return\n"
+"    }\n"
+"    set uppercol [string toupper $presetcol]\n"
 "\n"
+"    switch -- $::dialog_knob::var_colorradio($vid) {\n" // get type from radio and set
+"        0 { \n"
+"            set ::dialog_knob::var_color_bg($vid) $presetcol\n"
+"            set ::dialog_knob::var_hex_bgcolor_text($vid) $uppercol\n"
+"            $id.colors.bgrow.swatch configure -background $presetcol\n"
+"        }\n"
+"        1 { \n"
+"            set ::dialog_knob::var_color_arc($vid) $presetcol\n"
+"            set ::dialog_knob::var_hex_arccolor_text($vid) $uppercol\n"
+"            $id.colors.arcrow.swatch configure -background $presetcol\n"
+"        }\n"
+"        2 { \n"
+"            set ::dialog_knob::var_color_fg($vid) $presetcol\n"
+"            set ::dialog_knob::var_hex_fgcolor_text($vid) $uppercol\n"
+"            $id.colors.fgrow.swatch configure -background $presetcol\n"
+"        }\n"
+"    }\n"
+"    ::dialog_knob::applymacos $id\n"
+"}\n"
         
 // COMPOSE Color:
 "proc ::dialog_knob::compose_color {id} {\n"
@@ -638,6 +822,19 @@ static const char *knob_dialog_tcl =
 "    }\n"
 "}\n"
 "\n"
+// update color swatches
+"proc ::dialog_knob::update_swatch {id target varName index op} {\n"
+"    set vid [string trimleft $id .]\n"
+"    upvar #0 $varName var\n"
+"    set hexval $var($vid)\n"
+"    if {[regexp {^#[0-9A-Fa-f]{6}$} $hexval]} {\n"
+"        switch -- $target {\n"
+"            bg { $id.colors.bgrow.swatch configure -background $hexval }\n"
+"            arc { $id.colors.arcrow.swatch configure -background $hexval }\n"
+"            fg { $id.colors.fgrow.swatch configure -background $hexval }\n"
+"        }\n"
+"    }\n"
+"}\n"
                 
 //  CANCEL button
 "proc ::dialog_knob::cancel {id} {\n"
@@ -709,6 +906,7 @@ static const char *knob_dialog_tcl =
 // Bind and unbind enter key to Apply button on macOS for entry widgets
 "    if {$::windowingsystem eq \"aqua\"} {\n"
 // call apply on Return in entry boxes that are in focus & rebind Return to ok button
+"        bind $id.basic.dim.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.load.load.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.arcsettings.arcstart.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.num.size.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
@@ -717,15 +915,18 @@ static const char *knob_dialog_tcl =
 "        bind $id.discrete.steps.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.angle.range.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.angle.offset.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
-"        bind $id.basic.dim.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.logmode.expmode_entry <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.range.min.ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
-"        bind $id.rng.range.max_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
+"        bind $id.rng.row.lower_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
+"        bind $id.rng.row.upper_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
+"        bind $id.rng.row.expmode_entry <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.send.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.param.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.var.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
 "        bind $id.syms.receive.w_ent <KeyPress-Return> \"::dialog_knob::bind_enter_to_apply $id\"\n"
+"        bind $id.colors.bgrow.ent <KeyPress-Return> \"::dialog_knob::update_color_from_hex_enter $id bg\"\n"
+"        bind $id.colors.arcrow.ent <KeyPress-Return> \"::dialog_knob::update_color_from_hex_enter $id arc\"\n"
+"        bind $id.colors.fgrow.ent <KeyPress-Return> \"::dialog_knob::update_color_from_hex_enter $id fg\"\n"
 // unbind Return from ok button when an entry takes focus
+"        $id.basic.dim.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.load.load.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.arcsettings.arcstart.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.num.size.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
@@ -734,14 +935,16 @@ static const char *knob_dialog_tcl =
 "        $id.discrete.steps.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.angle.range.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.angle.offset.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
-"        $id.basic.dim.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
-"        $id.rng.logmode.expmode_entry config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
-"        $id.rng.range.min.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
-"        $id.rng.range.max_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.rng.row.lower_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.rng.row.upper_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.rng.row.expmode_entry config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.syms.send.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.syms.param.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.syms.var.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 "        $id.syms.receive.w_ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.colors.bgrow.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.colors.arcrow.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
+"        $id.colors.fgrow.ent config -validate focusin -vcmd \"::dialog_knob::unbind_return $id\"\n"
 // remove cancel button from focus list since it's not activated on Return
 "        $id.cao.cancel config -takefocus 0\n"
 // show active focus on the ok button as it *is* activated on Return
