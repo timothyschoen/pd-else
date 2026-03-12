@@ -870,7 +870,7 @@ fluid_sample_ensure_loaded(fluid_sample_t* sample, fluid_defsfont_t* sfont)
           sfont->fapi->fclose(fd);
           return FLUID_FAILED;
       }
-      sample->data = (short*) FLUID_MALLOC(byte_length);
+      sample->data = (short*) FLUID_MALLOC(sfont->samplesize);
       if (sample->data == NULL) {
           FLUID_LOG(FLUID_ERR, "Out of memory");
           sfont->fapi->fclose(fd);
