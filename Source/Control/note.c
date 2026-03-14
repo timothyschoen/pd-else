@@ -107,7 +107,7 @@ static int note_vis_check(t_note *x){
     return(gobj_shouldvis((t_gobj *)x, x->x_glist) && glist_isvisible(x->x_glist));
 }
 
-static void note_initialize(t_note *x){
+void note_initialize(t_note *x) {
 //    post("initialize");
     t_binbuf *bb = x->x_obj.te_binbuf;
     int n_args = binbuf_getnatom(bb) - 1; // number of arguments
