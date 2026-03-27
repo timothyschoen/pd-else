@@ -23,9 +23,37 @@ namespace eval bicoeff:: {
 }
 
 #------------------------------------------------------------------------------#
-# mtof added for intuitive log frequency scaling
 proc bicoeff::mtof {nn} {
     return [expr pow(2.0, ($nn-45)/12.0)*110.0]
+}
+
+proc bicoeff::ftom {f} {
+    set result [expr 12.0 * log($f / 110.0) / log(2.0) + 45.0]
+    return $result
+}
+
+proc bicoeff::hz_to_pixel {my f} {
+    variable ${my}::framex1
+    variable ${my}::framex2
+    set midi_note [ftom $f]
+    set pixel [expr $framex1 + ($midi_note - 16.766) / 120.0 * ($framex2 - $framex1)]
+    return $pixel
+}
+
+proc bicoeff::db_to_pixel {my db} {
+    variable ${my}::framey1
+    variable ${my}::framey2
+    # db range: 25 to -25
+    set pixel [expr $framey1 + ($framey2 - $framey1) * (25.0 - $db) / 50.0]
+    return [expr $pixel - $framey1]
+}
+
+proc bicoeff::bw_to_filterwidth {my f bw} {
+    set bwf [expr $f * (1.0 + $bw)]
+    set center_pix [hz_to_pixel $my $f]
+    set right_pix [hz_to_pixel $my $bwf]
+#    ::pdwindow::post "bw_to_filterwidth --> center_pix: $center_pix / right_pix $right_pix\n"
+    return [expr ($right_pix - $center_pix)]
 }
 
 proc bicoeff::drawgraph {my} {
@@ -62,8 +90,6 @@ proc bicoeff::update_coefficients {my} {
     variable ${my}::tkcanvas
     variable ${my}::receive_name
     variable ${my}::currentfiltertype
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
     variable ${my}::a1
     variable ${my}::a2
     variable ${my}::b0
@@ -71,11 +97,48 @@ proc bicoeff::update_coefficients {my} {
     variable ${my}::b2
 
     # run the calc for a given filter type first
-    $currentfiltertype $my $filtercenter $filterwidth
+    $currentfiltertype $my
     # send the result to pd
     pdsend "$receive_name biquad $a1 $a2 $b0 $b1 $b2"
     # update the graph
     drawgraph $my
+}
+
+proc bicoeff::setfiltertype_params {my filtertype cf bw g} {
+    variable ${my}::currentfiltertype $filtertype
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable ${my}::framey1
+    variable ${my}::framey2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+    variable ${my}::filtergain
+    variable ${my}::filterx1
+    variable ${my}::filterx2
+
+
+#    ::pdwindow::post "framey1 = $framey1, framey2 = $framey2\n"
+#    ::pdwindow::post "params --> cf: $cf / bw: $bw / g: $g\n"
+
+#    ::pdwindow::post "filtergain before = $filtergain\n"
+
+    set filtergain [db_to_pixel $my $g]
+
+#    ::pdwindow::post "filtergain after = $filtergain\n"
+
+    set filtercenter [hz_to_pixel $my $cf]
+    set filterwidth [bw_to_filterwidth $my $cf $bw]
+    set halfwidth [expr $filterwidth * 0.5]
+
+    # Draw lines at halfwidth distance from center
+    set filterx1 [expr $filtercenter - $halfwidth]
+    set filterx2 [expr $filtercenter + $halfwidth]
+    
+    $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
+    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
+    $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
+
+    update_coefficients $my
 }
 
 #------------------------------------------------------------------------------#
@@ -116,7 +179,7 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
     # invert and offset
     set logmagnitude [expr -1.0 * $logmagnitude + $halfframeheight + $framey1]
 
-    #	puts stderr "PHASE at $fHz Hz ($f radians): $phase"
+    #   puts stderr "PHASE at $fHz Hz ($f radians): $phase"
     # wrap phase
     if {$phase > $::pi} {
         set phase [expr $phase - $::2pi]
@@ -149,16 +212,23 @@ proc bicoeff::e_alphaq {q omega} {
 # lowpass
 #    f0 = frequency in Hz
 #    bw = bandwidth where 1 is an octave
-proc bicoeff::lowpass {my f0pix bwpix} {
+proc bicoeff::lowpass {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
     set f [mtof $nn]
     set bwf [mtof $nn2]
     set bw [expr ($bwf/$f)-1]
-#    puts stderr "lowpass: $f $bw $filtercenter $filterwidth"
+
+#    ::pdwindow::post "lowpass: $f $bw $filtercenter $filterwidth\n"
+
     set omega [e_omega $f $::samplerate]
     set alpha [e_alpha $bw $omega]
     set b1 [expr 1.0 - cos($omega)]
@@ -183,9 +253,14 @@ proc bicoeff::lowpass {my f0pix bwpix} {
 }
 
 # highpass
-proc bicoeff::highpass {my f0pix bwpix} {
+proc bicoeff::highpass {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -209,9 +284,14 @@ proc bicoeff::highpass {my f0pix bwpix} {
 }
 
 #bandpass
-proc bicoeff::bandpass {my f0pix bwpix} {
+proc bicoeff::bandpass {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -235,9 +315,14 @@ proc bicoeff::bandpass {my f0pix bwpix} {
 }
 
 #resonant
-proc bicoeff::resonant {my f0pix bwpix} {
+proc bicoeff::resonant {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -261,9 +346,14 @@ proc bicoeff::resonant {my f0pix bwpix} {
 }
 
 #notch
-proc bicoeff::notch {my f0pix bwpix} {
+proc bicoeff::notch {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -287,12 +377,20 @@ proc bicoeff::notch {my f0pix bwpix} {
 }
 
 #peaking
-proc bicoeff::peaking {my f0pix bwpix} {
+proc bicoeff::peaking {my} {
     variable ${my}::framex1
     variable ${my}::framey1
     variable ${my}::framex2
     variable ${my}::framey2
     variable ${my}::filtergain
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
+    set g $filtergain
+
+#    ::pdwindow::post "peaking --> filtergain: $g\n"
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -319,12 +417,17 @@ proc bicoeff::peaking {my f0pix bwpix} {
 }
 
 #lowshelf
-proc bicoeff::lowshelf {my f0pix bwpix} {
+proc bicoeff::lowshelf {my} {
     variable ${my}::framex1
     variable ${my}::framey1
     variable ${my}::framex2
     variable ${my}::framey2
     variable ${my}::filtergain
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set f [mtof $nn]
@@ -354,12 +457,17 @@ proc bicoeff::lowshelf {my f0pix bwpix} {
 }
 
 #highshelf
-proc bicoeff::highshelf {my f0pix bwpix} {
+proc bicoeff::highshelf {my} {
     variable ${my}::framex1
     variable ${my}::framey1
     variable ${my}::framex2
     variable ${my}::framey2
     variable ${my}::filtergain
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -390,9 +498,14 @@ proc bicoeff::highshelf {my f0pix bwpix} {
 }
 
 #allpass
-proc bicoeff::allpass {my f0pix bwpix} {
+proc bicoeff::allpass {my} {
     variable ${my}::framex1
     variable ${my}::framex2
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+
+    set f0pix $filtercenter
+    set bwpix $filterwidth
 
     set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
     set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
@@ -749,7 +862,7 @@ proc bicoeff::setfiltertype {my filtertype} {
     update_coefficients $my
 }
 
-proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype} {
+proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype cf bw g} {
 # if the $my namespace already exists, that means we already
 # have an instance active and setup.
     if {[namespace exists $my]} {
@@ -757,6 +870,9 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype} {
     } else {
         new $my $canvas $name $t $x1 $y1 $x2 $y2
     }
+
+    setfiltertype_params $my $filtertype $cf $bw $g
+
     variable ${my}::tkcanvas
     variable ${my}::receive_name
     variable ${my}::tag
@@ -768,7 +884,6 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype} {
     variable ${my}::filterx2
     variable ${my}::midpoint
     variable mys_in_tkcanvas
-    variable markercolor
     variable markercolor
     
     set fillx [expr $framex1 + 100]

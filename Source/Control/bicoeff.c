@@ -1,6 +1,7 @@
 // based on filterview
 
 #include <stdio.h>
+#include <math.h>
 #include <m_pd.h>
 #include <m_imp.h>
 #include <g_canvas.h>
@@ -11,6 +12,10 @@ typedef struct bicoeff{
     int         x_width;
     int         x_height;
     int         x_zoom;
+    int         x_savestate;
+    t_float     x_cf;
+    t_float     x_bw;
+    t_float     x_g;
     t_symbol*   x_type;
     t_symbol*   x_bind_name;  // name to bind to receive callbacks
     char        x_tkcanvas[MAXPDSTRING];
@@ -31,12 +36,15 @@ static void bicoeff_getrect(t_gobj *z, t_glist *glist, int *xp1, int *yp1, int *
 }
 
 static void bicoeff_save(t_gobj *z, t_binbuf *b){
-  t_bicoeff *x = (t_bicoeff *)z;
-  binbuf_addv(b, "ssiisiis", gensym("#X"),gensym("obj"),
-    (int)x->x_obj.te_xpix, (int)x->x_obj.te_ypix,
-    atom_getsymbol(binbuf_getvec(x->x_obj.te_binbuf)),
-    x->x_width, x->x_height, x->x_type);
-  binbuf_addv(b, ";");
+    t_bicoeff *x = (t_bicoeff *)z;
+    binbuf_addv(b, "ssiisiisfffi", gensym("#X"),gensym("obj"),
+        (int)x->x_obj.te_xpix, (int)x->x_obj.te_ypix,
+        atom_getsymbol(binbuf_getvec(x->x_obj.te_binbuf)),
+        x->x_width, x->x_height,
+        x->x_type,
+        x->x_cf, x->x_bw, x->x_g,
+        x->x_savestate);
+    binbuf_addv(b, ";");
 }
 
 static void bicoeff_displace(t_gobj *z, t_glist *glist, int dx, int dy){
@@ -68,16 +76,13 @@ static void bicoeff_vis(t_gobj *z, t_glist *glist, int vis){
     if(vis){
         int x1, y1, x2, y2;
         bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
-        sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d %s\n",
-            x->x_my,
-            x->x_tkcanvas,
+        sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d %s %f %f %f\n",
+            x->x_my, x->x_tkcanvas,
             x->x_bind_name->s_name,
             x->x_tag,
-            x1,
-            y1,
-            x2,
-            y2,
-            x->x_type->s_name);
+            x1, y1, x2, y2,
+            x->x_type->s_name,
+            x->x_cf, x->x_bw, x->x_g);
     }
     else
         sys_vgui("%s delete %s\n", x->x_tkcanvas, x->x_tag);
@@ -86,6 +91,10 @@ static void bicoeff_vis(t_gobj *z, t_glist *glist, int vis){
     if(samplerate > 0)  // samplerate is sometimes 0, ignore that
         sys_vgui("set ::samplerate %.0f\n", samplerate);
     // TODO: get [block~] settings or the Tk code would not need the samplerate
+}
+
+static double bicoeff_q_to_bw(double q){
+    return(asinh(1.0 / (2.0 * q)) * 2.0 / log(2.0));
 }
 
 // Methods ------------------------------------------------------------------------
@@ -100,67 +109,116 @@ static void setfiltertype(t_bicoeff *x, char* type){
         sys_vgui("::bicoeff::setfiltertype %s %s\n", x->x_my, type);
 }
 
+static void setfilter_params(t_bicoeff *x, char* type, t_floatarg cf, t_floatarg q, t_floatarg g){
+    x->x_type = gensym(type);
+    x->x_cf = cf;
+    x->x_bw = bicoeff_q_to_bw(q);
+    x->x_g = g;
+//    post("cf = %f / bw = %f / g = %f", cf, x->x_bw, g);
+    if(glist_isvisible(x->x_glist) && gobj_shouldvis((t_gobj *)x, x->x_glist))
+        sys_vgui("::bicoeff::setfiltertype_params %s %s %f %f %f\n", x->x_my, type, cf, x->x_bw, g);
+}
+
 static void bicoeff_allpass(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "allpass");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "allpass");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "allpass", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_bandpass(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "bandpass");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "bandpass");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "bandpass", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_highpass(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "highpass");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "highpass");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "highpass", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_highshelf(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "highshelf");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "highshelf");
+    else if(ac == 3){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        float g = atom_getfloat(av+2);
+        setfilter_params(x, "highshelf", cf, q, g);
+    }
 }
 
 static void bicoeff_lowpass(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "lowpass");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "lowpass");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "lowpass", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_lowshelf(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "lowshelf");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "lowshelf");
+    else if(ac == 3){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        float g = atom_getfloat(av+2);
+        setfilter_params(x, "lowshelf", cf, q, g);
+    }
 }
 
 static void bicoeff_notch(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "notch");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "notch");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "notch", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_eq(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "peaking");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "peaking");
+    else if(ac == 3){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        float g = atom_getfloat(av+2);
+        setfilter_params(x, "peaking", cf, q, g);
+    }
 }
 
 static void bicoeff_resonant(t_bicoeff *x, t_symbol *s, int ac, t_atom* av){
-    s = NULL;
-    ac = 0;
-    av = NULL;
-    setfiltertype(x, "resonant");
+    (void)s;
+    if(!ac)
+       setfiltertype(x, "resonant");
+    else if(ac == 2){
+        float cf = atom_getfloat(av);
+        float q = atom_getfloat(av+1);
+        setfilter_params(x, "resonant", cf, q, x->x_g);
+    }
 }
 
 static void bicoeff_dim(t_bicoeff *x, t_floatarg f1, t_floatarg f2){
@@ -171,16 +229,14 @@ static void bicoeff_dim(t_bicoeff *x, t_floatarg f1, t_floatarg f2){
     snprintf(x->x_tkcanvas, MAXPDSTRING, ".x%lx.c", (long unsigned int)glist_getcanvas(x->x_glist));
     int x1, y1, x2, y2;
     bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
-    sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d %s\n",
+    sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d %s %f %f %f\n",
         x->x_my,
         x->x_tkcanvas,
         x->x_bind_name->s_name,
         x->x_tag,
-        x1,
-        y1,
-        x2,
-        y2,
-        x->x_type->s_name);
+        x1, y1, x2, y2,
+        x->x_type->s_name,
+        x->x_cf, x->x_bw, x->x_g);
 }
 
 /*static void bicoeff_coeff(t_bicoeff *x, t_symbol *s, int ac, t_atom *av){
@@ -195,12 +251,24 @@ static void bicoeff_dim(t_bicoeff *x, t_floatarg f1, t_floatarg f2){
     }
 }*/
 
+static void bicoeff_savestate(t_bicoeff *x, t_floartarg f){
+    x->x_savestate = (f != 0);
+}
+
 static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
     s = NULL;
     t_bicoeff *x = (t_bicoeff *)pd_new(bicoeff_class);
     int width = 450;
     int height = 150;
+    x->x_savestate = 0;
+    float cf = 1000;
+    float bw = 1;
+    float g = 0;
     t_symbol *type = gensym("peaking");
+    x->x_type = type;
+    x->x_cf = cf;
+    x->x_bw = bw;
+    x->x_g = g;
     if(ac && av->a_type == A_FLOAT){ // 1ST Width
         int w = (int)av->a_w.w_float;
         width = w < 100 ? 100 : w; // min width is 100
@@ -212,6 +280,22 @@ static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
             if(ac && av->a_type == A_SYMBOL){ // 3RD type
                 type = av->a_w.w_symbol;
                 ac--, av++;
+                if(ac && av->a_type == A_FLOAT){ // 4th cf
+                    cf = av->a_w.w_float;
+                    ac--, av++;
+                    if(ac && av->a_type == A_FLOAT){ // 5th bw
+                        bw = av->a_w.w_float;
+                        ac--, av++;
+                        if(ac && av->a_type == A_FLOAT){ // 6th g
+                            g = av->a_w.w_float;
+                            ac--, av++;
+                            if(ac && av->a_type == A_FLOAT){ // 7th savestate
+                                x->x_savestate = (int)av->a_w.w_float;
+                                ac--, av++;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -226,12 +310,19 @@ static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
                 }
                 else goto errstate;
             }
-            else if(sym == gensym("-type")){
-                if(ac >= 2 && (av+1)->a_type == A_SYMBOL){
-                    type = atom_getsymbolarg(1, ac, av);
-                    ac-=2, av+=2;
+            else if(sym == gensym("-type")){ // and params
+                if(ac >= 5 && (av+1)->a_type == A_SYMBOL){
+                    x->x_type = type = atom_getsymbolarg(1, ac, av);
+                    x->x_cf = cf = atom_getfloatarg(2, ac, av);
+                    x->x_bw = bw = atom_getfloatarg(3, ac, av);
+                    x->x_g = g = atom_getfloatarg(4, ac, av);
+                    ac-=5, av+=5;
                 }
                 else goto errstate;
+            }
+            else if(sym == gensym("-savestate")){
+                x->x_savestate = 1;
+                ac--, av++;
             }
             else goto errstate;
         }
@@ -239,7 +330,12 @@ static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
     }
     x->x_width = width < 200 ? 200 : width;
     x->x_height = height < 100 ? 100 : height;
-    x->x_type = type;
+    if(x->x_savestate){
+        x->x_type = type;
+        x->x_cf = cf;
+        x->x_bw = bw;
+        x->x_g = g;
+    }
     x->x_glist = (t_glist*)canvas_getcurrent();
     x->x_zoom = x->x_glist->gl_zoom;
     snprintf(x->x_tag, MAXPDSTRING, "T%lx", (long unsigned int)x);
@@ -249,6 +345,15 @@ static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
     x->x_bind_name = gensym(buf);
     pd_bind(&x->x_obj.ob_pd, x->x_bind_name);
     outlet_new(&x->x_obj, &s_list);
+    
+/*    t_atom at[3];
+    SETFLOAT(at, x->x_cf);
+    SETFLOAT(at+1, x->x_bw);
+    SETFLOAT(at+2, x->x_g);
+    if(x->x_type == gensym("lowpass")){
+        bicoeff_lowpass(x, NULL, 2, at);
+    }*/
+    
 /*    t_atom at[5];
     SETFLOAT(at, 0);
     SETFLOAT(at+1, 0);
@@ -283,6 +388,7 @@ void bicoeff_setup(void){
     class_addmethod(bicoeff_class, (t_method)bicoeff_notch, gensym("bandstop"), A_GIMME, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_eq, gensym("eq"), A_GIMME, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_resonant, gensym("resonant"), A_GIMME, 0);
+    class_addmethod(bicoeff_class, (t_method)bicoeff_savestate, gensym("savestate"), A_FLOAT, 0);
 //    class_addmethod(bicoeff_class, (t_method)bicoeff_coeff, gensym("coeff"), A_GIMME, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_biquad_callback, gensym("biquad"), A_GIMME, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_zoom, gensym("zoom"), A_CANT, 0);
