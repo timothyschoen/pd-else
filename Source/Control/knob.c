@@ -375,6 +375,8 @@ static void knob_config_fg(t_knob *x){
     else
         snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
     pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_fg, "-fill", fg);
+    pdgui_vmess(0, "crs rs", cv, "itemconfigure", x->x_tag_outline,
+        "-outline", fg);
     pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_wpr_c,
         "-outline", fg, "-fill", fg);
     pdgui_vmess(0, "crs rsrs", cv, "itemconfigure", x->x_tag_arc,
@@ -460,10 +462,10 @@ static void knob_config_size(t_knob *x){
         x1, y1, x2, y2);
     pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_outline,
         x1, y1, x2, y2);
-    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_hover,
-        x1, y1, x2, y2);
     pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_outline,
         "-width", z);
+    pdgui_vmess(0, "crs iiii", cv, "coords", x->x_tag_hover,
+        x1, y1, x2, y2);
 // wiper's width, wiper's center circle
     int w_width = circle_width * z / 20; // wiper width is 1/20 of circle size
     pdgui_vmess(0, "crs ri", cv, "itemconfigure", x->x_tag_wiper,
@@ -598,6 +600,8 @@ static void knob_select(t_gobj *z, t_glist *glist, int sel){
         pdgui_vmess(0, "crs rk rk",  cv, "itemconfigure",
             x->x_tag_IO, "-outline", THISGUI->i_selectcolor,
             "-fill", THISGUI->i_selectcolor);
+        pdgui_vmess(0, "crs rk",  cv, "itemconfigure",
+            x->x_tag_outline, "-outline", THISGUI->i_selectcolor);
 //        pdgui_vmess(0, "rr rk",  sh->h_pathname, "configure",
 //            "-highlightcolor", THISGUI->i_selectcolor);
     }
@@ -613,6 +617,8 @@ static void knob_select(t_gobj *z, t_glist *glist, int sel){
             x->x_tag_wiper, "-fill", fg);
         pdgui_vmess(0, "crs rs rs",  cv, "itemconfigure",
             x->x_tag_IO, "-outline", fg, "-fill", fg);
+        pdgui_vmess(0, "crs rs",  cv, "itemconfigure",
+            x->x_tag_outline, "-outline", fg);
         pdgui_vmess(0, "crs rs",  cv, "itemconfigure",
             x->x_tag_arc, "-fill", fg);
         pdgui_vmess(0, "crs rk", cv, "itemconfigure",
@@ -738,6 +744,11 @@ static void knob_draw_ticks(t_knob *x){
 
 // draw all and initialize stuff
 static void knob_draw_new(t_knob *x, t_glist *glist){
+    char fg[32];
+    if(x->x_theme)
+        snprintf(fg, sizeof(fg), "#%06X", THISGUI->i_foregroundcolor);
+    else
+        snprintf(fg, sizeof(fg), "%s", x->x_fg->s_name);
     int z = x->x_zoom;
     int x1 = text_xpix(&x->x_obj, glist);
     int y1 = text_ypix(&x->x_obj, glist);
@@ -775,9 +786,10 @@ static void knob_draw_new(t_knob *x, t_glist *glist){
     pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
         x1, y1, x2, y2, "-tags", 2, tags_square);
 // outline
-    char *tags_outline[] = {x->x_tag_outline, x->x_tag_obj, x->x_tag_sel};
-    pdgui_vmess(0, "crr iiii ri rS", cv, "create", "rectangle",
-        x1, y1, x2, y2, "-width", z, "-tags", 3, tags_outline);
+    char *tags_outline[] = {x->x_tag_outline, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "rectangle",
+        x1, y1, x2, y2, "-outline", fg,
+        "-width", z, "-tags", 2, tags_outline);
 // base circle
     char *tags_circle[] = {x->x_tag_base_circle, x->x_tag_obj, x->x_tag_sel};
     pdgui_vmess(0, "crr iiii ri rS", cv, "create", "oval",
@@ -823,18 +835,12 @@ static void knob_draw_new(t_knob *x, t_glist *glist){
         "-tags", 3, tags_number);
 // inlet
     char *tags_in[] = {x->x_tag_in, x->x_tag_fg, x->x_tag_IO, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
-        x1, y1, x1 + IOWIDTH*z, y1 + IHEIGHT*z,
-        "-outline", x->x_fg->s_name,
-        "-fill", x->x_fg->s_name,
-        "-tags", 4, tags_in);
+    pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
+        x1, y1, x1 + IOWIDTH*z, y1 + IHEIGHT*z, "-tags", 4, tags_in);
 // outlet
     char *tags_out[] = {x->x_tag_out, x->x_tag_fg, x->x_tag_IO, x->x_tag_obj};
-    pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
-        x1, y2 - OHEIGHT*z, x1 + IOWIDTH*z, y2,
-        "-outline", x->x_fg->s_name,
-        "-fill", x->x_fg->s_name,
-        "-tags", 4, tags_out);
+    pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
+        x1, y2 - OHEIGHT*z, x1 + IOWIDTH*z, y2, "-tags", 4, tags_out);
 // hover area
     char *tags_hover[] = {x->x_tag_hover, x->x_tag_obj};
     pdgui_vmess(0, "crr iiii rs rs rS", cv, "create", "rectangle",
@@ -2193,7 +2199,7 @@ static void *knob_new(t_symbol *s, int ac, t_atom *av){
     int size = 50, steps = 0, discrete = 0;
     x->x_circular = 0;
     int arc = 1, angle = 320, offset = 0;
-    x->x_bg = gensym("#dfdfdf"), x->x_mg = gensym("#7c7c7c"), x->x_fg = gensym("black");
+    x->x_bg = gensym("#dfdfdf"), x->x_mg = gensym("#7c7c7c"), x->x_fg = gensym("#000000");
     x->x_clicked = x->x_log = x->x_jump = x->x_number_mode = x->x_savestate = 0;
     x->x_square = x->x_lb = 1;
     x->x_glist = (t_glist *)canvas_getcurrent();
@@ -2647,7 +2653,7 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_offset, gensym("offset"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_steps, gensym("steps"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_ticks, gensym("ticks"), A_FLOAT, 0);
-    class_addmethod(knob_class, (t_method)knob_motion, gensym("motion"), A_FLOAT, A_FLOAT, A_FLOAT, 0);
+//    class_addmethod(knob_class, (t_method)knob_motion, gensym("motion"), A_FLOAT, A_FLOAT, A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_square, gensym("square"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_readonly, gensym("readonly"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_number_mode, gensym("number"), A_FLOAT, 0);

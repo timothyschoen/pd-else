@@ -1,149 +1,21 @@
-# x axis is converted to midi notes, then frequencies, then radians.
-# magnitudes are in dB.
-#
-# Frequency input for calculating coefficients is also log-scaled with mtof.
 
 package require Tk
 
 # global things that are generally useful
 set pi [expr acos(-1)]
 set 2pi [expr 2.0*$pi]
-set LN2 0.69314718
 set samplerate 44100
 
-# global variables for all instances
+# global variables
 namespace eval bicoeff:: {
     # array of 'my' instance IDs in a given tkcanvas
     variable mys_in_tkcanvas
-    
-    # colors
+    # color
     variable markercolor "#bbbbcc"
-
-    variable filters_with_bw_lines [list "highshelf" "lowshelf" "peaking" "allpass"]
 }
 
 #------------------------------------------------------------------------------#
-proc bicoeff::mtof {nn} {
-    return [expr pow(2.0, ($nn-45)/12.0)*110.0]
-}
-
-proc bicoeff::ftom {f} {
-    set result [expr 12.0 * log($f / 110.0) / log(2.0) + 45.0]
-    return $result
-}
-
-proc bicoeff::hz_to_pixel {my f} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    set midi_note [ftom $f]
-    set pixel [expr $framex1 + ($midi_note - 16.766) / 120.0 * ($framex2 - $framex1)]
-    return $pixel
-}
-
-proc bicoeff::db_to_pixel {my db} {
-    variable ${my}::framey1
-    variable ${my}::framey2
-    # db range: 25 to -25
-    set pixel [expr $framey1 + ($framey2 - $framey1) * (25.0 - $db) / 50.0]
-    return [expr $pixel - $framey1]
-}
-
-proc bicoeff::bw_to_filterwidth {my f bw} {
-    set bwf [expr $f * (1.0 + $bw)]
-    set center_pix [hz_to_pixel $my $f]
-    set right_pix [hz_to_pixel $my $bwf]
-#    ::pdwindow::post "bw_to_filterwidth --> center_pix: $center_pix / right_pix $right_pix\n"
-    return [expr ($right_pix - $center_pix)]
-}
-
-proc bicoeff::drawgraph {my} {
-    variable ${my}::tkcanvas
-    variable ${my}::tag
-    variable ${my}::framex1
-    variable ${my}::framey1
-    variable ${my}::framex2
-    variable ${my}::framey2
-    variable ${my}::a1
-    variable ${my}::a2
-    variable ${my}::b0
-    variable ${my}::b1
-    variable ${my}::b2
-
-    set framewidth [expr int($framex2 - $framex1)]
-    for {set x [expr int($framex1)]} {$x <= $framex2} {incr x 5} {
-        lappend magnitudepoints $x
-        lappend phasepoints $x
-        set nn [expr ($x - $framex1)/$framewidth*120+16.766]
-        set result [calc_magnitude_phase \
-                        [expr $::2pi * [mtof $nn] / $::samplerate] $a1 $a2 $b0 $b1 $b2 \
-                        $framey1 $framey2]
-        lappend magnitudepoints [lindex $result 0]
-        lappend phasepoints [lindex $result 1]
-    }
-    $tkcanvas coords responseline$tag $magnitudepoints
-    $tkcanvas coords responsefill$tag \
-        [concat $magnitudepoints $framex2 $framey2 $framex1 $framey2]
-    $tkcanvas coords phaseline$tag $phasepoints
-}
-
-proc bicoeff::update_coefficients {my} {
-    variable ${my}::tkcanvas
-    variable ${my}::receive_name
-    variable ${my}::currentfiltertype
-    variable ${my}::a1
-    variable ${my}::a2
-    variable ${my}::b0
-    variable ${my}::b1
-    variable ${my}::b2
-
-    # run the calc for a given filter type first
-    $currentfiltertype $my
-    # send the result to pd
-    pdsend "$receive_name biquad $a1 $a2 $b0 $b1 $b2"
-    # update the graph
-    drawgraph $my
-}
-
-proc bicoeff::setfiltertype_params {my filtertype cf bw g} {
-    variable ${my}::currentfiltertype $filtertype
-    variable ${my}::tkcanvas
-    variable ${my}::tag
-    variable ${my}::framey1
-    variable ${my}::framey2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-    variable ${my}::filtergain
-    variable ${my}::filterx1
-    variable ${my}::filterx2
-
-
-#    ::pdwindow::post "framey1 = $framey1, framey2 = $framey2\n"
-#    ::pdwindow::post "params --> cf: $cf / bw: $bw / g: $g\n"
-
-#    ::pdwindow::post "filtergain before = $filtergain\n"
-
-    set filtergain [db_to_pixel $my $g]
-
-#    ::pdwindow::post "filtergain after = $filtergain\n"
-
-    set filtercenter [hz_to_pixel $my $cf]
-    set filterwidth [bw_to_filterwidth $my $cf $bw]
-    set halfwidth [expr $filterwidth * 0.5]
-
-    # Draw lines at halfwidth distance from center
-    set filterx1 [expr $filtercenter - $halfwidth]
-    set filterx2 [expr $filtercenter + $halfwidth]
-    
-    $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
-    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
-    $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
-
-    update_coefficients $my
-}
-
-#------------------------------------------------------------------------------#
-# calculate magnitude and phase of a given frequency for a set of
-# biquad coefficients.  f is input freq in radians
+# calculate magnitude & phase
 proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
     set x1 [expr cos(-1.0*$f)]
     set x2 [expr cos(-2.0*$f)]
@@ -166,7 +38,6 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
 
     # convert magnitude to dB scale
     set logmagnitude [expr 20.0*log($magnitude)/log(10)]
-#    puts stderr "magnitude at $fHz Hz ($f radians): $magnitude dB: $logmagnitude"
     # clip
     if {$logmagnitude > 25.0} {
         set logmagnitude 25.0
@@ -179,7 +50,6 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
     # invert and offset
     set logmagnitude [expr -1.0 * $logmagnitude + $halfframeheight + $framey1]
 
-    #   puts stderr "PHASE at $fHz Hz ($f radians): $phase"
     # wrap phase
     if {$phase > $::pi} {
         set phase [expr $phase - $::2pi]
@@ -193,344 +63,19 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
 }
 
 #------------------------------------------------------------------------------#
-# calculate coefficients
-
-proc bicoeff::e_omega {f r} {
-    return [expr $::2pi*$f/$r]
-}
-
-proc bicoeff::e_alpha {bw omega} {
-    return [expr sin($omega)*sinh($::LN2/2.0 * $bw * $omega/sin($omega))]
-}
-
-# just for testing (added to see the response without resonance (q = .7071) to be
-# sure it  wasn't causing problems. Might be useful later.
-proc bicoeff::e_alphaq {q omega} {
-    return [expr sin($omega)/(2*$q)]
-}
-
-# lowpass
-#    f0 = frequency in Hz
-#    bw = bandwidth where 1 is an octave
-proc bicoeff::lowpass {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-
-#    ::pdwindow::post "lowpass: $f $bw $filtercenter $filterwidth\n"
-
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set b1 [expr 1.0 - cos($omega)]
-    set b0 [expr $b1/2.0]
-    set b2 $b0
-    set a0 [expr 1.0 + $alpha]
-    set a1 [expr -2.0*cos($omega)]
-    set a2 [expr 1.0 - $alpha]
-
-# get this from ggee/filters
-#    if {!check_stability(-a1/a0,-a2/a0,b0/a0,b1/a0,b2/a0)} {
-#       post("lowpass: filter unstable -> resetting")]
-#        set a0 1; set a1 0; set a2 0
-#        set b0 1; set b1 0; set b2 0
-#    }
-
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-# highpass
-proc bicoeff::highpass {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set b1 [expr -1*(1.0 + cos($omega))]
-    set b0 [expr -$b1/2.0]
-    set b2 $b0
-    set a0 [expr 1.0 + $alpha]
-    set a1 [expr -2.0*cos($omega)]
-    set a2 [expr 1.0 - $alpha]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#bandpass
-proc bicoeff::bandpass {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set b1 0
-    set b0 $alpha
-    set b2 [expr -$b0]
-    set a0 [expr 1.0 + $alpha]
-    set a1 [expr -2.0*cos($omega)]
-    set a2 [expr 1.0 - $alpha]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#resonant
-proc bicoeff::resonant {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set b1 0
-    set b0 [expr sin($omega)/2]
-    set b2 [expr -$b0]
-    set a0 [expr 1.0 + $alpha]
-    set a1 [expr -2.0*cos($omega)]
-    set a2 [expr 1.0 - $alpha]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#notch
-proc bicoeff::notch {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set b1 [expr -2.0*cos($omega)]
-    set b0 1
-    set b2 1
-    set a0 [expr 1.0 + $alpha]
-    set a1 $b1
-    set a2 [expr 1.0 - $alpha]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#peaking
-proc bicoeff::peaking {my} {
-    variable ${my}::framex1
-    variable ${my}::framey1
-    variable ${my}::framex2
-    variable ${my}::framey2
-    variable ${my}::filtergain
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-    set g $filtergain
-
-#    ::pdwindow::post "peaking --> filtergain: $g\n"
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    set amp [expr pow(10.0, (-1.0*(($filtergain)/($framey2-$framey1)*50.0-25.0))/40.0)]
-    set alphamulamp [expr $alpha*$amp]
-    set alphadivamp [expr $alpha/$amp]
-    set b1 [expr -2.0*cos($omega)]
-    set b0 [expr 1.0 + $alphamulamp]
-    set b2 [expr 1.0 - $alphamulamp]
-    set a0 [expr 1.0 + $alphadivamp]
-    set a1 $b1
-    set a2 [expr 1.0 - $alphadivamp]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#lowshelf
-proc bicoeff::lowshelf {my} {
-    variable ${my}::framex1
-    variable ${my}::framey1
-    variable ${my}::framex2
-    variable ${my}::framey2
-    variable ${my}::filtergain
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set f [mtof $nn]
-    set bw [expr $bwpix / 100.0]
-    set amp [expr pow(10.0, (-1.0*(($filtergain)/($framey2-$framey1)*50.0-25.0))/40.0)]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    
-    set alphamod [expr 2.0*sqrt($amp)*$alpha]
-    set cosomega [expr cos($omega)]
-    set ampplus [expr $amp+1.0]
-    set ampmin [expr $amp-1.0]
-    
-    
-    set b0 [expr $amp*($ampplus - $ampmin*$cosomega + $alphamod)]
-    set b1 [expr 2.0*$amp*($ampmin - $ampplus*$cosomega)]
-    set b2 [expr $amp*($ampplus - $ampmin*$cosomega - $alphamod)]
-    set a0 [expr $ampplus + $ampmin*$cosomega + $alphamod]
-    set a1 [expr -2.0*($ampmin + $ampplus*$cosomega)]
-    set a2 [expr $ampplus + $ampmin*$cosomega - $alphamod]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#highshelf
-proc bicoeff::highshelf {my} {
-    variable ${my}::framex1
-    variable ${my}::framey1
-    variable ${my}::framex2
-    variable ${my}::framey2
-    variable ${my}::filtergain
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set amp [expr pow(10.0, (-1.0*(($filtergain)/($framey2-$framey1)*50.0-25.0))/40.0)]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    
-    set alphamod [expr 2.0*sqrt($amp)*$alpha]
-    set cosomega [expr cos($omega)]
-    set ampplus [expr $amp+1.0]
-    set ampmin [expr $amp-1.0]
-    
-    set b0 [expr $amp*($ampplus + $ampmin*$cosomega + $alphamod)]
-    set b1 [expr -2.0*$amp*($ampmin + $ampplus*$cosomega)]
-    set b2 [expr $amp*($ampplus + $ampmin*$cosomega - $alphamod)]
-    set a0 [expr $ampplus - $ampmin*$cosomega + $alphamod]
-    set a1 [expr 2.0*($ampmin - $ampplus*$cosomega)]
-    set a2 [expr $ampplus - $ampmin*$cosomega - $alphamod]
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#allpass
-proc bicoeff::allpass {my} {
-    variable ${my}::framex1
-    variable ${my}::framex2
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-
-    set f0pix $filtercenter
-    set bwpix $filterwidth
-
-    set nn [expr ($f0pix - $framex1)/($framex2-$framex1)*120+16.766]
-    set nn2 [expr ($bwpix+$f0pix - $framex1)/($framex2-$framex1)*120+16.766] 
-    set f [mtof $nn]
-    set bwf [mtof $nn2]
-    set bw [expr ($bwf/$f)-1]
-    set omega [e_omega $f $::samplerate]
-    set alpha [e_alpha $bw $omega]
-    
-    set b0 [expr 1.0 - $alpha]
-    set b1 [expr -2.0*cos($omega)]
-    set b2 [expr 1.0 + $alpha]
-    set a0 $b2
-    set a1 $b1
-    set a2 $b0
-    
-    set ${my}::a1 [expr -$a1/$a0]
-    set ${my}::a2 [expr -$a2/$a0]
-    set ${my}::b0 [expr $b0/$a0]
-    set ${my}::b1 [expr $b1/$a0]
-    set ${my}::b2 [expr $b2/$a0]
-}
-
-#------------------------------------------------------------------------------#
 # move filter control lines
+
+proc bicoeff::enter_body {my} {
+    variable ${my}::tkcanvas
+    set mytoplevel [winfo toplevel $tkcanvas]
+    $mytoplevel configure -cursor fleur
+}
+
+proc bicoeff::leave_body {my} {
+    variable ${my}::tkcanvas
+    set mytoplevel [winfo toplevel $tkcanvas]
+    $mytoplevel configure -cursor $::cursor_runmode_nothing
+}
 
 proc bicoeff::moveband {my x} {
     variable ${my}::tkcanvas
@@ -593,7 +138,15 @@ proc bicoeff::movegain {my y} {
 }
 
 #------------------------------------------------------------------------------#
-# move the filter
+# move the filter x / y
+
+proc bicoeff::send_params {my x y} {
+    variable ${my}::bind_name
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+    variable ${my}::filtergain
+    pdsend "$bind_name _params $filtercenter $filterwidth $filtergain $x $y"
+}
 
 proc bicoeff::start_move {my x y} {
     variable ${my}::tkcanvas
@@ -604,28 +157,22 @@ proc bicoeff::start_move {my x y} {
     variable ${my}::framey2
     variable ${my}::filtercenter
     variable markercolor
-
     $tkcanvas itemconfigure lines$tag -width 1 -fill $markercolor
     $tkcanvas bind $tag <Motion> "bicoeff::move $my %x %y"
-# cursors are set per toplevel window, not in the tkcanvas
-    set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor fleur
 }
 
 proc bicoeff::move {my x y} {
     moveband $my $x
     movegain $my $y
-    update_coefficients $my
+    send_params $my $x $y
 }
 
 #------------------------------------------------------------------------------#
-# change the filter
-
-proc bicoeff::start_changebandwidth {my x y} {
+# change bw
+proc bicoeff::start_changebandwidth {my x} {
     variable ${my}::tkcanvas
     variable ${my}::tag
     variable ${my}::previousx $x
-    variable ${my}::previousy $y
     variable ${my}::framey1
     variable ${my}::framey2
     variable ${my}::filtercenter
@@ -639,13 +186,10 @@ proc bicoeff::start_changebandwidth {my x y} {
     $tkcanvas bind bandedges$tag <Leave> {}
     $tkcanvas bind bandedges$tag <Enter> {}
     $tkcanvas bind bandedges$tag <Motion> {}
-    $tkcanvas bind $tag <Motion> "bicoeff::changebandwidth $my %x %y"
-# cursors are set per toplevel window, not in the tkcanvas
-    set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor sb_h_double_arrow
+    $tkcanvas bind $tag <Motion> "bicoeff::band_cursor $my; bicoeff::changebandwidth $my %x"
 }
 
-proc bicoeff::changebandwidth {my x y} {
+proc bicoeff::changebandwidth {my x} {
     variable ${my}::tkcanvas
     variable ${my}::tag
     variable ${my}::previousx
@@ -658,7 +202,6 @@ proc bicoeff::changebandwidth {my x y} {
     variable ${my}::filterwidth
     variable ${my}::filtercenter
     variable ${my}::lessthan_filtercenter
-
     set dx [expr $x - $previousx]
     if {$lessthan_filtercenter} {
         if {$x < $framex1} {
@@ -697,20 +240,16 @@ proc bicoeff::changebandwidth {my x y} {
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
     set previousx $x
 
-    movegain $my $y
-    update_coefficients $my
+    variable ${my}::filtergain
+
+    send_params $my $x $filtergain
 }
 
-proc bicoeff::band_cursor {my x} {
+proc bicoeff::band_cursor {my} {
     variable ${my}::tkcanvas
-    variable ${my}::filtercenter
 # cursors are set per toplevel window, not in the tkcanvas
     set mytoplevel [winfo toplevel $tkcanvas]
-    if {$x < $filtercenter} {
-        $mytoplevel configure -cursor left_side
-    } else {
-        $mytoplevel configure -cursor right_side
-    }
+    $mytoplevel configure -cursor sb_h_double_arrow
 }
 
 proc bicoeff::enterband {my} {
@@ -718,7 +257,7 @@ proc bicoeff::enterband {my} {
     variable ${my}::tag
     variable markercolor
     $tkcanvas bind $tag <ButtonPress-1> {}
-    $tkcanvas bind bandedges$tag <Motion> "bicoeff::band_cursor $my %x"
+    $tkcanvas bind bandedges$tag <Motion> "bicoeff::band_cursor $my"
     $tkcanvas itemconfigure band$tag -width 1 -fill $markercolor
 }
 
@@ -731,7 +270,7 @@ proc bicoeff::leaveband {my} {
     $tkcanvas itemconfigure band$tag -width 1 -fill $markercolor
 # cursors are set per toplevel window, not in the tkcanvas
     set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor $::cursor_runmode_nothing
+    $mytoplevel configure -cursor fleur
 }
 
 #------------------------------------------------------------------------------#
@@ -755,6 +294,8 @@ proc bicoeff::stop_editing {my} {
     variable ${my}::tag
     variable markercolor
     $tkcanvas bind $tag <Motion> {}
+    $tkcanvas bind $tag <Enter> "bicoeff::enter_body $my"
+    $tkcanvas bind $tag <Leave> "bicoeff::leave_body $my"
     $tkcanvas itemconfigure lines$tag -width 1 -fill $markercolor
     $tkcanvas bind bandedges$tag <Enter> "bicoeff::enterband $my"
     $tkcanvas bind bandedges$tag <Leave> "bicoeff::leaveband $my"
@@ -789,7 +330,7 @@ proc bicoeff::set_for_editmode {mytoplevel} {
                 $tkcanvas bind $tag <ButtonRelease-1> \
                     "bicoeff::stop_editing $my"
                 $tkcanvas bind bandedges$tag <ButtonPress-1> \
-                    "bicoeff::start_changebandwidth $my %x %y"
+                    "bicoeff::start_changebandwidth $my %x"
                 $tkcanvas bind bandedges$tag <ButtonRelease-1> \
                     "bicoeff::stop_editing $my"
                 reset_frame_location $my
@@ -801,12 +342,12 @@ proc bicoeff::set_for_editmode {mytoplevel} {
 #------------------------------------------------------------------------------#
 
 # sets up an new instance of the class
-proc bicoeff::new {my canvas rname t x1 y1 x2 y2} {
+proc bicoeff::new {my canvas bindname t x1 y1 x2 y2} {
     namespace eval $my {
         # init all here to make sure they are not blank
         variable tag "tag"                   ;# unique ID for canvas elements
         variable tkcanvas ".tkcanvas"        ;# Tk canvas this is drawn on
-        variable receive_name "receive_name" ;# Pd name to send callbacks to
+        variable bind_name "bind_name" ;# Pd name to send callbacks to
 
         variable currentfiltertype "peaking"
 
@@ -814,19 +355,12 @@ proc bicoeff::new {my canvas rname t x1 y1 x2 y2} {
         variable previousy 0
 
         variable filtergain 0
-
-        # coefficients for [biquad~]
-        variable a1 0
-        variable a2 0
-        variable b0 0
-        variable b1 0
-        variable b2 0
     }
 
     variable ${my}::filtergain
     set filtergain [expr ($y2 - $y1) / 2]; 
 
-    variable ${my}::receive_name $rname
+    variable ${my}::bind_name $bindname
     variable ${my}::tag $t
 
     update $my $canvas $x1 $y1 $x2 $y2
@@ -856,13 +390,7 @@ proc bicoeff::update {my canvas x1 y1 x2 y2} {
     variable ${my}::filtercenter [expr $filterx1 + ($filterwidth/2)]
 }
 
-proc bicoeff::setfiltertype {my filtertype} {
-    variable ${my}::currentfiltertype $filtertype
-    
-    update_coefficients $my
-}
-
-proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype cf bw g} {
+proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
 # if the $my namespace already exists, that means we already
 # have an instance active and setup.
     if {[namespace exists $my]} {
@@ -871,10 +399,7 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype cf bw g} {
         new $my $canvas $name $t $x1 $y1 $x2 $y2
     }
 
-    setfiltertype_params $my $filtertype $cf $bw $g
-
     variable ${my}::tkcanvas
-    variable ${my}::receive_name
     variable ${my}::tag
     variable ${my}::framex1
     variable ${my}::framey1
@@ -885,35 +410,22 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype cf bw g} {
     variable ${my}::midpoint
     variable mys_in_tkcanvas
     variable markercolor
-    
-    set fillx [expr $framex1 + 100]
 
-# background
-    $tkcanvas create rectangle $framex1 $framey1 $framex2 $framey2 \
-        -outline "black" -fill "white" \
-        -tags [list $tag frame$tag]
-    
 # graph fill (gray)
     $tkcanvas create polygon $framex1 $midpoint $framex2 $midpoint \
-        $framex2 $framey2 $framex1 $framey2 \
-        -fill "#dcdcdc" \
+        $framex2 $framey2 $framex1 $framey2 -fill "#dcdcdc" \
         -tags [list $tag response$tag responsefill$tag]
-
 # zero line/equator
     $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
-        -fill $markercolor \
-        -tags [list $tag zeroline$tag]
-        
+        -fill $markercolor -tags [list $tag zeroline$tag]
 # magnitude response graph line
     $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
         -fill "black" -width 1 \
         -tags [list $tag response$tag responseline$tag]
-    
 # phase response graph line
 #    $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
         -fill "black" -width 1 \
         -tags [list $tag response$tag phaseline$tag]
-
 # bandwidth box left side
     $tkcanvas create line $filterx1 $framey1 $filterx1 $framey2 \
         -fill $markercolor \
@@ -923,39 +435,66 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2 filtertype cf bw g} {
         -fill $markercolor \
         -tags [list $tag lines$tag band$tag bandright$tag bandedges$tag]
 
-# inlet/outlet
-    set inletx [expr $framex1 + 7]
-    set inlety [expr $framey1 + 2]
-    set outletx [expr $framex2 - 7]
-    set outlety [expr $framey2 - 2]
-    
-#inlet
-    $tkcanvas create rectangle $framex1 $framey1 $inletx $inlety \
-        -outline "black" -fill "black" \
-        -tags [list $tag inlet$tag]
-        
-#outlet
-    $tkcanvas create rectangle $framex1 $outlety $inletx $framey2 \
-        -outline "black" -fill "black" \
-        -tags [list $tag outlet$tag]
-
-    setfiltertype $my $filtertype
-
 # run to set things up
     stop_editing $my
-    lappend mys_in_tkcanvas($tkcanvas) $my
+#    lappend mys_in_tkcanvas($tkcanvas) $my
+    if {![info exists mys_in_tkcanvas($tkcanvas)] || \
+        [lsearch -exact $mys_in_tkcanvas($tkcanvas) $my] == -1} {
+        lappend mys_in_tkcanvas($tkcanvas) $my
+#        ::pdwindow::post "ADD TO LIST\n"
+    }
     set_for_editmode [winfo toplevel $tkcanvas]
 }
 
-# sets the biquad coefficients from a list in the first inlet
-#proc bicoeff::coefficients {my aa1 aa2 bb0 bb1 bb2} {
-#    variable ${my}::a1 $aa1
-#    variable ${my}::a2 $aa2
-#    variable ${my}::b0 $bb0
-#    variable ${my}::b1 $bb1
-#    variable ${my}::b2 $bb2
-#    drawgraph $my
-#}
+proc bicoeff::mtof {nn} {
+    return [expr pow(2.0, ($nn-45)/12.0)*110.0]
+}
+
+# plot
+proc bicoeff::plot_graph {my type a1 a2 b0 b1 b2 fg fc fw} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable ${my}::framex1
+    variable ${my}::framex2
+    variable ${my}::framey1
+    variable ${my}::framey2
+    variable ${my}::filterx1
+    variable ${my}::filterx2
+
+    variable ${my}::currentfiltertype $type    
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+    variable ${my}::filtergain
+
+    set filtergain $fg
+    set filtercenter $fc
+    set filterwidth $fw
+    
+    # Draw lines at halfwidth distance from center
+    set halfwidth [expr $filterwidth * 0.5]
+    set filterx1 [expr $filtercenter - $halfwidth]
+    set filterx2 [expr $filtercenter + $halfwidth]
+    
+    $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
+    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
+    $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
+
+#    plot graph
+    set framewidth [expr int($framex2 - $framex1)]
+    for {set x [expr int($framex1)]} {$x <= $framex2} {incr x 5} {
+        lappend magnitudepoints $x
+        lappend phasepoints $x
+        set nn [expr ($x - $framex1)/$framewidth*120+16.766]
+        set result [calc_magnitude_phase \
+            [expr $::2pi * [mtof $nn] / $::samplerate] $a1 $a2 $b0 $b1 $b2 \
+            $framey1 $framey2]
+        lappend magnitudepoints [lindex $result 0]
+        lappend phasepoints [lindex $result 1]
+    }
+    $tkcanvas coords responseline$tag $magnitudepoints
+    $tkcanvas coords responsefill$tag [concat $magnitudepoints $framex2 $framey2 $framex1 $framey2]
+    $tkcanvas coords phaseline$tag $phasepoints
+}
 
 # sets up the class
 proc bicoeff::setup {} {
