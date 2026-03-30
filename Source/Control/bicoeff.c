@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 #include <m_pd.h>
 #include <m_imp.h>
 #include <g_canvas.h>
@@ -32,6 +34,11 @@ typedef struct bicoeff{
     char        x_tag_in[32];
     char        x_tag_IO[32];
     char        x_tag_out[32];
+    char        x_tag_graph[32];
+    char        x_tag_graphline[32];
+    char        x_tag_zline[32];
+    char        x_tag_lbw[32];
+    char        x_tag_rbw[32];
     char        x_tkcanvas[MAXPDSTRING];
     char        x_tag[MAXPDSTRING];
     char        x_my[MAXPDSTRING];
@@ -41,8 +48,12 @@ t_class *bicoeff_class;
 static t_widgetbehavior bicoeff_widgetbehavior;
 
 // Helpers -------------------------------------------------------------------
-double bicoeff_ftom(double f){
-    return(12.0 * log(f / 110.0) / log(2.0) + 45.0);
+double bicoeff_ftom(double hz){
+    return(12.0 * log(hz / 110.0) / log(2.0) + 45.0);
+}
+
+double bicoeff_mtof(double midi){
+    return(pow(2.0, (midi-45)/12.0)*110.0);
 }
 
 static double bicoeff_q_to_bw(double q){
@@ -151,13 +162,60 @@ static void bicoeff_draw(t_bicoeff *x){
     bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
     int z = x->x_zoom;
     t_canvas *cv = glist_getcanvas(x->x_glist);
+    
 // background
     char *tags_bg[] = {x->x_tag_bg, x->x_tag_obj};
     pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
         x1, y1, x2, y2, "-tags", 2, tags_bg);
     
+    
+// graph fill (gray)
+    int mid = y1 + (x->x_height / 2);
+    
+    char *tags_graph[] = {x->x_tag_graph, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiiiiiii rs rS", cv, "create", "polygon",
+        x1, mid, x2, mid, x2, y2, x1, y2,
+        "-fill", "#dcdcdc", "-tags", 2, tags_graph);
+    
+// left/right bandwidth
+    double cf = bicoeff_get_xpos(x, x->x_cf);
+    double halfwidth = bicoeff_get_width(x) * 0.5;
+    double filterx1 = cf - halfwidth;
+    double filterx2 = cf + halfwidth;
+
+    char bandleft[MAXPDSTRING];
+    snprintf(bandleft, MAXPDSTRING, "bandleft%s", x->x_tag);
+    char bandright[MAXPDSTRING];
+    snprintf(bandright, MAXPDSTRING, "bandright%s", x->x_tag);
+    char bandedges[MAXPDSTRING];
+    snprintf(bandedges, MAXPDSTRING, "bandedges%s", x->x_tag);
+    
+    char *tags_lbw[] = {bandleft, bandedges, x->x_tag_lbw, x->x_tag_obj, x->x_tag};
+    pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
+        filterx1, y1, filterx1, y2,
+        "-fill", "#bbbbcc", "-width", z, "-tags", 5, tags_lbw);
+    
+    char *tags_rbw[] = {bandright, bandedges, x->x_tag_rbw, x->x_tag_obj, x->x_tag};
+    pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
+        filterx2, y1, filterx2, y2,
+        "-fill", "#bbbbcc", "-width", z, "-tags", 5, tags_rbw);
+    
+
     sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d\n", x->x_my,
         x->x_tkcanvas, x->x_bind_name->s_name, x->x_tag, x1, y1, x2, y2);
+    
+    
+    
+    char *tags_zline[] = {x->x_tag_zline, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
+        x1, mid, x2, mid,
+        "-fill", "#bbbbcc", "-width", z, "-tags", 2, tags_zline);
+    
+    char *tags_graphline[] = {x->x_tag_graphline, x->x_tag_graph, x->x_tag_obj};
+    pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
+        x1, mid, x2, mid,
+        "-fill", "black", "-width", z, "-tags", 3, tags_graphline);
+    
     
     
 /*    int x1 = text_xpix(&x->x_obj, glist);
@@ -184,12 +242,114 @@ static void bicoeff_draw(t_bicoeff *x){
     bicoeff_config_fg(x);
 }
 
+double bicoeff_get_mag(t_bicoeff *x, double fHz, double radians, int y0){
+    float x1 = cos(-1.0*radians);
+    float x2 = cos(-2.0*radians);
+    float y1 = sin(-1.0*radians);
+    float y2 = sin(-2.0*radians);
+
+    float A = x->x_a0 + x->x_a1*x1 + x->x_a2*x2;
+    float B = x->x_a1*y1 + x->x_a2*y2;
+    float C = 1 - x->x_b1*x1 - x->x_b2*x2;
+    float D = 0 - x->x_b1*y1 - x->x_b2*y2;
+    float numermag = sqrt(A*A + B*B);
+    float numerarg = atan2(B, A);
+    float denommag = sqrt(C*C + D*D);
+    float denomarg = atan2(D, C);
+    float magnitude = numermag/denommag;
+    float phase = numerarg-denomarg;
+//        # convert magnitude to dB scale
+    float logmagnitude = 20.0*log(magnitude)/log(10);
+//        # clip
+    if(logmagnitude > 25.0)
+        logmagnitude = 25.0;
+    else if(logmagnitude < -25.0)
+        logmagnitude = -25.0;
+//        # scale to pixel range
+    float halfframeheight = (float)x->x_height/2.0;
+    logmagnitude = (logmagnitude/25.0) * halfframeheight;
+//        # invert and offset
+    logmagnitude = -1.0 * logmagnitude + halfframeheight + y0;
+//        # wrap phase
+        if(phase > M_PI)
+            phase = phase - 2*M_PI;
+        else if(phase < -M_PI)
+            phase = phase + 2*M_PI;
+//        # scale phase values to pixels
+    float scaledphase = halfframeheight*(-phase/M_PI) + halfframeheight + y0;
+    return(logmagnitude);
+}
+
 static void bicoeff_plot(t_bicoeff *x){
-    sys_vgui("bicoeff::plot_graph %s %s %f %f %f %f %f %f %f %f\n",
-        x->x_my, x->x_type->s_name, x->x_b1, x->x_b2, x->x_a0, x->x_a1, x->x_a2,
+    double nyq = sys_getsr() * 0.5;
+    int x1, y1, x2, y2;
+    bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
+    t_canvas *cv = glist_getcanvas(x->x_glist);
+
+    char *coordlist = NULL;
+    size_t len = 0;
+    for(int point = 0; point < x->x_width; point += 5){
+        float midi = ((float)point / (float)x->x_width) * 120 + 16.766;
+        float hz = bicoeff_mtof(midi);
+        float radians = hz * M_PI / nyq;
+        float mag = bicoeff_get_mag(x, hz, radians, y1);
+
+        char tmp[64];
+        int n = snprintf(tmp, sizeof(tmp), "%d %f ", point + x1, mag);
+
+        coordlist = realloc(coordlist, len + n + 1);
+        memcpy(coordlist + len, tmp, n);
+        len += n;
+        coordlist[len] = '\0';
+    }
+// nyq point
+    float hz = nyq;
+    float radians = M_PI;
+    float mag = bicoeff_get_mag(x, hz, radians, y1);
+    char tmp[64];
+    int n = snprintf(tmp, sizeof(tmp), "%d %f ", x->x_width + x1, mag);
+    coordlist = realloc(coordlist, len + n + 1);
+    memcpy(coordlist + len, tmp, n);
+    len += n;
+    coordlist[len] = '\0';
+    
+    
+    pdgui_vmess(0, "crs s", cv, "coords", x->x_tag_graphline, coordlist);
+    
+    // append the closing rectangle for the graph
+    char tail[64];
+    int tn = snprintf(tail, sizeof(tail), "%d %d %d %d", x2, y2, x1, y2);
+    coordlist = realloc(coordlist, len + tn + 1);
+    memcpy(coordlist + len, tail, tn);
+    len += tn;
+    coordlist[len] = '\0';
+    pdgui_vmess(0, "crs s", cv, "coords", x->x_tag_graph, coordlist);
+    
+//    post("x2 %d y2 %d x1 %d y2 %d", x2, y2, x1, y2);
+    
+/*    sys_vgui("bicoeff::plot_graph %s %s %s %f %f %f %f %f %f %f %f %d %d %d %d\n",
+        x->x_my, x->x_tag_graph, x->x_type->s_name,
+        x->x_b1, x->x_b2, x->x_a0, x->x_a1, x->x_a2,
         bicoeff_get_ypos(x), // filtergain
         bicoeff_get_xpos(x, x->x_cf), // filtercenter
-        bicoeff_get_width(x)); // filterwidth)
+        bicoeff_get_width(x), // filterwidth
+        x1, y1, x2, y2);*/
+    
+// # Draw lines at halfwidth distance from center
+    double cf = bicoeff_get_xpos(x, x->x_cf);
+    double halfwidth = bicoeff_get_width(x) * 0.5;
+    double filterx1 = cf - halfwidth;
+    double filterx2 = cf + halfwidth;
+    
+    char bandleft[MAXPDSTRING];
+    snprintf(bandleft, MAXPDSTRING, "bandleft%s", x->x_tag);
+    char bandright[MAXPDSTRING];
+    snprintf(bandright, MAXPDSTRING, "bandright%s", x->x_tag);
+    
+//    post("filterx1 = %d / filterx2 = %d ", (int)filterx1, (int)filterx2);
+    
+    pdgui_vmess(0, "crs iiii", cv, "coords", bandleft, (int)filterx1, y1, (int)filterx1, y2);
+    pdgui_vmess(0, "crs iiii", cv, "coords", bandright, (int)filterx2, y1, (int)filterx2, y2);
 }
 
 static void bicoeff_vis(t_gobj *z, t_glist *glist, int vis){
@@ -713,6 +873,11 @@ static void *bicoeff_new(t_symbol *s, int ac, t_atom* av){
     sprintf(x->x_tag_in, "%pIN", x);
     sprintf(x->x_tag_out, "%pOUT", x);
     sprintf(x->x_tag_IO, "%pIO", x);
+    sprintf(x->x_tag_graph, "%pGRAPH", x);
+    sprintf(x->x_tag_graphline, "%pGRAPHLINE", x);
+    sprintf(x->x_tag_zline, "%pZLINE", x);
+    sprintf(x->x_tag_lbw, "%pRBW", x);
+    sprintf(x->x_tag_rbw, "%pLBW", x);
     return(x);
 errstate:
     pd_error(x, "[bicoeff]: improper args");
