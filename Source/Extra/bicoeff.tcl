@@ -106,7 +106,6 @@ proc bicoeff::moveband {my x} {
     set filterwidth [expr $filterx2 - $filterx1]
     set filtercenter [expr $filterx1 + ($filterwidth/2)]
     $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
-    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
     set previousx $x
 }
@@ -236,7 +235,6 @@ proc bicoeff::changebandwidth {my x} {
     set filtercenter [expr $filterx1 + ($filterwidth/2)]
 
     $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
-    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
     set previousx $x
 
@@ -341,31 +339,6 @@ proc bicoeff::set_for_editmode {mytoplevel} {
 
 #------------------------------------------------------------------------------#
 
-# sets up an new instance of the class
-proc bicoeff::new {my canvas bindname t x1 y1 x2 y2} {
-    namespace eval $my {
-        # init all here to make sure they are not blank
-        variable tag "tag"                   ;# unique ID for canvas elements
-        variable tkcanvas ".tkcanvas"        ;# Tk canvas this is drawn on
-        variable bind_name "bind_name" ;# Pd name to send callbacks to
-
-        variable currentfiltertype "peaking"
-
-        variable previousx 0
-        variable previousy 0
-
-        variable filtergain 0
-    }
-
-    variable ${my}::filtergain
-    set filtergain [expr ($y2 - $y1) / 2]; 
-
-    variable ${my}::bind_name $bindname
-    variable ${my}::tag $t
-
-    update $my $canvas $x1 $y1 $x2 $y2
-}
-
 # updates an existing instance when its about to be drawn again
 proc bicoeff::update {my canvas x1 y1 x2 y2} {
     variable ${my}::tkcanvas $canvas
@@ -390,14 +363,38 @@ proc bicoeff::update {my canvas x1 y1 x2 y2} {
     variable ${my}::filtercenter [expr $filterx1 + ($filterwidth/2)]
 }
 
+# sets up an new instance of the class
+proc bicoeff::new {my canvas bindname t x1 y1 x2 y2} {
+    namespace eval $my {
+        # init all here to make sure they are not blank
+        variable tag "tag"                   ;# unique ID for canvas elements
+        variable tkcanvas ".tkcanvas"        ;# Tk canvas this is drawn on
+        variable bind_name "bind_name" ;# Pd name to send callbacks to
+
+        variable currentfiltertype "peaking"
+
+        variable previousx 0
+        variable previousy 0
+
+        variable filtergain 0
+    }
+
+    variable ${my}::filtergain
+    set filtergain [expr ($y2 - $y1) / 2]; 
+
+    variable ${my}::bind_name $bindname
+    variable ${my}::tag $t
+
+}
+
 proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
 # if the $my namespace already exists, that means we already
 # have an instance active and setup.
-    if {[namespace exists $my]} {
-        update $my $canvas $x1 $y1 $x2 $y2
-    } else {
+    if {![namespace exists $my]} {
         new $my $canvas $name $t $x1 $y1 $x2 $y2
     }
+
+    update $my $canvas $x1 $y1 $x2 $y2
 
     variable ${my}::tkcanvas
     variable ${my}::tag
@@ -428,11 +425,11 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
         -tags [list $tag response$tag phaseline$tag]
 # bandwidth box left side
     $tkcanvas create line $filterx1 $framey1 $filterx1 $framey2 \
-        -fill $markercolor \
+        -fill $markercolor -width 1 \
         -tags [list $tag lines$tag band$tag bandleft$tag bandedges$tag]
 # bandwidth box right side
     $tkcanvas create line $filterx2 $framey1 $filterx2 $framey2 \
-        -fill $markercolor \
+        -fill $markercolor -width 1 \
         -tags [list $tag lines$tag band$tag bandright$tag bandedges$tag]
 
 # run to set things up
@@ -476,7 +473,6 @@ proc bicoeff::plot_graph {my type a1 a2 b0 b1 b2 fg fc fw} {
     set filterx2 [expr $filtercenter + $halfwidth]
     
     $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
-    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
 
 #    plot graph
