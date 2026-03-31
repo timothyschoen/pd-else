@@ -3,6 +3,7 @@ name: Compile PureData Object
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 #╭──────────────────────────────────────╮
 #│  Uncomment if you want to trigger a  │
 #│               release                │
@@ -222,4 +223,3 @@ jobs:
   #         prerelease: false
   #
   #
-
