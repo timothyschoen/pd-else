@@ -101,73 +101,6 @@ foreach(file ${else_sources})
         pd_add_external(cartopol ${file})
     elseif(${target_name} STREQUAL "pol2car")
         pd_add_external(poltocar ${file})
-
-    # If target is streamout_tilde, add static libogg and libvorbis linking on macOS
-    elseif(${target_name} STREQUAL "streamout_tilde")
-        if(APPLE)
-            # Detect Homebrew prefix based on architecture
-            execute_process(
-                COMMAND brew --prefix
-                OUTPUT_VARIABLE HOMEBREW_PREFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-            set(OGG_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libogg.a")
-            set(VORBIS_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libvorbis.a")
-            set(VORBISENC_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libvorbisenc.a")
-
-            set(OGG_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-            set(VORBIS_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-            set(VORBISENC_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-
-            message(WARNING "${OGG_STATIC_LIB}")
-            message(WARNING "${VORBIS_STATIC_LIB}")
-            message(WARNING "${VORBISENC_STATIC_LIB}")
-
-            if(EXISTS ${OGG_STATIC_LIB}
-               AND EXISTS ${VORBIS_STATIC_LIB}
-               AND EXISTS ${VORBISENC_STATIC_LIB})
-                message(STATUS "Found static libogg, libvorbis, and libvorbisenc")
-                target_include_directories(${target_name} PRIVATE ${OGG_INCLUDE_DIR} ${VORBIS_INCLUDE_DIR} ${VORBISENC_INCLUDE_DIR})
-                target_link_libraries(${target_name} PRIVATE ${OGG_STATIC_LIB} ${VORBIS_STATIC_LIB} ${VORBISENC_STATIC_LIB} m)
-            else()
-                message(FATAL_ERROR "Static libogg, libvorbis, or libvorbisenc not found in ${HOMEBREW_PREFIX}/lib")
-
-            endif()
-        elseif(EMSCRIPTEN)
-            message(STATUS "libogg not support on EMSCRIPTEN")
-        else()
-            find_path(OGG_INCLUDE_DIR ogg/ogg.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                OGG_LIBRARY
-                NAMES ogg
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            find_path(VORBIS_INCLUDE_DIR vorbis/codec.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                VORBIS_LIBRARY
-                NAMES vorbis
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            find_path(VORBISENC_INCLUDE_DIR vorbis/vorbisenc.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                VORBISENC_LIBRARY
-                NAMES vorbisenc
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            if(OGG_INCLUDE_DIR
-               AND OGG_LIBRARY
-               AND VORBIS_INCLUDE_DIR
-               AND VORBIS_LIBRARY
-               AND VORBISENC_INCLUDE_DIR
-               AND VORBISENC_LIBRARY)
-                message(STATUS "Found libogg, libvorbis, and libvorbisenc")
-                target_include_directories(${target_name} PRIVATE ${OGG_INCLUDE_DIR} ${VORBIS_INCLUDE_DIR} ${VORBISENC_INCLUDE_DIR})
-                target_link_libraries(${target_name} PRIVATE ${OGG_LIBRARY} ${VORBIS_LIBRARY} ${VORBISENC_LIBRARY} m)
-            else()
-                message(FATAL_ERROR "libogg, libvorbis, or libvorbisenc not found")
-            endif()
-        endif()
-
     endif()
 endforeach()
 
@@ -178,7 +111,6 @@ add_subdirectory(Source/Audio/plaits~)
 add_subdirectory(Source/Audio/sfont~)
 add_subdirectory(Source/Audio/sfz~)
 add_subdirectory(Source/Shared/link)
-add_subdirectory(Source/Shared/ffmpeg)
 
 # ╭──────────────────────────────────────╮
 # │            pdlua library             │
@@ -205,15 +137,6 @@ if(ELSE_WITH_SAF)
     file(COPY ${pdsaf_lua} DESTINATION ${PD_OUTPUT_PATH})
 endif()
 
-# ╭──────────────────────────────────────╮
-# │             Target links             │
-# ╰──────────────────────────────────────╯
-target_link_libraries(play.file_tilde PRIVATE ffmpeg)
-target_link_libraries(streamin_tilde PRIVATE ffmpeg)
-target_link_libraries(streamout_tilde PRIVATE ffmpeg)
-target_link_libraries(sfload PRIVATE ffmpeg)
-target_link_libraries(sfinfo PRIVATE ffmpeg)
-
 if(WIN32)
     target_link_libraries(osc.format PRIVATE ws2_32)
     target_link_libraries(osc.parse PRIVATE ws2_32)
@@ -228,6 +151,7 @@ if(UNIX
         target_compile_definitions(${target} PRIVATE OPENSSL_NO_KRB5 OPENSSL_NO_ENGINE OPENSSL_API_3_0)
     endforeach()
 endif()
+target_link_libraries(streamout_tilde PUBLIC link opus vorbis vorbisenc)
 
 target_link_libraries(pdlink PUBLIC link)
 target_link_libraries(pdlink_tilde PUBLIC link opus)
@@ -278,4 +202,3 @@ math(EXPR total_abstractions "${control_pd_file_count} + ${signal_pd_file_count}
 message(STATUS "${total_compiled} coded objects (${signal_c_file_count} signal objects / ${control_c_file_count} control objects)")
 message(STATUS "${total_abstractions} abstractions (${signal_pd_file_count} signal objects / ${control_pd_file_count} control objects)")
 message(STATUS "Merda modules: ${modules_pd_file_count}")
-
