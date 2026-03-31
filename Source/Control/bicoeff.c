@@ -162,12 +162,11 @@ static void bicoeff_draw(t_bicoeff *x){
     bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
     int z = x->x_zoom;
     t_canvas *cv = glist_getcanvas(x->x_glist);
-    
+/*
 // background
     char *tags_bg[] = {x->x_tag_bg, x->x_tag_obj};
     pdgui_vmess(0, "crr iiii rS", cv, "create", "rectangle",
         x1, y1, x2, y2, "-tags", 2, tags_bg);
-    
     
 // graph fill (gray)
     int mid = y1 + (x->x_height / 2);
@@ -199,14 +198,14 @@ static void bicoeff_draw(t_bicoeff *x){
     pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
         filterx2, y1, filterx2, y2,
         "-fill", "#bbbbcc", "-width", z, "-tags", 5, tags_rbw);
-    
+    */
 
     sys_vgui("bicoeff::drawme %s %s %s %s %d %d %d %d\n", x->x_my,
         x->x_tkcanvas, x->x_bind_name->s_name, x->x_tag, x1, y1, x2, y2);
     
     
     
-    char *tags_zline[] = {x->x_tag_zline, x->x_tag_obj};
+/*    char *tags_zline[] = {x->x_tag_zline, x->x_tag_obj};
     pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
         x1, mid, x2, mid,
         "-fill", "#bbbbcc", "-width", z, "-tags", 2, tags_zline);
@@ -214,8 +213,7 @@ static void bicoeff_draw(t_bicoeff *x){
     char *tags_graphline[] = {x->x_tag_graphline, x->x_tag_graph, x->x_tag_obj};
     pdgui_vmess(0, "crr iiii rs ri rS", cv, "create", "line",
         x1, mid, x2, mid,
-        "-fill", "black", "-width", z, "-tags", 3, tags_graphline);
-    
+        "-fill", "black", "-width", z, "-tags", 3, tags_graphline);*/
     
     
 /*    int x1 = text_xpix(&x->x_obj, glist);
@@ -247,45 +245,56 @@ double bicoeff_get_mag(t_bicoeff *x, double fHz, double radians, int y0){
     float x2 = cos(-2.0*radians);
     float y1 = sin(-1.0*radians);
     float y2 = sin(-2.0*radians);
-
     float A = x->x_a0 + x->x_a1*x1 + x->x_a2*x2;
     float B = x->x_a1*y1 + x->x_a2*y2;
     float C = 1 - x->x_b1*x1 - x->x_b2*x2;
     float D = 0 - x->x_b1*y1 - x->x_b2*y2;
-    float numermag = sqrt(A*A + B*B);
-    float numerarg = atan2(B, A);
-    float denommag = sqrt(C*C + D*D);
-    float denomarg = atan2(D, C);
-    float magnitude = numermag/denommag;
-    float phase = numerarg-denomarg;
-//        # convert magnitude to dB scale
-    float logmagnitude = 20.0*log(magnitude)/log(10);
-//        # clip
-    if(logmagnitude > 25.0)
-        logmagnitude = 25.0;
-    else if(logmagnitude < -25.0)
-        logmagnitude = -25.0;
-//        # scale to pixel range
     float halfframeheight = (float)x->x_height/2.0;
-    logmagnitude = (logmagnitude/25.0) * halfframeheight;
-//        # invert and offset
-    logmagnitude = -1.0 * logmagnitude + halfframeheight + y0;
-//        # wrap phase
+    if(x->x_type == gensym("allpass")){ // plot phase
+        float numerarg = atan2(B, A);
+        float denomarg = atan2(D, C);
+        float phase = numerarg-denomarg;
+        // wrap phase
         if(phase > M_PI)
             phase = phase - 2*M_PI;
         else if(phase < -M_PI)
             phase = phase + 2*M_PI;
-//        # scale phase values to pixels
-    float scaledphase = halfframeheight*(-phase/M_PI) + halfframeheight + y0;
-    return(logmagnitude);
+        float scaledphase = halfframeheight*(-phase/M_PI) + halfframeheight + y0;
+        return(scaledphase);
+    }
+        
+    else{ // plot magnitude
+        float numermag = sqrt(A*A + B*B);
+        float denommag = sqrt(C*C + D*D);
+        float magnitude = numermag/denommag;
+        // convert magnitude to dB scale
+        float logmagnitude = 20.0*log(magnitude)/log(10);
+        // clip
+        if(logmagnitude > 25.0)
+            logmagnitude = 25.0;
+        else if(logmagnitude < -25.0)
+            logmagnitude = -25.0;
+        // scale to pixel range
+        logmagnitude = (logmagnitude/25.0) * halfframeheight;
+        // invert and offset
+        logmagnitude = -1.0 * logmagnitude + halfframeheight + y0;
+        return(logmagnitude);
+    }
 }
 
 static void bicoeff_plot(t_bicoeff *x){
-    double nyq = sys_getsr() * 0.5;
     int x1, y1, x2, y2;
     bicoeff_getrect((t_gobj *)x, x->x_glist, &x1, &y1, &x2, &y2);
-    t_canvas *cv = glist_getcanvas(x->x_glist);
+    sys_vgui("bicoeff::plot_graph %s %s %f %f %f %f %f %f %f %f\n",
+        x->x_my, x->x_type->s_name,
+        x->x_b1, x->x_b2, x->x_a0, x->x_a1, x->x_a2,
+        bicoeff_get_ypos(x), // filtergain
+        bicoeff_get_xpos(x, x->x_cf), // filtercenter
+        bicoeff_get_width(x)); // filterwidth
 
+/*
+    double nyq = sys_getsr() * 0.5;
+    t_canvas *cv = glist_getcanvas(x->x_glist);
     char *coordlist = NULL;
     size_t len = 0;
     for(int point = 0; point < x->x_width; point += 5){
@@ -327,13 +336,8 @@ static void bicoeff_plot(t_bicoeff *x){
     
 //    post("x2 %d y2 %d x1 %d y2 %d", x2, y2, x1, y2);
     
-/*    sys_vgui("bicoeff::plot_graph %s %s %s %f %f %f %f %f %f %f %f %d %d %d %d\n",
-        x->x_my, x->x_tag_graph, x->x_type->s_name,
-        x->x_b1, x->x_b2, x->x_a0, x->x_a1, x->x_a2,
-        bicoeff_get_ypos(x), // filtergain
-        bicoeff_get_xpos(x, x->x_cf), // filtercenter
-        bicoeff_get_width(x), // filterwidth
-        x1, y1, x2, y2);*/
+
+    
     
 // # Draw lines at halfwidth distance from center
     double cf = bicoeff_get_xpos(x, x->x_cf);
@@ -350,6 +354,7 @@ static void bicoeff_plot(t_bicoeff *x){
     
     pdgui_vmess(0, "crs iiii", cv, "coords", bandleft, (int)filterx1, y1, (int)filterx1, y2);
     pdgui_vmess(0, "crs iiii", cv, "coords", bandright, (int)filterx2, y1, (int)filterx2, y2);
+ */
 }
 
 static void bicoeff_vis(t_gobj *z, t_glist *glist, int vis){

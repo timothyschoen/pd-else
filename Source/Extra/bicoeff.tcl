@@ -1,4 +1,10 @@
+
 package require Tk
+
+# global things that are generally useful
+set pi [expr acos(-1)]
+set 2pi [expr 2.0*$pi]
+set samplerate 44100
 
 # global variables
 namespace eval bicoeff:: {
@@ -9,28 +15,69 @@ namespace eval bicoeff:: {
 }
 
 #------------------------------------------------------------------------------#
-proc bicoeff::send_params {my x y} {
-    variable ${my}::bind_name
-    variable ${my}::filtercenter
-    variable ${my}::filterwidth
-    variable ${my}::filtergain
-    pdsend "$bind_name _params $filtercenter $filterwidth $filtergain $x $y"
+# calculate magnitude & phase
+proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
+    set x1 [expr cos(-1.0*$f)]
+    set x2 [expr cos(-2.0*$f)]
+    set y1 [expr sin(-1.0*$f)]
+    set y2 [expr sin(-2.0*$f)]
+
+    set A [expr $b0 + $b1*$x1 + $b2*$x2]
+    set B [expr $b1*$y1 + $b2*$y2]
+    set C [expr 1 - $a1*$x1 - $a2*$x2]
+    set D [expr 0 - $a1*$y1 - $a2*$y2]
+    set numermag [expr sqrt($A*$A + $B*$B)]
+    set numerarg [expr atan2($B, $A)]
+    set denommag [expr sqrt($C*$C + $D*$D)]
+    set denomarg [expr atan2($D, $C)]
+
+    set magnitude [expr $numermag/$denommag]
+    set phase [expr $numerarg-$denomarg]
+    
+    set fHz [expr $f * $::samplerate / $::2pi]
+
+    # convert magnitude to dB scale
+    set logmagnitude [expr 20.0*log($magnitude)/log(10)]
+    # clip
+    if {$logmagnitude > 25.0} {
+        set logmagnitude 25.0
+    } elseif {$logmagnitude < -25.0} {
+        set logmagnitude -25.0
+    }
+    # scale to pixel range
+    set halfframeheight [expr ($framey2 - $framey1)/2.0]
+    set logmagnitude [expr $logmagnitude/25.0 * $halfframeheight]
+    # invert and offset
+    set logmagnitude [expr -1.0 * $logmagnitude + $halfframeheight + $framey1]
+
+    # wrap phase
+    if {$phase > $::pi} {
+        set phase [expr $phase - $::2pi]
+    } elseif {$phase < [expr -$::pi]} {
+        set phase [expr $phase + $::2pi]
+    }
+    # scale phase values to pixels
+    set scaledphase [expr $halfframeheight*(-$phase/($::pi)) + $halfframeheight + $framey1]
+    
+    return [list $logmagnitude $scaledphase]
 }
 
-# move  x/y axis
-proc bicoeff::start_move_xy {my x y} {
+#------------------------------------------------------------------------------#
+# move filter control lines
+
+proc bicoeff::enter_body {my} {
     variable ${my}::tkcanvas
-    variable ${my}::tag
-    variable ${my}::previousx $x
-    variable ${my}::previousy $y
-    variable ${my}::framey1
-    variable ${my}::framey2
-    variable ${my}::filtercenter
-    variable markercolor
-    $tkcanvas bind $tag <Motion> "bicoeff::move_xy $my %x %y"
+    set mytoplevel [winfo toplevel $tkcanvas]
+    $mytoplevel configure -cursor fleur
 }
 
-proc bicoeff::move_xy {my x y} {
+proc bicoeff::leave_body {my} {
+    variable ${my}::tkcanvas
+    set mytoplevel [winfo toplevel $tkcanvas]
+    $mytoplevel configure -cursor $::cursor_runmode_nothing
+}
+
+proc bicoeff::moveband {my x} {
     variable ${my}::tkcanvas
     variable ${my}::tag
     variable ${my}::previousx
@@ -42,10 +89,7 @@ proc bicoeff::move_xy {my x y} {
     variable ${my}::filterx2
     variable ${my}::filterwidth
     variable ${my}::filtercenter
-    variable ${my}::previousy
-    variable ${my}::gainy
-    variable ${my}::filtergain
-# move x axis
+
     set dx [expr $x - $previousx]
     set x1 [expr $filterx1 + $dx]
     set x2 [expr $filterx2 + $dx]
@@ -62,9 +106,22 @@ proc bicoeff::move_xy {my x y} {
     set filterwidth [expr $filterx2 - $filterx1]
     set filtercenter [expr $filterx1 + ($filterwidth/2)]
     $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
+    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
     set previousx $x
-# move y axis
+}
+
+proc bicoeff::movegain {my y} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable ${my}::previousy
+    variable ${my}::framex1
+    variable ${my}::framey1
+    variable ${my}::framex2
+    variable ${my}::framey2
+    variable ${my}::gainy
+    variable ${my}::filtergain
+
     set gain [expr $filtergain + $y - $previousy]
     set framemax [expr $framey2 - $framey1]
     if {[expr $gain < 0]} {
@@ -74,13 +131,43 @@ proc bicoeff::move_xy {my x y} {
     } else {
         set filtergain $gain
     }
+
     set gainy [expr $framey1 + $filtergain]
     $tkcanvas coords $framex1 $gainy $framex2 $gainy
     set previousy $y
-# send values
+}
+
+#------------------------------------------------------------------------------#
+# move the filter x / y
+
+proc bicoeff::send_params {my x y} {
+    variable ${my}::bind_name
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+    variable ${my}::filtergain
+    pdsend "$bind_name _params $filtercenter $filterwidth $filtergain $x $y"
+}
+
+proc bicoeff::start_move {my x y} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable ${my}::previousx $x
+    variable ${my}::previousy $y
+    variable ${my}::framey1
+    variable ${my}::framey2
+    variable ${my}::filtercenter
+    variable markercolor
+    $tkcanvas itemconfigure lines$tag -width 1 -fill $markercolor
+    $tkcanvas bind $tag <Motion> "bicoeff::move $my %x %y"
+}
+
+proc bicoeff::move {my x y} {
+    moveband $my $x
+    movegain $my $y
     send_params $my $x $y
 }
 
+#------------------------------------------------------------------------------#
 # change bw
 proc bicoeff::start_changebandwidth {my x} {
     variable ${my}::tkcanvas
@@ -165,6 +252,27 @@ proc bicoeff::band_cursor {my} {
     $mytoplevel configure -cursor sb_h_double_arrow
 }
 
+proc bicoeff::enterband {my} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable markercolor
+    $tkcanvas bind $tag <ButtonPress-1> {}
+    $tkcanvas bind bandedges$tag <Motion> "bicoeff::band_cursor $my"
+    $tkcanvas itemconfigure band$tag -width 1 -fill $markercolor
+}
+
+proc bicoeff::leaveband {my} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable markercolor
+    $tkcanvas bind $tag <ButtonPress-1> "bicoeff::start_move $my %x %y"
+    $tkcanvas bind bandedges$tag <Motion> {}
+    $tkcanvas itemconfigure band$tag -width 1 -fill $markercolor
+# cursors are set per toplevel window, not in the tkcanvas
+    set mytoplevel [winfo toplevel $tkcanvas]
+    $mytoplevel configure -cursor fleur
+}
+
 #------------------------------------------------------------------------------#
 
 # Tcl doesn't get the frame location from Pd in bicoeff, so we
@@ -181,37 +289,6 @@ proc bicoeff::reset_frame_location {my} {
     }
 }
 
-proc bicoeff::enter_body {my} {
-    variable ${my}::tkcanvas
-    set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor fleur
-}
-
-proc bicoeff::leave_body {my} {
-    variable ${my}::tkcanvas
-    set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor $::cursor_runmode_nothing
-}
-
-proc bicoeff::enterband {my} {
-    variable ${my}::tkcanvas
-    variable ${my}::tag
-    variable markercolor
-    $tkcanvas bind $tag <ButtonPress-1> {}
-    $tkcanvas bind bandedges$tag <Motion> "bicoeff::band_cursor $my"
-}
-
-proc bicoeff::leaveband {my} {
-    variable ${my}::tkcanvas
-    variable ${my}::tag
-    variable markercolor
-    $tkcanvas bind $tag <ButtonPress-1> "bicoeff::start_move_xy $my %x %y"
-    $tkcanvas bind bandedges$tag <Motion> {}
-# cursors are set per toplevel window, not in the tkcanvas
-    set mytoplevel [winfo toplevel $tkcanvas]
-    $mytoplevel configure -cursor fleur
-}
-
 proc bicoeff::stop_editing {my} {
     variable ${my}::tkcanvas
     variable ${my}::tag
@@ -219,8 +296,10 @@ proc bicoeff::stop_editing {my} {
     $tkcanvas bind $tag <Motion> {}
     $tkcanvas bind $tag <Enter> "bicoeff::enter_body $my"
     $tkcanvas bind $tag <Leave> "bicoeff::leave_body $my"
+    $tkcanvas itemconfigure lines$tag -width 1 -fill $markercolor
     $tkcanvas bind bandedges$tag <Enter> "bicoeff::enterband $my"
     $tkcanvas bind bandedges$tag <Leave> "bicoeff::leaveband $my"
+#    delete_centerline $my
     # cursors are set per toplevel window, not in the tkcanvas
     set mytoplevel [winfo toplevel $tkcanvas]
     $mytoplevel configure -cursor $::cursor_runmode_nothing
@@ -247,7 +326,7 @@ proc bicoeff::set_for_editmode {mytoplevel} {
             foreach my $mys_in_tkcanvas($tkcanvas) {
                 variable ${my}::tag
                 $tkcanvas bind $tag <ButtonPress-1> \
-                    "bicoeff::start_move_xy $my %x %y"
+                    "bicoeff::start_move $my %x %y"
                 $tkcanvas bind $tag <ButtonRelease-1> \
                     "bicoeff::stop_editing $my"
                 $tkcanvas bind bandedges$tag <ButtonPress-1> \
@@ -261,7 +340,33 @@ proc bicoeff::set_for_editmode {mytoplevel} {
 }
 
 #------------------------------------------------------------------------------#
-# update instance before it's drawn
+
+# sets up an new instance of the class
+proc bicoeff::new {my canvas bindname t x1 y1 x2 y2} {
+    namespace eval $my {
+        # init all here to make sure they are not blank
+        variable tag "tag"                   ;# unique ID for canvas elements
+        variable tkcanvas ".tkcanvas"        ;# Tk canvas this is drawn on
+        variable bind_name "bind_name" ;# Pd name to send callbacks to
+
+        variable currentfiltertype "peaking"
+
+        variable previousx 0
+        variable previousy 0
+
+        variable filtergain 0
+    }
+
+    variable ${my}::filtergain
+    set filtergain [expr ($y2 - $y1) / 2]; 
+
+    variable ${my}::bind_name $bindname
+    variable ${my}::tag $t
+
+    update $my $canvas $x1 $y1 $x2 $y2
+}
+
+# updates an existing instance when its about to be drawn again
 proc bicoeff::update {my canvas x1 y1 x2 y2} {
     variable ${my}::tkcanvas $canvas
     variable ${my}::filtergain
@@ -285,29 +390,14 @@ proc bicoeff::update {my canvas x1 y1 x2 y2} {
     variable ${my}::filtercenter [expr $filterx1 + ($filterwidth/2)]
 }
 
-# sets up an new instance of the class
-proc bicoeff::new {my canvas bindname t x1 y1 x2 y2} {
-    namespace eval $my {
-        # init all here to make sure they are not blank
-        variable tag "tag"             ;# unique ID for canvas elements
-        variable tkcanvas ".tkcanvas"  ;# Tk canvas this is drawn on
-        variable bind_name "bind_name" ;# Pd name to send callbacks to
-        variable previousx 0
-        variable previousy 0
-        variable filtergain 0
-    }
-    variable ${my}::filtergain
-    set filtergain [expr ($y2 - $y1) / 2]; 
-
-    variable ${my}::bind_name $bindname
-    variable ${my}::tag $t
-}
-
 proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
-    if {![namespace exists $my]} {
+# if the $my namespace already exists, that means we already
+# have an instance active and setup.
+    if {[namespace exists $my]} {
+        update $my $canvas $x1 $y1 $x2 $y2
+    } else {
         new $my $canvas $name $t $x1 $y1 $x2 $y2
     }
-    update $my $canvas $x1 $y1 $x2 $y2
 
     variable ${my}::tkcanvas
     variable ${my}::tag
@@ -324,7 +414,7 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
 # graph fill (gray)
     $tkcanvas create polygon $framex1 $midpoint $framex2 $midpoint \
         $framex2 $framey2 $framex1 $framey2 -fill "#dcdcdc" \
-        -tags [list $tag response$tag]
+        -tags [list $tag response$tag responsefill$tag]
 # zero line/equator
     $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
         -fill $markercolor -tags [list $tag zeroline$tag]
@@ -332,16 +422,18 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
     $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
         -fill "black" -width 1 \
         -tags [list $tag response$tag responseline$tag]
-
-
-# left bandwidth
+# phase response graph line
+#    $tkcanvas create line $framex1 $midpoint $framex2 $midpoint \
+        -fill "black" -width 1 \
+        -tags [list $tag response$tag phaseline$tag]
+# bandwidth box left side
     $tkcanvas create line $filterx1 $framey1 $filterx1 $framey2 \
-        -fill $markercolor -width 1 \
-        -tags [list $tag bandleft$tag bandedges$tag]
-# right bandwidth
+        -fill $markercolor \
+        -tags [list $tag lines$tag band$tag bandleft$tag bandedges$tag]
+# bandwidth box right side
     $tkcanvas create line $filterx2 $framey1 $filterx2 $framey2 \
-        -fill $markercolor -width 1 \
-        -tags [list $tag bandright$tag bandedges$tag]
+        -fill $markercolor \
+        -tags [list $tag lines$tag band$tag bandright$tag bandedges$tag]
 
 # run to set things up
     stop_editing $my
@@ -352,6 +444,56 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
 #        ::pdwindow::post "ADD TO LIST\n"
     }
     set_for_editmode [winfo toplevel $tkcanvas]
+}
+
+proc bicoeff::mtof {nn} {
+    return [expr pow(2.0, ($nn-45)/12.0)*110.0]
+}
+
+# plot
+proc bicoeff::plot_graph {my type a1 a2 b0 b1 b2 fg fc fw} {
+    variable ${my}::tkcanvas
+    variable ${my}::tag
+    variable ${my}::framex1
+    variable ${my}::framex2
+    variable ${my}::framey1
+    variable ${my}::framey2
+    variable ${my}::filterx1
+    variable ${my}::filterx2
+
+    variable ${my}::currentfiltertype $type    
+    variable ${my}::filtercenter
+    variable ${my}::filterwidth
+    variable ${my}::filtergain
+
+    set filtergain $fg
+    set filtercenter $fc
+    set filterwidth $fw
+    
+    # Draw lines at halfwidth distance from center
+    set halfwidth [expr $filterwidth * 0.5]
+    set filterx1 [expr $filtercenter - $halfwidth]
+    set filterx2 [expr $filtercenter + $halfwidth]
+    
+    $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
+    $tkcanvas coords bandcenter$tag $filtercenter $framey1  $filtercenter $framey2
+    $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
+
+#    plot graph
+    set framewidth [expr int($framex2 - $framex1)]
+    for {set x [expr int($framex1)]} {$x <= $framex2} {incr x 5} {
+        lappend magnitudepoints $x
+        lappend phasepoints $x
+        set nn [expr ($x - $framex1)/$framewidth*120+16.766]
+        set result [calc_magnitude_phase \
+            [expr $::2pi * [mtof $nn] / $::samplerate] $a1 $a2 $b0 $b1 $b2 \
+            $framey1 $framey2]
+        lappend magnitudepoints [lindex $result 0]
+        lappend phasepoints [lindex $result 1]
+    }
+    $tkcanvas coords responseline$tag $magnitudepoints
+    $tkcanvas coords responsefill$tag [concat $magnitudepoints $framex2 $framey2 $framex1 $framey2]
+    $tkcanvas coords phaseline$tag $phasepoints
 }
 
 # sets up the class
