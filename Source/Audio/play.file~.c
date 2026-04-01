@@ -160,10 +160,9 @@ static AVChannelLayout playfile_layout(t_playfile *x){
 
 static err_t playfile_reset(void *y){
     t_playfile *x = (t_playfile *)y;
-    t_playfile *b = x;
     swr_free(&x->x_swr);
-    AVChannelLayout layout_in = playfile_layout(b);
-    swr_alloc_set_opts2(&x->x_swr, &x->x_layout, AV_SAMPLE_FMT_FLT,
+    AVChannelLayout layout_in = playfile_layout(x);
+    swr_alloc_set_opts2(&x->x_swr, &layout_in, AV_SAMPLE_FMT_FLT,
         x->x_stream_ctx->sample_rate, &layout_in, x->x_stream_ctx->sample_fmt,
         x->x_stream_ctx->sample_rate, 0, NULL);
     if(swr_init(x->x_swr) < 0)
@@ -224,10 +223,14 @@ static err_t playfile_load(t_playfile *x, int index){
     if(x->x_sr != pd_sr)
         post("[play.file~] Warning: file's sample rate (%d Hz) differs from Pd's (%d Hz)", x->x_sr, pd_sr);
     int file_nch = x->x_stream_ctx->ch_layout.nb_channels;
-/*    if(file_nch != x->x_file_nch && x->x_mc){
+    if(file_nch != x->x_file_nch){
+        x->x_buffer = (t_sample *)resizebytes(x->x_buffer,
+            x->x_file_nch * FRAMES * sizeof(t_sample),
+            file_nch * FRAMES * sizeof(t_sample));
         x->x_file_nch = file_nch;
-        canvas_update_dsp();
-    }*/
+        if(x->x_mc)
+            canvas_update_dsp();
+    }
     return(playfile_reset(x));
 }
 
@@ -416,6 +419,8 @@ static void playfile_set(t_playfile *x, t_symbol* s){
 static t_int *playfile_perform(t_int *w){
     t_playfile *x = (t_playfile *)(w[1]);
     unsigned nch = x->x_nch;
+    unsigned file_nch = x->x_file_nch;
+    unsigned min_ch = nch < file_nch ? nch : file_nch;
     t_sample** outs = ALLOCA(t_sample*, nch);
     for(int j = 0; j < nch; j++)
         outs[j] = x->x_outs[j];
@@ -433,14 +438,13 @@ static t_int *playfile_perform(t_int *w){
                         }
                         int samples_converted = swr_convert(x->x_swr, (uint8_t **)&x->x_buffer, FRAMES,
                             (const uint8_t **)x->x_frm->extended_data, x->x_frm->nb_samples);
-                        x->x_bufsize = samples_converted;
                         if(samples_converted < 0){
                             fprintf(stderr, "Error converting samples\n");
                             x->x_bufsize = 0;
                             av_packet_unref(x->x_pkt);
                             continue;
                         }
-                        x->x_bufsize = samples_converted * nch;
+                        x->x_bufsize = samples_converted * file_nch;
                         av_packet_unref(x->x_pkt);
                         break;
                     }
@@ -471,9 +475,12 @@ static t_int *playfile_perform(t_int *w){
                 }
             }
             while(i < n && x->x_buff_idx < x->x_bufsize){
-                for(unsigned int ch = 0; ch < nch; ch++)
+                unsigned int ch;
+                for(ch = 0; ch < min_ch; ch++)
                     outs[ch][i] = x->x_buffer[x->x_buff_idx + ch];
-                x->x_buff_idx += nch;
+                for(; ch < nch; ch++)
+                    outs[ch][i] = 0.0f;
+                x->x_buff_idx += file_nch;
                 i++;
             }
         }
@@ -494,6 +501,8 @@ static t_int *playfile_perform_mc(t_int *w){
     t_playfile *x = (t_playfile *)(w[1]);
     t_sample *out = (t_sample *)(w[2]);
     unsigned int nch = x->x_nch;
+    unsigned int file_nch = x->x_file_nch;
+    unsigned int min_ch = nch < file_nch ? nch : file_nch;
     int n = x->x_n;
     int i = 0;
     if(x->x_play){
@@ -518,7 +527,7 @@ static t_int *playfile_perform_mc(t_int *w){
                             av_packet_unref(x->x_pkt);
                             continue;
                         }
-                        x->x_bufsize = samples_converted * nch;
+                        x->x_bufsize = samples_converted * file_nch;
                         av_packet_unref(x->x_pkt);
                         break;
                     }
@@ -553,9 +562,12 @@ static t_int *playfile_perform_mc(t_int *w){
                 }
             }
             while(i < n && x->x_buff_idx < x->x_bufsize){
-                for(unsigned ch = 0; ch < nch; ch++)
+                unsigned ch;
+                for(ch = 0; ch < min_ch; ch++)
                     out[ch*n + i] = x->x_buffer[x->x_buff_idx + ch];
-                x->x_buff_idx += nch;
+                for(; ch < nch; ch++)
+                    out[ch*n + i] = 0.0f;
+                x->x_buff_idx += file_nch;
                 i++;
             }
         }
@@ -578,12 +590,7 @@ static void playfile_dsp(t_playfile *x, t_signal **sp){
         post("[play.file~] Warning: file's sample rate (%d Hz) differs from Pd's (%d Hz)",
              x->x_sr, sr);
     if(x->x_mc){
-/*        if(x->x_nch != x->x_file_nch){
-            x->x_buffer = (t_sample *)resizebytes(x->x_buffer,
-                x->x_nch * FRAMES * sizeof(t_sample), x->x_file_nch * FRAMES * sizeof(t_sample));
-            x->x_nch = x->x_file_nch;
-        }
-        signal_setmultiout(&sp[0], x->x_file_nch);*/
+        x->x_nch = x->x_file_nch;
         signal_setmultiout(&sp[0], x->x_nch);
         dsp_add(playfile_perform_mc, 2, x, sp[0]->s_vec);
     }
@@ -605,8 +612,9 @@ static void playfile_free(t_playfile *x){
     swr_free(&x->x_swr);
     t_playlist *pl = &x->x_plist;
     freebytes(pl->arr, pl->max * sizeof(t_symbol *));
-    freebytes(x->x_outs, x->x_nch * sizeof(t_sample *));
-    freebytes(x->x_buffer, x->x_nch * sizeof(t_sample) * FRAMES);
+    if(!x->x_mc)
+        freebytes(x->x_outs, x->x_nch * sizeof(t_sample *));
+    freebytes(x->x_buffer, x->x_file_nch * sizeof(t_sample) * FRAMES);
     pd_unbind(&x->x_obj.ob_pd, x->x_openpanel_sym);
 }
 
@@ -678,7 +686,7 @@ static void *playfile_new(t_symbol *s, int ac, t_atom *av){
     if(!ac){
         uint64_t mask = 0;
         for(int ch = 0; ch < nch; ch++)
-            mask |= (ch + 1);
+            mask |= (1ULL << ch);
         av_channel_layout_from_mask(&layout, mask);
     }
     else{ // ac
@@ -690,7 +698,7 @@ static void *playfile_new(t_symbol *s, int ac, t_atom *av){
                     nch = 1;
                 uint64_t mask = 0;
                 for(int ch = 0; ch < nch; ch++)
-                    mask |= (ch + 1);
+                    mask |= (1ULL << ch);
                 av_channel_layout_from_mask(&layout, mask);
             }
             else // ignore arg if MC and give warning
@@ -724,6 +732,7 @@ static void *playfile_new(t_symbol *s, int ac, t_atom *av){
             outlet_new(&x->x_obj, &s_signal);
     }
     x->x_bang_out = outlet_new(&x->x_obj, 0);
+    x->x_buffer = (t_sample *)getbytes(x->x_file_nch * FRAMES * sizeof(t_sample));
     if(filefound)
         playfile_open(x, gensym("open"), 1, at);
     if(ac){  // Autostart/Loops args
@@ -742,7 +751,6 @@ static void *playfile_new(t_symbol *s, int ac, t_atom *av){
     }
     x->x_speed = 1;
     x->x_loop = loop;
-    x->x_buffer = (t_sample *)getbytes(x->x_nch * FRAMES * sizeof(t_sample));
     char buf[50];
     snprintf(buf, 50, "d%lx", (t_int)x);
     x->x_openpanel_sym = gensym(buf);
