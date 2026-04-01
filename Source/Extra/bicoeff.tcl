@@ -95,11 +95,11 @@ proc bicoeff::drawme {my canvas name t x1 y1 x2 y2} {
             variable filtergain 0
         }
         variable ${my}::filtergain
-        set filtergain [expr ($y2 - $y1) / 2]; 
+        set filtergain [expr ($y2 - $y1) / 2];
         variable ${my}::bind_name $name
         variable ${my}::tag $t
-    }   
-#    update 
+    }
+#    update
     variable ${my}::tkcanvas $canvas
     variable ${my}::filtergain
 # convert these all to floats so the math works properly
@@ -184,7 +184,7 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
 
     set magnitude [expr $numermag/$denommag]
     set phase [expr $numerarg-$denomarg]
-    
+
     set fHz [expr $f * $::samplerate / $::2pi]
 
     # convert magnitude to dB scale
@@ -209,7 +209,7 @@ proc bicoeff::calc_magnitude_phase {f a1 a2 b0 b1 b2 framey1 framey2} {
     }
     # scale phase values to pixels
     set scaledphase [expr $halfframeheight*(-$phase/($::pi)) + $halfframeheight + $framey1]
-    
+
     return [list $logmagnitude $scaledphase]
 }
 
@@ -224,7 +224,7 @@ proc bicoeff::plot_graph {my type a1 a2 b0 b1 b2 fg fc fw} {
     variable ${my}::filterx1
     variable ${my}::filterx2
 
-    variable ${my}::currentfiltertype $type    
+    variable ${my}::currentfiltertype $type
     variable ${my}::filtercenter
     variable ${my}::filterwidth
     variable ${my}::filtergain
@@ -232,12 +232,12 @@ proc bicoeff::plot_graph {my type a1 a2 b0 b1 b2 fg fc fw} {
     set filtergain $fg
     set filtercenter $fc
     set filterwidth $fw
-    
+
     # Draw lines at halfwidth distance from center
     set halfwidth [expr $filterwidth * 0.5]
     set filterx1 [expr $filtercenter - $halfwidth]
     set filterx2 [expr $filtercenter + $halfwidth]
-    
+
     $tkcanvas coords bandleft$tag $filterx1 $framey1  $filterx1 $framey2
     $tkcanvas coords bandright$tag $filterx2 $framey1  $filterx2 $framey2
 
@@ -304,7 +304,7 @@ proc bicoeff::changebandwidth {my x} {
     if {$lessthan_filtercenter} {
         if {$x < $framex1} {
             set filterx1 $framex1
-            set filterx2 [expr $filterx1 + $filterwidth] 
+            set filterx2 [expr $filterx1 + $filterwidth]
         } elseif {$x < [expr $filtercenter - 75]} {
             set filterx1 [expr $filtercenter - 75]
             set filterx2 [expr $filtercenter + 75]
@@ -318,7 +318,7 @@ proc bicoeff::changebandwidth {my x} {
     } else {
         if {$x > $framex2} {
             set filterx2 $framex2
-            set filterx1 [expr $filterx2 - $filterwidth] 
+            set filterx1 [expr $filterx2 - $filterwidth]
         } elseif {$x > [expr $filtercenter + 75]} {
             set filterx1 [expr $filtercenter - 75]
             set filterx2 [expr $filtercenter + 75]

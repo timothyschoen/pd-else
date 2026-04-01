@@ -3,6 +3,8 @@ file(GLOB SOURCES
      ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/libsamplerate/*.c
      ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/fftease/*.c)
 
+add_subdirectory(Source/Shared/ffmpeg)
+
 add_library(else_shared SHARED ${SOURCES})
 
 target_include_directories(else_shared PUBLIC
@@ -41,13 +43,21 @@ if(PD_FLOATSIZE64)
   target_compile_definitions(else_shared PRIVATE PD_FLOATSIZE=64)
 endif()
 
+target_link_libraries(else_shared PUBLIC ffmpeg)
+
 function(message)
   if(NOT MESSAGE_QUIET)
     _message(${ARGN})
   endif()
 endfunction()
 
+
 message(STATUS "Configuring Opus")
 set(MESSAGE_QUIET ON)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/opus EXCLUDE_FROM_ALL)
+set(MESSAGE_QUIET OFF)
+
+message(STATUS "Configuring Vorbis")
+set(MESSAGE_QUIET ON)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Source/Shared/vorbis EXCLUDE_FROM_ALL)
 set(MESSAGE_QUIET OFF)
