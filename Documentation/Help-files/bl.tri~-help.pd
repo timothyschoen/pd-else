@@ -1,4 +1,4 @@
-#N canvas 491 128 566 623 10;
+#N canvas 617 86 566 623 10;
 #X obj 306 6 cnv 15 250 40 empty empty empty 12 13 0 18 #7c7c7c #e0e4dc 0;
 #N canvas 382 141 749 319 (subpatch) 0;
 #X coords 0 -1 1 1 252 42 2 0 0;
@@ -160,6 +160,12 @@
 #X obj 60 66 else/tri~;
 #X obj 62 102 else/vco.m~;
 #A saved 1 0 0 0 0 0 0 0 0 0;
+#A saved;
+#A saved;
+#A saved;
+#A saved;
+#A saved;
+#A saved;
 #A saved;
 #A saved;
 #A saved;
