@@ -247,7 +247,7 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/sfz~/sfz" DESTINATION ${PD_O
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION ${PD_OUTPUT_PATH}/LICENSE)
 file(COPY "${pd_lua_SOURCE_DIR}/pd.lua" DESTINATION ${PD_OUTPUT_PATH}/)
-file(COPY "${pd_lua_SOURCE_DIR}/lua.pd_lua" DESTINATION ${PD_OUTPUT_PATH}/)
+file(COPY "${pd_lua_SOURCE_DIR}/lua.pd_luajit" DESTINATION ${PD_OUTPUT_PATH}/)
 file(REMOVE_RECURSE ${PD_OUTPUT_PATH}/audio)
 
 # Log the object count
@@ -279,4 +279,3 @@ math(EXPR total_abstractions "${control_pd_file_count} + ${signal_pd_file_count}
 message(STATUS "${total_compiled} coded objects (${signal_c_file_count} signal objects / ${control_c_file_count} control objects)")
 message(STATUS "${total_abstractions} abstractions (${signal_pd_file_count} signal objects / ${control_pd_file_count} control objects)")
 message(STATUS "Merda modules: ${modules_pd_file_count}")
-
