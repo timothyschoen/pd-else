@@ -119,9 +119,9 @@ include(FetchContent)
 FetchContent_Declare(
     pd_lua
     GIT_REPOSITORY https://github.com/EL-LOCUS-SOLUS/pd-lua.git
-    GIT_TAG master)
+    GIT_TAG main)
 FetchContent_MakeAvailable(pd_lua)
-target_link_libraries(else PUBLIC pdlua)
+target_link_libraries(else PUBLIC lua)
 
 # ╭──────────────────────────────────────╮
 # │          Ambisonics library          │
@@ -171,6 +171,7 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/sfz~/sfz" DESTINATION ${PD_O
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION ${PD_OUTPUT_PATH}/LICENSE)
 file(COPY "${pd_lua_SOURCE_DIR}/pd.lua" DESTINATION ${PD_OUTPUT_PATH}/)
+file(COPY "${pd_lua_SOURCE_DIR}/lua.pd_luajit" DESTINATION ${PD_OUTPUT_PATH}/)
 file(REMOVE_RECURSE ${PD_OUTPUT_PATH}/audio)
 
 # Log the object count
