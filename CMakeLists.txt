@@ -90,72 +90,17 @@ foreach(file ${else_sources})
     pd_add_external(${name_we} ${file})
     target_link_libraries(${target_name} PRIVATE else_shared)
 
-    # If target is streamout_tilde, add static libogg and libvorbis linking on macOS
-    if(${target_name} STREQUAL "streamout_tilde")
-        if(APPLE)
-            # Detect Homebrew prefix based on architecture
-            execute_process(
-                COMMAND brew --prefix
-                OUTPUT_VARIABLE HOMEBREW_PREFIX
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-            set(OGG_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libogg.a")
-            set(VORBIS_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libvorbis.a")
-            set(VORBISENC_STATIC_LIB "${HOMEBREW_PREFIX}/lib/libvorbisenc.a")
-
-            set(OGG_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-            set(VORBIS_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-            set(VORBISENC_INCLUDE_DIR "${HOMEBREW_PREFIX}/include")
-
-            message(WARNING "${OGG_STATIC_LIB}")
-            message(WARNING "${VORBIS_STATIC_LIB}")
-            message(WARNING "${VORBISENC_STATIC_LIB}")
-
-            if(EXISTS ${OGG_STATIC_LIB}
-               AND EXISTS ${VORBIS_STATIC_LIB}
-               AND EXISTS ${VORBISENC_STATIC_LIB})
-                message(STATUS "Found static libogg, libvorbis, and libvorbisenc")
-                target_include_directories(${target_name} PRIVATE ${OGG_INCLUDE_DIR} ${VORBIS_INCLUDE_DIR} ${VORBISENC_INCLUDE_DIR})
-                target_link_libraries(${target_name} PRIVATE ${OGG_STATIC_LIB} ${VORBIS_STATIC_LIB} ${VORBISENC_STATIC_LIB} m)
-            else()
-                message(FATAL_ERROR "Static libogg, libvorbis, or libvorbisenc not found in ${HOMEBREW_PREFIX}/lib")
-
-            endif()
-        elseif(EMSCRIPTEN)
-            message(STATUS "libogg not support on EMSCRIPTEN")
-        else()
-            find_path(OGG_INCLUDE_DIR ogg/ogg.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                OGG_LIBRARY
-                NAMES ogg
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            find_path(VORBIS_INCLUDE_DIR vorbis/codec.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                VORBIS_LIBRARY
-                NAMES vorbis
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            find_path(VORBISENC_INCLUDE_DIR vorbis/vorbisenc.h PATHS /opt/homebrew/include /usr/local/include)
-            find_library(
-                VORBISENC_LIBRARY
-                NAMES vorbisenc
-                PATHS /opt/homebrew/lib /usr/local/lib)
-
-            if(OGG_INCLUDE_DIR
-               AND OGG_LIBRARY
-               AND VORBIS_INCLUDE_DIR
-               AND VORBIS_LIBRARY
-               AND VORBISENC_INCLUDE_DIR
-               AND VORBISENC_LIBRARY)
-                message(STATUS "Found libogg, libvorbis, and libvorbisenc")
-                target_include_directories(${target_name} PRIVATE ${OGG_INCLUDE_DIR} ${VORBIS_INCLUDE_DIR} ${VORBISENC_INCLUDE_DIR})
-                target_link_libraries(${target_name} PRIVATE ${OGG_LIBRARY} ${VORBIS_LIBRARY} ${VORBISENC_LIBRARY} m)
-            else()
-                message(FATAL_ERROR "libogg, libvorbis, or libvorbisenc not found")
-            endif()
-        endif()
-
+# aliases
+    if(${target_name} STREQUAL "sig2float_tilde")
+        pd_add_external(s2f~ ${file})
+    elseif(${target_name} STREQUAL "car2pol_tilde")
+        pd_add_external(cartopol~ ${file})
+    elseif(${target_name} STREQUAL "pol2car_tilde")
+        pd_add_external(poltocar~ ${file})
+    elseif(${target_name} STREQUAL "car2pol")
+        pd_add_external(cartopol ${file})
+    elseif(${target_name} STREQUAL "pol2car")
+        pd_add_external(poltocar ${file})
     endif()
 endforeach()
 
@@ -166,7 +111,6 @@ add_subdirectory(Source/Audio/plaits~)
 add_subdirectory(Source/Audio/sfont~)
 add_subdirectory(Source/Audio/sfz~)
 add_subdirectory(Source/Shared/link)
-add_subdirectory(Source/Shared/ffmpeg)
 
 # ╭──────────────────────────────────────╮
 # │            pdlua library             │
@@ -175,9 +119,9 @@ include(FetchContent)
 FetchContent_Declare(
     pd_lua
     GIT_REPOSITORY https://github.com/EL-LOCUS-SOLUS/pd-lua.git
-    GIT_TAG master)
+    GIT_TAG main)
 FetchContent_MakeAvailable(pd_lua)
-target_link_libraries(else PUBLIC pdlua)
+target_link_libraries(else PUBLIC lua)
 
 # ╭──────────────────────────────────────╮
 # │          Ambisonics library          │
@@ -193,15 +137,6 @@ if(ELSE_WITH_SAF)
     file(COPY ${pdsaf_lua} DESTINATION ${PD_OUTPUT_PATH})
 endif()
 
-# ╭──────────────────────────────────────╮
-# │             Target links             │
-# ╰──────────────────────────────────────╯
-target_link_libraries(play.file_tilde PRIVATE ffmpeg)
-target_link_libraries(streamin_tilde PRIVATE ffmpeg)
-target_link_libraries(streamout_tilde PRIVATE ffmpeg)
-target_link_libraries(sfload PRIVATE ffmpeg)
-target_link_libraries(sfinfo PRIVATE ffmpeg)
-
 if(WIN32)
     target_link_libraries(osc.format PRIVATE ws2_32)
     target_link_libraries(osc.parse PRIVATE ws2_32)
@@ -216,6 +151,7 @@ if(UNIX
         target_compile_definitions(${target} PRIVATE OPENSSL_NO_KRB5 OPENSSL_NO_ENGINE OPENSSL_API_3_0)
     endforeach()
 endif()
+target_link_libraries(streamout_tilde PUBLIC link opus vorbis vorbisenc)
 
 target_link_libraries(pdlink PUBLIC link)
 target_link_libraries(pdlink_tilde PUBLIC link opus)
@@ -227,7 +163,7 @@ file(GLOB extra_files ${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Extra-files/* ${
 
 file(GLOB merda_files "${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Merda/Modules/*")
 file(GLOB tcl_files ${CMAKE_CURRENT_SOURCE_DIR}/Source/Extra/*.tcl ${CMAKE_CURRENT_SOURCE_DIR}/Source/Extra/tkdnd)
-file(GLOB pdlua_files ${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/*.pd_lua ${CMAKE_CURRENT_SOURCE_DIR}/Source/Control/*.pd_lua)
+file(GLOB pdlua_files ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Audio/*.pd_luajit ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Control/*.pd_luajit)
 file(GLOB abstractions ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Audio/*.pd ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Control/*.pd ${CMAKE_CURRENT_SOURCE_DIR}/Abstractions/Extra/*)
 file(COPY ${pdf_help} ${extra_files} ${help_files} ${abstractions} ${tcl_files} ${pdlua_files} DESTINATION ${PD_OUTPUT_PATH})
 file(COPY ${merda_files} DESTINATION ${PD_OUTPUT_PATH})
@@ -235,6 +171,7 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Source/Audio/sfz~/sfz" DESTINATION ${PD_O
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Documentation/Live-Electronics-Tutorial" DESTINATION ${PD_OUTPUT_PATH})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" DESTINATION ${PD_OUTPUT_PATH}/LICENSE)
 file(COPY "${pd_lua_SOURCE_DIR}/pd.lua" DESTINATION ${PD_OUTPUT_PATH}/)
+file(COPY "${pd_lua_SOURCE_DIR}/lua.pd_luajit" DESTINATION ${PD_OUTPUT_PATH}/)
 file(REMOVE_RECURSE ${PD_OUTPUT_PATH}/audio)
 
 # Log the object count

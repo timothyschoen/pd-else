@@ -4,6 +4,7 @@
 package require pd_menus
 
 namespace eval category_menu_vanilla {
+    variable uid 0
 }
 
 proc category_menu_vanilla::send_item {w x y item} {
@@ -62,79 +63,523 @@ proc category_menu_vanilla::send_item {w x y item} {
     }
 }
 
-proc category_menu_vanilla::load_menutree {} {
+proc category_menu_vanilla::load_vanilla_menutree {} {
     set menutree {
-        {vanilla
-            {guis
-                {Message Number\ atom\ box Symbol\ atom\ box List\ box Comment Bang Toggle Number2 Vertical\ slider Horizontal\ slider Vertical\ radio Horizontal\ radio VU\ meter Canvas Graph Array}}
-            {general\ data\ management
-                {bang trigger route swap print float int value symbol makefilename send receive}}
-            {list\ management
-                {pack unpack list\ append list\ prepend list\ store list\ split list\ trim list\ length list\ fromsymbol list\ tosymbol}}
-            {arrays/tables
-                {tabread tabread4 tabwrite soundfiler table array\ define array\ size array\ sum array\ get array\ set array\ quantile array\ random array\ max array\ min}}
-            {text\ management
-                {qlist textfile text\ define text\ get text\ set text\ insert text\ delete text\ size text\ tolist text\ fromlist text\ search text\ sequence}}
-            {file\ management
-                {file\ handle file\ define file\ mkdir  file\ cwd file\ patchpath file\ which file\ glob file\ stat file\ isfile file\ isdirectory file\ size file\ copy file\ move file\ delete file\ split file\ join file\ splitex file\ splitname file\ normalize file\ isabsolute}}
-            {time
-                {delay pipe metro line timer cputime realtime}}
-            {logic
-                {select change spigot moses until}}
-            {math
-                {expr clip random + - * / max min > >= < <= == != div mod && || & | << >> wrap abs sqrt exp log pow sin cos tan atan atan2}}
-            {acoustic\ conversions
-                {mtof ftom rmstodb dbtorms powtodb dbtopow}}
-            {midi/osc
-                {midiin midiout notein noteout ctlin ctlout pgmin pgmout bendin bendout touchin touchout polytouchin polytouchout sysexin midirealtimein makenote stripnote poly oscparse oscformat}}
-            {misc
-                {openpanel savepanel key keyup keyname netsend netreceive fudiparse fudiformat bag trace}}
-            {general\ audio\ tools
-                {snake~\ in snake~\ out adc~ dac~ sig~ line~ vline~ threshold~ env~ snapshot~ vsnapsot~ bang~ samphold~ samplerate~ send~ receive~ throw~ catch~ readsf~ writesf~ print~}}
-            {signal\ math
-                {fft~ ifft~ rfft~ rifft~ expr~ fexpr~ +~ -~ *~ /~ max~ min~ log~ pow~ abs~ sqrt~ rsqrt~ wrap~ exp~ clip~}}
-            {signal\ acoustic\ conversions
-                {mtof~ ftom~ rmstodb~ dbtorms~ powtodb~ dbtopow~}}
-            {audio\ generators/tables
-                {noise~ phasor~ cos~ osc~ tabosc4~ tabplay~ tabwrite~ tabread~ tabread4~ tabsend~ tabreceive~}}
-            {audio\ filters
-                {vcf~ hip~ lop~ slop~ bp~ biquad~ rpole~ rzero~ rzero_rev~ cpole~ czero~ czero_rev~}}
-            {audio\ delay
-                {delwrite~ delread~ delread4~}}
-            {patch/subpatch
-                {loadbang declare savestate clone pdcontrol pd inlet inlet~ outlet outlet~ namecanvas block~ switch~}}
-            {data\ structures
-                {struct drawpolygon filledpolygon drawcurve filledcurve drawnumber drawsymbol drawtext plot scalar pointer vpointer get set element getsize setsize append}}
-            {extra
-                {sigmund~ bonk~ choice hilbert~ complex-mod~ loop~ lrshift~ pd~ stdout rev1~ rev2~ rev3~ bob~ output~}}
+        {
+            guis
+            {
+                {
+                    iemguis
+                    {
+                        Bang
+                        Toggle
+                        Number2
+                        Vertical\ slider
+                        Horizontal\ slider
+                        Vertical\ radio
+                        Horizontal\ radio
+                        VU\ meter
+                        Canvas
+                    }
+                }
+                Message
+                Number\ atom\ box
+                Symbol\ atom\ box
+                List\ box
+                Comment
+                Graph
+                Array
+            }
+        }
+        {
+            patch/subpatch
+            {
+                inlet
+                inlet~
+                outlet
+                outlet~
+                pd
+                block~
+                switch~
+                clone
+                namecanvas
+                loadbang
+                declare
+                savestate
+                pdcontrol
+            }
+        }
+        {
+            control
+            {
+                {
+                    general\ tools
+                    {
+                        {
+                            data\ management
+                            {
+                                bang
+                                trigger
+                                route
+                                swap
+                                print
+                                float
+                                int
+                                value
+                                symbol
+                                makefilename
+                            }
+                        }
+                        send
+                        receive
+                        openpanel
+                        savepanel
+                        key
+                        keyup
+                        keyname
+                        trace
+                    }
+                }
+                {
+                    list\ management
+                    {
+                        pack
+                        unpack
+                        list\ append
+                        list\ prepend
+                        list\ store
+                        list\ split
+                        list\ trim
+                        list\ length
+                        list\ fromsymbol
+                        list\ tosymbol
+                    }
+                }
+                {
+                    text\ management
+                    {
+                        text\ define
+                        text\ get
+                        text\ set
+                        text\ insert
+                        text\ delete
+                        text\ size
+                        text\ tolist
+                        text\ fromlist
+                        text\ search
+                        text\ sequence
+                        qlist
+                        textfile
+                    }
+                }
+                {
+                    file\ management
+                    {
+                        file\ handle
+                        file\ define
+                        file\ mkdir
+                        file\ cwd
+                        file\ patchpath
+                        file\ which
+                        file\ glob
+                        file\ stat
+                        file\ isfile
+                        file\ isdirectory
+                        file\ size
+                        file\ copy
+                        file\ move
+                        file\ delete
+                        file\ split
+                        file\ join
+                        file\ splitex
+                        file\ splitname
+                        file\ normalize
+                        file\ isabsolute
+                    }
+                }
+                {
+                    arrays/tables
+                    {
+                        tabread
+                        tabread4
+                        tabwrite
+                        soundfiler
+                        table
+                        array\ define
+                        array\ size
+                        array\ sum
+                        array\ get
+                        array\ set
+                        array\ quantile
+                        array\ random
+                        array\ max
+                        array\ min
+                    }
+                }
+                {
+                    time
+                    {
+                        delay
+                        pipe
+                        metro
+                        line
+                        timer
+                        cputime
+                        realtime
+                    }
+                }
+                {
+                    logic
+                    {
+                        select
+                        change
+                        spigot
+                        moses
+                        until
+                    }
+                }
+                {
+                    math
+                    {
+                        {
+                            trig
+                            {
+                                sin
+                                cos
+                                tan
+                                atan
+                                atan2
+                            }
+                        }
+                        {
+                            unops
+                            {
+                                wrap
+                                abs
+                                sqrt
+                                exp
+                            }
+                        }
+                        {
+                            binops
+                            {
+                                +
+                                -
+                                *
+                                /
+                                max
+                                min
+                                log
+                                pow
+                                >
+                                >=
+                                <
+                                <=
+                                ==
+                                !=
+                                div
+                                mod
+                                &&
+                                ||
+                                &
+                                |
+                                <<
+                                >>
+                            }
+                        }
+                        expr
+                        clip
+                        random
+                    }
+                }
+                {
+                    acoustic\ conversions
+                    {
+                        mtof
+                        ftom
+                        rmstodb
+                        dbtorms
+                        powtodb
+                        dbtopow
+                    }
+                }
+                {
+                    midi
+                    {
+                        {
+                            in/out
+                            {
+                                midiin
+                                midiout
+                                notein
+                                noteout
+                                ctlin
+                                ctlout
+                                pgmin
+                                pgmout
+                                bendin
+                                bendout
+                                touchin
+                                touchout
+                                polytouchin
+                                polytouchout
+                                sysexin
+                                midirealtimein
+                            }
+                        }
+                        makenote
+                        stripnote
+                        bag
+                        poly
+                    }
+                }
+                {
+                    network/osc
+                    {
+                        netsend
+                        netreceive
+                        fudiparse
+                        fudiformat
+                        oscparse
+                        oscformat
+                    }
+                }
+            }
+        }
+        {
+            audio
+            {
+                {
+                    general\ tools
+                    {
+                        snake~\ in
+                        snake~\ out
+                        adc~
+                        dac~
+                        sig~
+                        line~
+                        vline~
+                        threshold~
+                        env~
+                        snapshot~
+                        vsnapshot~
+                        bang~
+                        samphold~
+                        samplerate~
+                        send~
+                        receive~
+                        throw~
+                        catch~
+                        readsf~
+                        writesf~
+                        print~
+                    }
+                }
+                {
+                    math
+                    {
+                        {
+                            unops
+                            {
+                                abs~
+                                sqrt~
+                                rsqrt~
+                                wrap~
+                                exp~
+                            }
+                        }
+                        {
+                            binops
+                            {
+                                +~
+                                -~
+                                *~
+                                /~
+                                max~
+                                min~
+                                log~
+                                pow~
+                            }
+                        }
+                        {
+                            fft
+                            {
+                                fft~
+                                ifft~
+                                rfft~
+                                rifft~
+                            }
+                        }
+                        expr~
+                        fexpr~
+                        clip~
+                    }
+                }
+                {
+                    acoustic\ conversions
+                    {
+                        mtof~
+                        ftom~
+                        rmstodb~
+                        dbtorms~
+                        powtodb~
+                        dbtopow~
+                    }
+                }
+                {
+                    audio\ generators/tables
+                    {
+                        noise~
+                        phasor~
+                        cos~
+                        osc~
+                        tabosc4~
+                        tabplay~
+                        tabwrite~
+                        tabread~
+                        tabread4~
+                        tabsend~
+                        tabreceive~
+                    }
+                }
+                {
+                    filters
+                    {
+                        vcf~
+                        hip~
+                        lop~
+                        slop~
+                        bp~
+                        biquad~
+                        rpole~
+                        rzero~
+                        rzero_rev~
+                        cpole~
+                        czero~
+                        czero_rev~
+                    }
+                }
+                {
+                    delay
+                    {
+                        delwrite~
+                        delread~
+                        delread4~
+                    }
+                }
+            }
+        }
+        {
+            data\ structures
+            {
+                struct
+                drawpolygon
+                filledpolygon
+                drawcurve
+                filledcurve
+                drawnumber
+                drawsymbol
+                drawtext
+                plot
+                scalar
+                pointer
+                vpointer
+                get
+                set
+                element
+                getsize
+                setsize
+                append
+            }
+        }
+        {
+            extra
+            {
+                sigmund~
+                bonk~
+                choice
+                hilbert~
+                complex-mod~
+                loop~
+                lrshift~
+                pd~
+                stdout
+                rev1~
+                rev2~
+                rev3~
+                bob~
+                output~
+            }
         }
     }
     return $menutree
 }
 
-proc category_menu_vanilla::create {cmdstring code result op} {
-    set mymenu [lindex $cmdstring 1]
-    set x [lindex $cmdstring 3]
-    set y [lindex $cmdstring 4]
-    set menutree [load_menutree]
-    $mymenu add separator
-    foreach categorylist $menutree {
-        set category [lindex $categorylist 0]
-        menu $mymenu.$category
-        $mymenu add cascade -label $category -menu $mymenu.$category
-        foreach subcategorylist [lrange $categorylist 1 end] {
-            set subcategory [lindex $subcategorylist 0]
-            menu $mymenu.$category.$subcategory
-            $mymenu.$category add cascade -label $subcategory -menu $mymenu.$category.$subcategory
-            foreach item [lindex $subcategorylist end] {
-                # replace the normal dash with a Unicode minus so that Tcl does not
-                # interpret the dash in the -label to make it a separator
-                $mymenu.$category.$subcategory add command \
-                    -label [regsub -all {^\-$} $item {−}] \
-                    -command "::category_menu_vanilla::send_item \$::focused_window $x $y {$item}"
-            }
+proc category_menu_vanilla::build_menu {parent_menu node x y} {
+    # node = {label {children}}, where children can include subnodes
+    variable uid
+    set name [lindex $node 0]
+    incr uid
+    set safe_name [string tolower [regsub -all {[^a-z0-9_]} $name {_}]]
+    set current_menu $parent_menu.m${uid}_${safe_name}
+    menu $current_menu
+    $parent_menu add cascade \
+        -label $name \
+        -menu $current_menu
+    set children [lindex $node 1]
+    foreach element $children {
+        # detect submenu (2 elements where the 2nd is a list)
+        if {[llength $element] == 2 && [llength [lindex $element 1]] > 1} {
+            build_menu $current_menu $element $x $y
+        } else {
+            $current_menu add command \
+                -label [regsub -all {^\-$} $element {−}] \
+                -command "category_menu::send_item \$::focused_window $x $y {$element}"
         }
     }
 }
 
+proc category_menu_vanilla::create {cmdstring code result op} {
+    if {!$::category_menu_vanilla::enabled} { return }
+    set mymenu [lindex $cmdstring 1]
+    set x [lindex $cmdstring 3]
+    set y [lindex $cmdstring 4]
+    set menutree [load_vanilla_menutree]
+    $mymenu add separator
+    set category "vanilla"
+    menu $mymenu.$category
+    $mymenu add cascade -label $category -menu $mymenu.$category
+    # Process each top-level item
+    foreach item $menutree {
+        build_menu $mymenu.$category $item $x $y
+    }
+}
+
+proc category_menu_vanilla::read_browser_cfg {} {
+    set ::category_menu_vanilla::enabled [::pd_guiprefs::read vanilla_browser_enabled]
+    if {$::category_menu_vanilla::enabled eq ""} {
+        set ::category_menu_vanilla::enabled 1 
+    }
+    if {$::category_menu_vanilla::enabled == 1} {
+        ::pdwindow::post "Vanilla browser plugin is Enabled\n\n"
+    } else {
+        ::pdwindow::post "Vanilla browser plugin is Disabled\n\n"
+    }
+}
+
+proc category_menu_vanilla::write_config {{filename browser.cfg}} {
+    ::pd_guiprefs::write vanilla_browser_enabled $::category_menu_vanilla::enabled
+}
+
 trace add execution ::pdtk_canvas::create_popup leave category_menu_vanilla::create
+
+proc category_menu_vanilla::add_menu_entry {} {
+    .preferences add separator
+    .preferences add checkbutton \
+        -label [_ "Enable Vanilla Browser"] \
+        -variable ::category_menu_vanilla::enabled \
+        -command {category_menu_vanilla::write_config}
+}
+
+category_menu_vanilla::read_browser_cfg
+category_menu_vanilla::add_menu_entry
