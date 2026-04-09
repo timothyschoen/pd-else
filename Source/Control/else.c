@@ -24,12 +24,12 @@ static int else_bugfix = 0;
 #define STATUS "rc test"
 static int status_number = 15;
 
-extern void pdlua_setup();
+extern void lua_setup();
 
 static void else_obj_dir(t_else_obj *x){
     outlet_symbol(x->x_out4, else_obj_class->c_externdir);
 }
-    
+
 static void else_obj_version(t_else_obj *x){
     int ac = 5;
     t_atom at[5];
@@ -132,5 +132,5 @@ void else_setup(void){
     pdgui_vmess("load_plugin_script", "s", plugin);
     sprintf(plugin, "%s/browser-else.tcl", else_obj_class->c_externdir->s_name);
     pdgui_vmess("load_plugin_script", "s", plugin);
-    pdlua_setup();
+    lua_setup();
 }
