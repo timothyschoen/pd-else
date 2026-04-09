@@ -12,19 +12,19 @@ EXTERN_STRUCT _osdir;
 #define OSDIR_FILEMODE  1
 #define OSDIR_DIRMODE   2
 
-int ospath_length(char *path, char *cwd);
-char *ospath_absolute(char *path, char *cwd, char *result);
+int else_ospath_length(char *path, char *cwd);
+char *else_ospath_absolute(char *path, char *cwd, char *result);
 
-FILE *fileread_open(char *filename, t_canvas *cv, int textmode);
-FILE *filewrite_open(char *filename, t_canvas *cv, int textmode);
+FILE *else_fileread_open(char *filename, t_canvas *cv, int textmode);
+FILE *else_filewrite_open(char *filename, t_canvas *cv, int textmode);
 
-t_osdir *osdir_open(char *dirname);
-void osdir_setmode(t_osdir *dp, int flags);
-void osdir_close(t_osdir *dp);
-void osdir_rewind(t_osdir *dp);
-char *osdir_next(t_osdir *dp);
-int osdir_isfile(t_osdir *dp);
-int osdir_isdir(t_osdir *dp);
+t_osdir *else_osdir_open(char *dirname);
+void else_osdir_setmode(t_osdir *dp, int flags);
+void else_osdir_close(t_osdir *dp);
+void else_osdir_rewind(t_osdir *dp);
+char *else_osdir_next(t_osdir *dp);
+int else_osdir_isfile(t_osdir *dp);
+int else_osdir_isdir(t_osdir *dp);
 
 #endif
 
