@@ -211,7 +211,7 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){ // cu
     float pitch = 0;
     t_symbol *pitchsym = NULL;
     if(av->a_type == A_FLOAT)
-       pitch = atom_getfloat(av);
+        pitch = atom_getfloat(av);
     else if(av->a_type == A_SYMBOL)
        pitchsym = atom_getsymbol(av);
     t_voice *prev = 0;
@@ -245,6 +245,39 @@ static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){ // cu
     }
     else // go to extra
         outlet_list(x->x_extra, s, ac, av);
+}
+
+static void voices_noteoff(t_voices *x, t_float note, t_float vel){
+    t_atom* at = ALLOCA(t_atom, 2);
+    SETFLOAT(at, note);
+    SETFLOAT(at+1, vel);
+    voices_anything(x, gensym("noteoff"), 2, at);
+// Note off
+    float pitch = note;
+    vel = 0;
+    int ac = 2, i;
+    t_voice *v;
+    t_voice *used_pitch = 0;
+    unsigned int used_idx = 0, count = 0xffffffff;
+    for(v = x->x_vec, i = 0; i < x->x_n; v++, i++){ // search existing pitch
+        int check_pitch = 0;
+        if(v->v_pitchsym == NULL && v->v_pitch == pitch)
+            check_pitch = 1;
+        if(v->v_used && !v->v_released && check_pitch && v->v_count < count)
+            used_pitch = v, count = (unsigned int)v->v_count, used_idx = i;
+    }
+    if(used_pitch){ // pitch was found in a used and unreleased voice
+    // send note-off
+        if(x->x_release > 0){ // free voice after release time
+            clock_delay(used_pitch->v_clock, x->x_release);
+            used_pitch->v_released = 1;
+        }
+        else{
+            used_pitch->v_used = used_pitch->v_pitch = 0;
+            used_pitch->v_pitchsym = NULL;
+            used_pitch->v_count = x->x_count++;
+        }
+    }
 }
 
 static void voices_offset(t_voices *x, t_float f){
@@ -419,6 +452,7 @@ void voices_setup(void){
         (t_method)voices_free, sizeof(t_voices), 0, A_GIMME, 0);
     class_addlist(voices_class, voices_list);
     class_addanything(voices_class, voices_anything);
+    class_addmethod(voices_class, (t_method)voices_noteoff, gensym("noteoff"), A_FLOAT, A_FLOAT, 0);
     class_addmethod(voices_class, (t_method)voices_offset, gensym("offset"), A_FLOAT, 0);
     class_addmethod(voices_class, (t_method)voices_steal, gensym("steal"), A_FLOAT, 0);
     class_addmethod(voices_class, (t_method)voices_retrig, gensym("retrig"), A_FLOAT, 0);
