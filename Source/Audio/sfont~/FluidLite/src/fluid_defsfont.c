@@ -856,10 +856,11 @@ fluid_sample_ensure_loaded(fluid_sample_t* sample, fluid_defsfont_t* sfont)
 #endif
 
   /* Non-OGG path — seek and read raw PCM */
+  unsigned int num_samples = sample->end + 1 - sample->start;
+  unsigned int byte_length = num_samples * sizeof(short);
   unsigned int byte_offset = sfont->samplepos + sample->start * sizeof(short);
-  unsigned int byte_length = (sample->end - sample->start) * sizeof(short);
 
-  if(!sample->data) {
+  if (!sample->data) {
       fluid_file fd = sfont->fapi->fopen(sfont->fapi, sfont->filename);
       if (fd == NULL) {
           FLUID_LOG(FLUID_ERR, "Can't open soundfont file");
@@ -870,7 +871,7 @@ fluid_sample_ensure_loaded(fluid_sample_t* sample, fluid_defsfont_t* sfont)
           sfont->fapi->fclose(fd);
           return FLUID_FAILED;
       }
-      sample->data = (short*) FLUID_MALLOC(sfont->samplesize);
+      sample->data = (short*) FLUID_MALLOC(byte_length);
       if (sample->data == NULL) {
           FLUID_LOG(FLUID_ERR, "Out of memory");
           sfont->fapi->fclose(fd);
@@ -888,14 +889,20 @@ fluid_sample_ensure_loaded(fluid_sample_t* sample, fluid_defsfont_t* sfont)
   /* Byte-swap on big endian machines */
   unsigned short endian = 0x0100;
   if (((char*) &endian)[0]) {
-    unsigned char* cbuf = (unsigned char*) sample->data;
-    unsigned int i, j;
-    for (i = 0, j = 0; j < byte_length; i++) {
-      unsigned char lo = cbuf[j++];
-      unsigned char hi = cbuf[j++];
-      sample->data[i] = (hi << 8) | lo;
-    }
+      unsigned char* cbuf = (unsigned char*) sample->data;
+      unsigned int i, j;
+      for (i = 0, j = 0; j < byte_length; i++) {
+          unsigned char lo = cbuf[j++];
+          unsigned char hi = cbuf[j++];
+          sample->data[i] = (hi << 8) | lo;
+      }
   }
+
+  /* Rebase offsets onto the per-sample buffer */
+  sample->loopstart -= sample->start;
+  sample->loopend   -= sample->start;
+  sample->end       -= sample->start;
+  sample->start      = 0;
 
   sample->data_loaded = 1;
   fluid_voice_optimize_sample(sample);
