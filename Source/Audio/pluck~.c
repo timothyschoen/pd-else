@@ -36,7 +36,6 @@ typedef struct _pluck{
     double          x_fbstack[PLUCK_STACK];
     int             x_alloc;                    // if we are using allocated buf
     unsigned int    x_sz;                       // actual size of each delay buffer
-    t_float         x_maxdel;                   // maximum delay in ms
     unsigned int    x_wh;                       // writehead
     float           x_sum;
     float           x_amp;
@@ -99,25 +98,19 @@ static void pluck_list(t_pluck *x, t_symbol *s, int argc, t_atom *argv){
     x->x_ignore = s;
     if(argc == 0)
         return;
-
     if(atom_getfloat(argv+1) == 0)
         return;
     if(argc >= 2){
         x->x_midi_pitch = atom_getfloat(argv);
         argc--, argv++;
-        x->x_float_trig = atom_getfloat(argv)/ 127.f;
+        x->x_float_trig = atom_getfloat(argv) / 127.f;
         x->x_control_trig = 1;
     }
 }
 
 static void pluck_sz(t_pluck *x){
     // helper function to deal with allocation issues if needed
-    // ie if wanted size x->x_maxdel is bigger than stack, allocate
-
-    // convert ms to samps
-    unsigned int newsz = (unsigned int)ceil((double)x->x_maxdel*0.001*(double)x->x_sr);
-    newsz++; // add a sample for good measure since say bufsize is 2048 and
-    // you want a delay of 2048 samples,.. problem!
+    unsigned int newsz = (unsigned int)x->x_sr + 1;
     int alloc = x->x_alloc;
     unsigned int cursz = x->x_sz; //current size
     if(newsz > PLUCK_MAXD)
@@ -245,7 +238,7 @@ static t_int *pluck_perform_noise_input(t_int *w){
         }
     };
     x->x_sum = sum; // next
-    x->x_last_trig = amp;
+    x->x_amp = amp;
     x->x_last_trig = last_trig;
     x->x_xnm1 = xnm1;
     x->x_ynm1 = ynm1;
@@ -330,7 +323,7 @@ static t_int *pluck_perform(t_int *w){
         }
     };
     x->x_sum = sum; // next
-    x->x_last_trig = amp;
+    x->x_amp = amp;
     x->x_last_trig = last_trig;
     x->x_xnm1 = xnm1;
     x->x_ynm1 = ynm1;
@@ -434,7 +427,6 @@ static void *pluck_new(t_symbol *s, int argc, t_atom *argv){
 
     x->x_ain = decay;
     x->x_f = (double)cut_freq;
-    x->x_maxdel = 1000;
 // ship off to the helper method to deal with allocation if necessary
     pluck_sz(x);
     
@@ -468,5 +460,5 @@ void pluck_tilde_setup(void){
     class_addlist(pluck_class, pluck_list);
     class_addmethod(pluck_class, (t_method)pluck_midi, gensym("midi"), A_DEFFLOAT, 0);
     class_addmethod(pluck_class, (t_method)pluck_midi_active, gensym("midi_active"), A_FLOAT, 0);
-    class_addmethod(pluck_class, (t_method)pluck_clear, gensym("clear"), 0);\
+    class_addmethod(pluck_class, (t_method)pluck_clear, gensym("clear"), 0);
 }
