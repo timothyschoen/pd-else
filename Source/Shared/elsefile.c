@@ -387,8 +387,9 @@ static void elsefile_text_window_editor_guidefs(void){
     "  for {set i 1} {[$name.text compare $i.end < end]} {incr i 1} {\n"
     "   set lin [$name.text get $i.0 $i.end]\n"
     "   if {$lin != \"\"} {\n"
-    "    regsub -all \\; $lin \"  _semi_ \" tmplin\n"
-    "    regsub -all \\, $tmplin \"  _comma_ \" lin\n"
+    "    regsub -all \\t $lin \"  _tab_ \" tmplin\n"
+    "    regsub -all \\; $tmplin \"  _semi_ \" tmplin2\n"
+    "    regsub -all \\, $tmplin2 \"  _comma_ \" lin\n"
     "    pdsend \"ELSEFILE$name addline $lin\"\n"
     "   }\n"
     "  }\n"
@@ -531,6 +532,8 @@ static void else_editor_addline(t_elsefile *f, t_symbol *s, int ac, t_atom *av){
                     SETSEMI(ap);
                 else if(!strcmp(ap->a_w.w_symbol->s_name, "_comma_"))
                     SETCOMMA(ap);
+                else if(!strcmp(ap->a_w.w_symbol->s_name, "_tab_"))
+                    SETSYMBOL(ap, gensym("\t"));
             }
         }
         binbuf_add(f->f_binbuf, ac, av);
