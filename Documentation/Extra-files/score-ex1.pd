@@ -6,7 +6,7 @@
 #X obj 182 254 outlet~;
 #X obj 105 97 unpack;
 #X obj 320 220 switch~;
-#X obj 320 194 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000 #000000 0 1;
+#X obj 320 194 tgl 15 0 empty empty empty 17 7 0 10 #dfdfdf #000000 #000000 0 1;
 #X obj 197 169 else/adsr~ 10 0 1 100;
 #X msg 197 141 gate \$1;
 #X connect 0 0 4 0;

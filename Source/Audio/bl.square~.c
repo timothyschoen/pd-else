@@ -181,6 +181,7 @@ typedef struct _blsquare{
     t_int       x_ch4;
     t_int       x_midi;
     t_int       x_soft;
+    t_int       x_verbose;
     t_int      *x_dir;
     float      *x_freq_list;
     t_int       x_list_size;
@@ -217,56 +218,62 @@ static t_int *blsquare_perform(t_int *w){
     for(int j = 0; j < x->x_nchans; j++){
         for(int i = 0, n = x->x_n; i < n; i++){
             double hz = x->x_sig1 ? in1[j*n + i] : x->x_freq_list[j];
+
             if(x->x_midi){
-                if(hz > 127) hz = 127;
-                hz = hz <= 0 ? 0 : pow(2, (hz - 69)/12) * 440;
+                if(hz <= 0 || hz >= 127)
+                    hz = 0;
+                else
+                    hz = pow(2, (hz - 69)/12) * 440;
             }
+            if(x->x_midi && hz == 0)
+               out[j*n + i] = 0.;
+            else{
+                t_float pulse_width = x->x_ch2 == 1 ? in2[i] : in2[j*n + i];
+                t_float trig = x->x_ch3 == 1 ? in3[i] : in3[j*n + i];
+                double phase_offset = x->x_ch4 == 1 ? in4[i] : in4[j*n + i];
+                double phase_dev = phase_offset - x->x_last_phase_offset[j];
+                x->x_last_phase_offset[j] = phase_offset;
+                double last_phase = phase[j];
+                double step = hz * x->x_sr_rec;
+                step = step > 0.5 ? 0.5 : step < -0.5 ? -0.5 : step;
 
-            t_float pulse_width = x->x_ch2 == 1 ? in2[i] : in2[j*n + i];
-            t_float trig = x->x_ch3 == 1 ? in3[i] : in3[j*n + i];
-            double phase_offset = x->x_ch4 == 1 ? in4[i] : in4[j*n + i];
-            double phase_dev = phase_offset - x->x_last_phase_offset[j];
-            x->x_last_phase_offset[j] = phase_offset;
-            double last_phase = phase[j];
-            double step = hz * x->x_sr_rec;
-            step = step > 0.5 ? 0.5 : step < -0.5 ? -0.5 : step;
+                if(dir[j] == 0) // initialize this just once
+                    dir[j] = 1;
+                if(trig > 0 && trig <= 1 && x->x_soft){
+                    dir[j] = dir[j] == 1 ? -1 : 1;
+                }
+                step *= dir[j];
 
-            if(dir[j] == 0) // initialize this just once
-                dir[j] = 1;
-            if(trig > 0 && trig <= 1 && x->x_soft){
-                dir[j] = dir[j] == 1 ? -1 : 1;
-            }
-            step *= dir[j];
+                double abs_step = fabs(step);
+                if(abs_step > 0){
+                    if(pulse_width < abs_step)
+                        pulse_width = abs_step;
+                    else if(pulse_width > 1.0 - abs_step)
+                        pulse_width = 1.0 - abs_step;
+                }
 
-            double abs_step = fabs(step);
-            if(abs_step > 0){
-                if(pulse_width < abs_step)
-                    pulse_width = abs_step;
-                else if(pulse_width > 1.0 - abs_step)
-                    pulse_width = 1.0 - abs_step;
-            }
+                out[j*n + i] = (phase[j] <= pulse_width ? 1.0f : -1.0f) + elliptic_blep_get(&blep[j]);
 
-            out[j*n + i] = (phase[j] <= pulse_width ? 1.0f : -1.0f) + elliptic_blep_get(&blep[j]);
+                phase[j] += (step + phase_dev);
+                elliptic_blep_step(&blep[j]);
 
-            phase[j] += (step + phase_dev);
-            elliptic_blep_step(&blep[j]);
+                if(trig > 0 && trig <= 1 && !x->x_soft){
+                    phase[j] = trig;
+                }
 
-            if(trig > 0 && trig <= 1 && !x->x_soft){
-                phase[j] = trig;
-            }
-
-            if(phase[j] >= 1 || phase[j] < 0) {
-                t_float phase_step = blsquare_wrap_phase(x->x_phase[j] - last_phase);
-                t_float amp_step = (blsquare_wrap_phase(phase[j]) <= pulse_width ? 1.0f : -1.0f) - (blsquare_wrap_phase(last_phase) <= pulse_width ? 1.0f : -1.0f);
-                phase[j] = blsquare_wrap_phase(phase[j]);
-                t_float samples_in_past = phase[j] / phase_step;
-                elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past);
-            }
-            else if (phase[j] >= pulse_width && phase[j] < pulse_width + step) {
-                t_float phase_step = blsquare_wrap_phase(x->x_phase[j] - last_phase);
-                t_float amp_step = (blsquare_wrap_phase(phase[j]) <= pulse_width ? 1.0f : -1.0f) - (blsquare_wrap_phase(last_phase) <= pulse_width ? 1.0f : -1.0f);
-                t_float samples_in_past = (phase[j] - pulse_width) / phase_step;
-                elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past);
+                if(phase[j] >= 1 || phase[j] < 0) {
+                    t_float phase_step = blsquare_wrap_phase(x->x_phase[j] - last_phase);
+                    t_float amp_step = (blsquare_wrap_phase(phase[j]) <= pulse_width ? 1.0f : -1.0f) - (blsquare_wrap_phase(last_phase) <= pulse_width ? 1.0f : -1.0f);
+                    phase[j] = blsquare_wrap_phase(phase[j]);
+                    t_float samples_in_past = phase[j] / phase_step;
+                    elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past);
+                }
+                else if (phase[j] >= pulse_width && phase[j] < pulse_width + step) {
+                    t_float phase_step = blsquare_wrap_phase(x->x_phase[j] - last_phase);
+                    t_float amp_step = (blsquare_wrap_phase(phase[j]) <= pulse_width ? 1.0f : -1.0f) - (blsquare_wrap_phase(last_phase) <= pulse_width ? 1.0f : -1.0f);
+                    t_float samples_in_past = (phase[j] - pulse_width) / phase_step;
+                    elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past);
+                }
             }
         }
     }
@@ -300,7 +307,8 @@ static void blsquare_dsp(t_blsquare *x, t_signal **sp){
     || (x->x_ch3 > 1 && x->x_ch3 != x->x_nchans)
     || (x->x_ch4 > 1 && x->x_ch4 != x->x_nchans)){
         dsp_add_zero(sp[4]->s_vec, x->x_nchans * x->x_n);
-        pd_error(x, "[blsquare~]: channel sizes mismatch");
+        if(x->x_verbose)
+            pd_error(x, "[blsquare~]: channel sizes mismatch");
         return;
     }
     dsp_add(blsquare_perform, 6, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec, sp[4]->s_vec);
@@ -340,6 +348,10 @@ static void blsquare_soft(t_blsquare *x, t_floatarg f){
     x->x_soft = (int)(f != 0);
 }
 
+static void blsquare_verbose(t_blsquare *x, t_floatarg f){
+    x->x_verbose = (int)(f != 0);
+}
+
 static void blsquare_free(t_blsquare *x) {
     inlet_free(x->x_inlet_sync);
     inlet_free(x->x_inlet_phase);
@@ -354,7 +366,6 @@ static void blsquare_free(t_blsquare *x) {
 static void *blsquare_new(t_symbol *s, int ac, t_atom *av){
     t_blsquare *x = (t_blsquare *)pd_new(blsquare_class);
     x->x_ignore = s;
-
     t_float width = 0.5f;
     x->x_midi = x->x_soft = 0;
     x->x_dir = (t_int *)getbytes(sizeof(*x->x_dir));
@@ -365,6 +376,7 @@ static void *blsquare_new(t_symbol *s, int ac, t_atom *av){
     x->x_freq_list[0] = 0;
     x->x_phase[0] = 0;
     x->x_list_size = 1;
+    x->x_verbose = 1;
     while(ac && av->a_type == A_SYMBOL){
         if(atom_getsymbol(av) == gensym("-midi")){
             x->x_midi = 1;
@@ -420,7 +432,8 @@ void setup_bl0x2esquare_tilde(void){
     class_addmethod(blsquare_class, nullfn, gensym("signal"), 0);
     class_addmethod(blsquare_class, (t_method)blsquare_dsp, gensym("dsp"), A_CANT, 0);
     class_addlist(blsquare_class, blsquare_list);
-    class_addmethod(blsquare_class, (t_method)blsquare_soft, gensym("soft"), A_DEFFLOAT, 0);
-    class_addmethod(blsquare_class, (t_method)blsquare_midi, gensym("midi"), A_DEFFLOAT, 0);
+    class_addmethod(blsquare_class, (t_method)blsquare_verbose, gensym("verbose"), A_FLOAT, 0);
+    class_addmethod(blsquare_class, (t_method)blsquare_soft, gensym("soft"), A_FLOAT, 0);
+    class_addmethod(blsquare_class, (t_method)blsquare_midi, gensym("midi"), A_FLOAT, 0);
     class_addmethod(blsquare_class, (t_method)blsquare_set, gensym("set"), A_GIMME, 0);
 }

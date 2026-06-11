@@ -22,6 +22,7 @@ typedef struct _blvsaw{
     t_int       x_ch4;
     t_int       x_midi;
     t_int       x_soft;
+    t_int       x_verbose;
     t_int      *x_dir;
     float      *x_freq_list;
     t_int       x_list_size;
@@ -59,81 +60,86 @@ static t_int *blvsaw_perform(t_int *w){
         for(int i = 0, n = x->x_n; i < n; i++){
             double hz = x->x_sig1 ? in1[j*n + i] : x->x_freq_list[j];
             if(x->x_midi){
-                if(hz > 127) hz = 127;
-                hz = hz <= 0 ? 0 : pow(2, (hz - 69)/12) * 440;
-            }
-
-            t_float pulse_width = x->x_ch2 == 1 ? in2[i] : in2[j*n + i];
-            t_float trig = x->x_ch3 == 1 ? in3[i] : in3[j*n + i];
-            double phase_offset = x->x_ch4 == 1 ? in4[i] : in4[j*n + i];
-            double phase_dev = phase_offset - x->x_last_phase_offset[j];
-            x->x_last_phase_offset[j] = phase_offset;
-            double last_phase = phase[j];
-            double step = hz * x->x_sr_rec;
-            step = step > 0.5 ? 0.5 : step < -0.5 ? -0.5 : step;
-
-            if(dir[j] == 0) // initialize this just once
-                dir[j] = 1;
-            if(trig > 0 && trig <= 1 && x->x_soft){
-                dir[j] = dir[j] == 1 ? -1 : 1;
-            }
-            step *= dir[j];
-            
-            t_float output;
-            if (pulse_width <= 0.01f)
-                output = phase[j] * -2 + 1;
-            else if (pulse_width >= 0.99f)
-                output = phase[j] * 2 - 1;
-            else {
-                float value;
-                if(phase[j] <= pulse_width)
-                    value = phase[j] / pulse_width;
+                if(hz <= 0 || hz >= 127)
+                    hz = 0;
                 else
-                    value = 1 - ((phase[j] - pulse_width) / (1 - pulse_width));
-                output = value * 2 - 1;
+                    hz = pow(2, (hz - 69)/12) * 440;
             }
-            
-            out[j*n + i] = output + elliptic_blep_get(&blep[j]);
-            
-            phase[j] += (step + phase_dev);
-            elliptic_blep_step(&blep[j]);
-            
-            if(trig > 0 && trig <= 1 && !x->x_soft){
-                phase[j] = trig;
-            }
-            
-            if(pulse_width > 0.01f && pulse_width < 0.99f)
-            {
-                t_float gap = 1.f / (pulse_width * (1.0f / hz));
-                if(gap < x->x_sr) {
-                    if(phase[j] >= 1 || phase[j] < 0) {
-                        phase[j] = blvsaw_wrap_phase(phase[j]);
-                        t_float samples_in_past = phase[j] / step;
-                        elliptic_blep_add_in_past(&blep[j], step * 4.0, 2, samples_in_past);
+            if(x->x_midi && hz == 0)
+               out[j*n + i] = 0.;
+            else{
+                t_float pulse_width = x->x_ch2 == 1 ? in2[i] : in2[j*n + i];
+                t_float trig = x->x_ch3 == 1 ? in3[i] : in3[j*n + i];
+                double phase_offset = x->x_ch4 == 1 ? in4[i] : in4[j*n + i];
+                double phase_dev = phase_offset - x->x_last_phase_offset[j];
+                x->x_last_phase_offset[j] = phase_offset;
+                double last_phase = phase[j];
+                double step = hz * x->x_sr_rec;
+                step = step > 0.5 ? 0.5 : step < -0.5 ? -0.5 : step;
+
+                if(dir[j] == 0) // initialize this just once
+                    dir[j] = 1;
+                if(trig > 0 && trig <= 1 && x->x_soft){
+                    dir[j] = dir[j] == 1 ? -1 : 1;
+                }
+                step *= dir[j];
+                
+                t_float output;
+                if (pulse_width <= 0.01f)
+                    output = phase[j] * -2 + 1;
+                else if (pulse_width >= 0.99f)
+                    output = phase[j] * 2 - 1;
+                else {
+                    float value;
+                    if(phase[j] <= pulse_width)
+                        value = phase[j] / pulse_width;
+                    else
+                        value = 1 - ((phase[j] - pulse_width) / (1 - pulse_width));
+                    output = value * 2 - 1;
+                }
+                
+                out[j*n + i] = output + elliptic_blep_get(&blep[j]);
+                
+                phase[j] += (step + phase_dev);
+                elliptic_blep_step(&blep[j]);
+                
+                if(trig > 0 && trig <= 1 && !x->x_soft){
+                    phase[j] = trig;
+                }
+                
+                if(pulse_width > 0.01f && pulse_width < 0.99f)
+                {
+                    t_float gap = 1.f / (pulse_width * (1.0f / hz));
+                    if(gap < x->x_sr) {
+                        if(phase[j] >= 1 || phase[j] < 0) {
+                            phase[j] = blvsaw_wrap_phase(phase[j]);
+                            t_float samples_in_past = phase[j] / step;
+                            elliptic_blep_add_in_past(&blep[j], step * 4.0, 2, samples_in_past);
+                        }
+                        else if (phase[j] >= pulse_width && phase[j] < pulse_width + step) {
+                            t_float samples_in_past = (phase[j] - pulse_width) / step;
+                            elliptic_blep_add_in_past(&blep[j], step * -4.0, 2, samples_in_past);
+                        }
                     }
-                    else if (phase[j] >= pulse_width && phase[j] < pulse_width + step) {
-                        t_float samples_in_past = (phase[j] - pulse_width) / step;
-                        elliptic_blep_add_in_past(&blep[j], step * -4.0, 2, samples_in_past);
+                    else {
+                        if(phase[j] >= 1 || phase[j] < 0) {
+                            phase[j] = blvsaw_wrap_phase(phase[j]);
+                            t_float samples_in_past = phase[j] / step;
+                            elliptic_blep_add_in_past(&blep[j], step * -4.0, 1, samples_in_past);
+                        }
                     }
                 }
                 else {
-                    if(phase[j] >= 1 || phase[j] < 0) {
-                        phase[j] = blvsaw_wrap_phase(phase[j]);
-                        t_float samples_in_past = phase[j] / step;
-                        elliptic_blep_add_in_past(&blep[j], step * -4.0, 1, samples_in_past);
+                    if(phase[j] >= 1 || phase[j] < 0){
+                        t_float phase_step = blvsaw_wrap_phase(phase[j] - last_phase);
+                        t_float wrapped = blvsaw_wrap_phase(phase[j]);
+                        t_float last_wrapped = blvsaw_wrap_phase(last_phase);
+                        t_float slope = pulse_width < 0.5f ? -2.0f : 2.0f;
+                        t_float amp_step = slope * (wrapped - last_wrapped);
+                        phase[j] = wrapped;
+                        t_float samples_in_past = phase[j] / phase_step;
+                        elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past < 1.0 ? samples_in_past : 0.999999);
                     }
-                }
-            }
-            else {
-                if(phase[j] >= 1 || phase[j] < 0){
-                    t_float phase_step = blvsaw_wrap_phase(phase[j] - last_phase);
-                    t_float wrapped = blvsaw_wrap_phase(phase[j]);
-                    t_float last_wrapped = blvsaw_wrap_phase(last_phase);
-                    t_float slope = pulse_width < 0.5f ? -2.0f : 2.0f;
-                    t_float amp_step = slope * (wrapped - last_wrapped);
-                    phase[j] = wrapped;
-                    t_float samples_in_past = phase[j] / phase_step;
-                    elliptic_blep_add_in_past(&blep[j], amp_step, 1, samples_in_past < 1.0 ? samples_in_past : 0.999999);
                 }
             }
         }
@@ -169,7 +175,8 @@ static void blvsaw_dsp(t_blvsaw *x, t_signal **sp){
     || (x->x_ch3 > 1 && x->x_ch3 != x->x_nchans)
     || (x->x_ch4 > 1 && x->x_ch4 != x->x_nchans)){
         dsp_add_zero(sp[4]->s_vec, x->x_nchans * x->x_n);
-        pd_error(x, "[blvsaw~]: channel sizes mismatch");
+        if(x->x_verbose)
+            pd_error(x, "[blvsaw~]: channel sizes mismatch");
         return;
     }
     dsp_add(blvsaw_perform, 6, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec, sp[4]->s_vec);
@@ -209,6 +216,10 @@ static void blvsaw_soft(t_blvsaw *x, t_floatarg f){
     x->x_soft = (int)(f != 0);
 }
 
+static void blvsaw_verbose(t_blvsaw *x, t_floatarg f){
+    x->x_verbose = (int)(f != 0);
+}
+
 static void blvsaw_free(t_blvsaw *x) {
     inlet_free(x->x_inlet_sync);
     inlet_free(x->x_inlet_phase);
@@ -233,6 +244,7 @@ static void *blvsaw_new(t_symbol *s, int ac, t_atom *av){
     x->x_freq_list[0] = 0;
     x->x_phase[0] = 0;
     x->x_list_size = 1;
+    x->x_verbose = 1;
     while(ac && av->a_type == A_SYMBOL){
         if(atom_getsymbol(av) == gensym("-midi")){
             x->x_midi = 1;
@@ -288,7 +300,8 @@ void setup_bl0x2evsaw_tilde(void){
     class_addmethod(blvsaw_class, nullfn, gensym("signal"), 0);
     class_addmethod(blvsaw_class, (t_method)blvsaw_dsp, gensym("dsp"), A_CANT, 0);
     class_addlist(blvsaw_class, blvsaw_list);
-    class_addmethod(blvsaw_class, (t_method)blvsaw_soft, gensym("soft"), A_DEFFLOAT, 0);
-    class_addmethod(blvsaw_class, (t_method)blvsaw_midi, gensym("midi"), A_DEFFLOAT, 0);
+    class_addmethod(blvsaw_class, (t_method)blvsaw_verbose, gensym("verbose"), A_FLOAT, 0);
+    class_addmethod(blvsaw_class, (t_method)blvsaw_soft, gensym("soft"), A_FLOAT, 0);
+    class_addmethod(blvsaw_class, (t_method)blvsaw_midi, gensym("midi"), A_FLOAT, 0);
     class_addmethod(blvsaw_class, (t_method)blvsaw_set, gensym("set"), A_GIMME, 0);
 }
