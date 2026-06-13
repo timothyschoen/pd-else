@@ -1,16 +1,9 @@
 #N canvas 291 55 1006 685 12;
 #X declare -path else;
-<<<<<<<< HEAD:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/3.resonator/2.[resonator2~].pd
-#X obj 707 113 nbx 5 14 1 1e+37 0 0 \$0-q q-set empty 0 -8 0 10 #dcdcdc #000000 #000000 0 256;
-#X obj 682 63 nbx 5 14 -1e+37 1e+37 0 0 \$0-freq freq-set empty 0 -8 0 10 #dcdcdc #000000 #000000 0 256;
-#X obj 612 100 noise~;
-#X obj 685 40 hsl 200 15 100 22050 1 0 empty freq-slider-set empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
-========
 #X obj 742 109 nbx 5 14 1 1e+37 0 0 \$0-q q-set empty 0 -8 0 10 #dcdcdc #000000 #000000 0 256;
 #X obj 640 65 nbx 5 14 -1e+37 1e+37 0 0 \$0-freq freq-set empty 0 -8 0 10 #dcdcdc #000000 #000000 0 256;
 #X obj 691 102 noise~;
 #X obj 643 42 hsl 200 15 100 22050 1 0 empty freq-slider-set empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
->>>>>>>> 2802eb099692b602ced872f0b6b5778f3806320e:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/6.resonator/2.[resonator2~].pd
 #N canvas 106 63 1083 613 (subpatch) 0;
 #N canvas 169 136 777 574 plot 0;
 #N canvas 159 22 181 220 loop 0;
@@ -458,15 +451,9 @@
 #X obj 996 384 cnv 15 15 15 empty empty dB 5 5 1 16 #fcfcfc #000000 0;
 #X coords 0 -1 1 1 932 422 2 100 100;
 #X restore 32 235 pd;
-<<<<<<<< HEAD:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/3.resonator/2.[resonator2~].pd
-#X text 738 63 Hz;
-#X obj 730 144 hsl 128 15 0 1 0 0 empty ganho empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
-#N canvas 68 23 655 392 output 0;
-========
 #X text 696 65 Hz;
 #X obj 765 140 hsl 128 15 0 1 0 0 empty ganho empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
 #N canvas 68 38 655 392 output 0;
->>>>>>>> 2802eb099692b602ced872f0b6b5778f3806320e:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/6.resonator/2.[resonator2~].pd
 #X obj 206 206 *~;
 #X obj 225 175 line~;
 #X msg 225 149 \$1 10;
@@ -497,22 +484,6 @@
 #X connect 10 0 9 0;
 #X connect 12 0 10 0;
 #X connect 13 0 7 0;
-<<<<<<<< HEAD:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/3.resonator/2.[resonator2~].pd
-#X restore 687 189 pd output;
-#X obj 750 164 hsl 128 15 0 1 0 0 empty ganho empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
-#X text 774 143 Left;
-#X text 782 162 Right;
-#X text 716 39 Resonant Frequency;
-#X obj 710 91 hsl 200 15 0.01 10 1 0 empty empty empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
-#X text 737 89 reverberation time;
-#X text 765 110 ms;
-#X obj 612 143 resonator2~ 10;
-#X text 68 32 The [resonator2~] object from ELSE is actually a variant of [vcf~]. Note that [vcf~] has a constant gain at 0dB \, but [resonator~] changes the gain according to the resonance paramter. Like [resonant~] \, this resonating parameter is in t60! We'll also get back to this filter later when studying other resonators. For now \, note that we need to give it quite low resonant values so the output doesn't get too high., f 69;
-#X text 68 124 This is not a very well suited filter for filtering incoming signals as it can resonate quite easily and output singal with quite a high volume. As well see later \, this filter is suited for resonating from excitation signals such as an impulse. It is also the basis of the [damp.osc~] object \, by the way and more details about this will also come later in this tutorial., f 69;
-#X connect 0 0 15 2;
-#X connect 1 0 15 1;
-#X connect 2 0 15 0;
-========
 #X connect 15 0 14 0;
 #X restore 722 185 pd output;
 #X obj 785 160 hsl 128 15 0 1 0 0 empty ganho empty -2 -8 0 10 #dcdcdc #000000 #000000 0 1;
@@ -529,15 +500,9 @@
 #X connect 0 0 17 2;
 #X connect 1 0 17 0;
 #X connect 2 0 17 1;
->>>>>>>> 2802eb099692b602ced872f0b6b5778f3806320e:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/6.resonator/2.[resonator2~].pd
 #X connect 3 0 1 0;
 #X connect 6 0 7 2;
 #X connect 8 0 7 3;
 #X connect 12 0 0 0;
-<<<<<<<< HEAD:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/3.resonator/2.[resonator2~].pd
-#X connect 15 0 7 0;
-#X connect 15 1 7 1;
-========
 #X connect 17 0 7 0;
 #X connect 17 1 7 1;
->>>>>>>> 2802eb099692b602ced872f0b6b5778f3806320e:Documentation/Live-Electronics-Tutorial/Part.06-Filters(Basic)/27-Filters.types/2.Filter.Types/2.Resonant/6.resonator/2.[resonator2~].pd
