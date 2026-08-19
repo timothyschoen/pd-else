@@ -4,16 +4,20 @@ SRC_DIR="$1"
 TARGET_OS="$2"
 TARGET_OS_ARCH="$3"
 CC_LAUNCHER="$4"
+MACOS_DEPLOYMENT_TARGET="$5"
 
 [ "$TARGET_OS_ARCH" = "none" ] && TARGET_OS_ARCH=""
 [ "$CC_LAUNCHER" = "none" ] && CC_LAUNCHER=""
+[ "$MACOS_DEPLOYMENT_TARGET" = "none" ] && MACOS_DEPLOYMENT_TARGET=""
 
 # Variables
 FFMPEG_DIR="ffmpeg-7.0.1"
 
 # Define platform-specific configurations
 if [[ $TARGET_OS == "Darwin" ]]; then
-    ffmpeg_config="--enable-securetransport --extra-cflags=-mmacosx-version-min=10.9 --extra-ldflags=-mmacosx-version-min=10.9"
+    MACOS_DEPLOYMENT_TARGET="${MACOS_DEPLOYMENT_TARGET:-10.9}"
+    export MACOSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET"
+    ffmpeg_config="--enable-securetransport --extra-cflags=-mmacosx-version-min=$MACOS_DEPLOYMENT_TARGET --extra-ldflags=-mmacosx-version-min=$MACOS_DEPLOYMENT_TARGET"
     ffmpeg_cc="clang -arch x86_64 -arch arm64"
 elif [[ $TARGET_OS == "iOS" ]]; then
     SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
