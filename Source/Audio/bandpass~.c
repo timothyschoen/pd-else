@@ -37,22 +37,22 @@ typedef struct _bandpass{
     double      x_f;
     double      x_reson;
     double      x_a0;
-    double      x_a1;
     double      x_a2;
     double      x_b1;
     double      x_b2;
     t_glist    *x_glist;
     t_float    *x_sigscalar1;
     t_float    *x_sigscalar2;
-    t_symbol   *x_ignore;
 }t_bandpass;
 
 static t_class *bandpass_class;
 
 static void bandpass_freq(t_bandpass *x, t_symbol *s, int ac, t_atom *av){
-    x->x_ignore = s;
+    (void)s;
     if(ac == 0)
         return;
+    if(ac > MAXLEN)
+        ac = MAXLEN;
     for(int i = 0; i < ac; i++)
         x->x_freq_list[i] = atom_getfloat(av+i);
     if(x->x_f_list_size != ac){
@@ -63,9 +63,11 @@ static void bandpass_freq(t_bandpass *x, t_symbol *s, int ac, t_atom *av){
 }
 
 static void bandpass_reson(t_bandpass *x, t_symbol *s, int ac, t_atom *av){
-    x->x_ignore = s;
+    (void)s;
     if(ac == 0)
         return;
+    if(ac > MAXLEN)
+        ac = MAXLEN;
     for(int i = 0; i < ac; i++)
         x->x_reson_list[i] = atom_getfloat(av+i);
     if(x->x_q_list_size != ac){
@@ -155,7 +157,7 @@ static t_int *bandpass_perform(t_int *w){
             else{
                 if(f != x->x_f || reson != x->x_reson)
                     update_coeffs(x, (double)f, (double)reson);
-                yn = x->x_a0 * xn + x->x_a1 * xnm1[j] + x->x_a2 * xnm2[j] + x->x_b1 * ynm1[j] + x->x_b2 * ynm2[j];
+                yn = x->x_a0 * xn + x->x_a2 * xnm2[j] + x->x_b1 * ynm1[j] + x->x_b2 * ynm2[j];
                 out[j*n + i] = yn;
                 xnm2[j] = xnm1[j];
                 xnm1[j] = xn;
@@ -243,8 +245,8 @@ static void *bandpass_free(t_bandpass *x){
 }
 
 static void *bandpass_new(t_symbol *s, int ac, t_atom *av){
+    (void)s;
     t_bandpass *x = (t_bandpass *)pd_new(bandpass_class);
-    x->x_ignore = s;
     float freq = 0.000001;
     float reson = 0;
     int bw = 0;

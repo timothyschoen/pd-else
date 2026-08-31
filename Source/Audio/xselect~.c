@@ -1,16 +1,16 @@
-// porres 2017-2020
+// porres 2017-2024
 
 #include <m_pd.h>
 #include <buffer.h>
-#include <else_alloca.h>
 
 static t_class *xselect_class;
 
-#define INPUTLIMIT 512
-#define HALF_PI (3.14159265358979323846 * 0.5)
+#define INPUTLIMIT 4096
 
 typedef struct _xselect{
     t_object    x_obj;
+    int         x_nchs;
+    int         x_n;
     int         x_channel;
     int         x_lastchannel;
     int         x_ninlets;
@@ -19,8 +19,9 @@ typedef struct _xselect{
     int         x_active_channel[INPUTLIMIT];
     int         x_counter[INPUTLIMIT];
     double      x_fade[INPUTLIMIT];
-    float       *x_in[INPUTLIMIT];
-    t_outlet    *x_out_status;
+    t_float   **x_ins;
+    t_float    *x_out;
+    t_outlet   *x_out_status;
 }t_xselect;
 
 void xselect_float(t_xselect *x, t_floatarg ch){
@@ -36,90 +37,102 @@ void xselect_float(t_xselect *x, t_floatarg ch){
 }
 
 static t_int *xselect_perform(t_int *w){
-    int i;
     t_xselect *x = (t_xselect *)(w[1]);
-    int n = (int)(w[2]);
-    for(i = 0; i < x->x_ninlets; i++)
-        x->x_in[i] = (t_float *)(w[3 + i]); // all inputs
-    float *out = (t_float *)(w[3 + x->x_ninlets]);
-    while(n--){
-        float sum = 0;
-        for(i = 0; i < x->x_ninlets; i++){
-            if(x->x_active_channel[i] && x->x_counter[i] < x->x_fade_in_samps)
-                x->x_counter[i]++;
-            else if(!x->x_active_channel[i] && x->x_counter[i] > 0){
-                x->x_counter[i]--;
-                if(x->x_counter[i] == 0){
+    int n = x->x_n, chs = x->x_nchs;
+    for(int i = 0; i < n; i++){
+        for(int in = 0; in < x->x_ninlets; in++){
+            if(x->x_active_channel[in] && x->x_counter[in] < x->x_fade_in_samps)
+                x->x_counter[in]++;
+            else if(!x->x_active_channel[in] && x->x_counter[in] > 0){
+                x->x_counter[in]--;
+                if(x->x_counter[in] == 0){
                     t_atom at[2];
-                    SETFLOAT(at, i + 1);
-                    SETFLOAT(at+1, 0);
+                    SETFLOAT(at, in + 1);
+                    SETFLOAT(at + 1, 0);
                     outlet_list(x->x_out_status, gensym("list"), 2, at);
                 }
             }
-            x->x_fade[i] = x->x_counter[i] / x->x_fade_in_samps;
-            x->x_fade[i] = sin(x->x_fade[i] * HALF_PI); // equal power
-            sum += *x->x_in[i]++ * x->x_fade[i];
+            x->x_fade[in] = x->x_fade_in_samps ? x->x_counter[in] / x->x_fade_in_samps : 1;
+            x->x_fade[in] = read_sintab(x->x_fade[in] * 0.25);
         }
-        *out++ = sum;
+        for(int j = 0; j < chs; j++){
+            double sum = 0;
+            for(int in = 0; in < x->x_ninlets; in++)
+                sum += x->x_ins[in][j*n + i] * x->x_fade[in];
+            x->x_out[j*n + i] = sum;
+        }
     }
-    return(w + 4 + x->x_ninlets);
+    return(w+2);
 }
 
-static void xselect_dsp(t_xselect *x, t_signal **sp) {
+static void xselect_dsp(t_xselect *x, t_signal **sp){
+    x->x_n = sp[0]->s_n;
     x->x_sr_khz = sp[0]->s_sr * 0.001;
-    int i, count = x->x_ninlets + 3;
-    
-    t_int* sigvec = ALLOCA(t_int, count);
-    sigvec[0] = (t_int)x; // 1st => object
-    sigvec[1] = (t_int)sp[0]->s_n; // 2nd => block (n)
-    for(i = 2; i < count; i++) // ins/out
-        sigvec[i] = (t_int)sp[i-2]->s_vec;
-    dsp_addv(xselect_perform, count, (t_int*)sigvec);
-    FREEA(sigvec, t_int, count);
+    t_signal **sigp = sp;
+    x->x_nchs = sp[0]->s_nchans;
+    signal_setmultiout(&sp[x->x_ninlets], x->x_nchs);
+    for(int i = 0; i < x->x_ninlets; i++){
+        if(sp[i]->s_nchans != x->x_nchs){
+            post("[xselect~]: multichannel inputs don't match");
+            dsp_add_zero(sp[x->x_ninlets]->s_vec, x->x_nchs * x->x_n);
+            return;
+        }
+        x->x_ins[i] = (*sigp++)->s_vec;
+    }
+    x->x_out = (*sigp)->s_vec;
+    dsp_add(xselect_perform, 1, x);
 }
 
 static void xselect_time(t_xselect *x, t_floatarg ms){
     double last_fade_in_samps = x->x_fade_in_samps;
     ms = ms < 0 ? 0 : ms;
     x->x_fade_in_samps = x->x_sr_khz * ms;
-    for(int i = 0; i < x->x_ninlets; i++)
-        if(x->x_counter[i]) // adjust counters
-            x->x_counter[i] = x->x_counter[i] / last_fade_in_samps * x->x_fade_in_samps;
+    for(int i = 0; i < x->x_ninlets; i++){
+        if(x->x_counter[i] && last_fade_in_samps)
+            x->x_counter[i] =
+                x->x_counter[i] / last_fade_in_samps * x->x_fade_in_samps;
+    }
 }
 
-static void *xselect_new(t_symbol *s, int argc, t_atom *argv){
+void *xselect_free(t_xselect *x){
+    freebytes(x->x_ins, x->x_ninlets * sizeof(*x->x_ins));
+    return(void *)x;
+}
+
+static void *xselect_new(t_symbol *s, int ac, t_atom *av){
     s = NULL;
     t_xselect *x = (t_xselect *)pd_new(xselect_class);
     x->x_sr_khz = sys_getsr() * 0.001;
     t_float ch = 1, ms = 0, init_channel = 0;
     int i;
     int argnum = 0;
-    while(argc > 0){
-        if(argv -> a_type == A_FLOAT){ //if current argument is a float
-            t_float argval = atom_getfloatarg(0, argc, argv);
+    while(ac > 0){
+        if(av -> a_type == A_FLOAT){ // if current argument is a float
+            t_float aval = atom_getfloat(av);
             switch(argnum){
                 case 0:
-                    ch = argval;
+                    ch = aval;
                     break;
                 case 1:
-                    ms = argval;
+                    ms = aval;
                     break;
                 case 2:
-                    init_channel = argval;
+                    init_channel = aval;
                 default:
                     break;
             };
         };
         argnum++;
-        argc--;
-        argv++;
+        ac--;
+        av++;
     };
     x->x_ninlets = ch < 1 ? 1 : ch;
     if(x->x_ninlets > INPUTLIMIT)
         x->x_ninlets = INPUTLIMIT;
+    x->x_ins = getbytes(x->x_ninlets * sizeof(*x->x_ins));
     for(i = 0; i < x->x_ninlets - 1; i++)
         inlet_new(&x->x_obj, &x->x_obj.ob_pd, &s_signal, &s_signal);
-    outlet_new(&x->x_obj, gensym("signal"));
+    outlet_new(&x->x_obj, &s_signal);
     x->x_out_status = outlet_new(&x->x_obj, &s_list);
     ms = ms > 0 ? ms : 0;
     x->x_fade_in_samps = x->x_sr_khz * ms + 1;
@@ -134,8 +147,8 @@ static void *xselect_new(t_symbol *s, int argc, t_atom *argv){
 }
 
 void xselect_tilde_setup(void){
-    xselect_class = class_new(gensym("xselect~"), (t_newmethod)xselect_new, 0,
-        sizeof(t_xselect), CLASS_DEFAULT, A_GIMME, 0);
+    xselect_class = class_new(gensym("xselect~"), (t_newmethod)xselect_new,
+        (t_method)xselect_free, sizeof(t_xselect), CLASS_MULTICHANNEL, A_GIMME, 0);
     class_addfloat(xselect_class, (t_method)xselect_float);
     class_addmethod(xselect_class, nullfn, gensym("signal"), 0);
     class_addmethod(xselect_class, (t_method)xselect_dsp, gensym("dsp"), A_CANT, 0);

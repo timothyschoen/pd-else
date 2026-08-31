@@ -240,8 +240,8 @@ void fbdelay_tilde_setup(void){
     class_addmethod(fbdelay_class, nullfn, gensym("signal"), 0);
     class_addmethod(fbdelay_class, (t_method)fbdelay_dsp, gensym("dsp"), A_CANT, 0);
     class_addmethod(fbdelay_class, (t_method)fbdelay_clear, gensym("clear"), 0);
-    class_addmethod(fbdelay_class, (t_method)fbdelay_size, gensym("size"), A_DEFFLOAT, 0);
-    class_addmethod(fbdelay_class, (t_method)fbdelay_gain, gensym("gain"), A_DEFFLOAT, 0);
-    class_addmethod(fbdelay_class, (t_method)fbdelay_freeze, gensym("freeze"), A_DEFFLOAT, 0);
+    class_addmethod(fbdelay_class, (t_method)fbdelay_size, gensym("size"), A_FLOAT, 0);
+    class_addmethod(fbdelay_class, (t_method)fbdelay_gain, gensym("gain"), A_FLOAT, 0);
+    class_addmethod(fbdelay_class, (t_method)fbdelay_freeze, gensym("freeze"), A_FLOAT, 0);
 }
         
