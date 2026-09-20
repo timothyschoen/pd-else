@@ -8,17 +8,17 @@
 
 #include <m_pd.h>
 
-static t_class *plaits_class;
+static t_class *bd_class;
 
-typedef struct _plaits{
+typedef struct _bd{
     t_object            x_obj;
     t_int               x_n;
     t_int               x_mode;
     t_int               x_k_trig;
     t_float             x_pitch_correction;
-    t_float             x_harmonics;
-    t_float             x_timbre;
-    t_float             x_morph;
+    t_float             x_punch; // (harmonics)
+    t_float             x_tone; // (timbre)
+    t_float             x_decay;
     t_float             x_pitch;
     t_int               x_block_size;
     t_int               x_block_count;
@@ -29,54 +29,54 @@ typedef struct _plaits{
     plaits::Patch       x_patch;
     plaits::Modulations x_modulations;
     char                x_shared_buffer[16384];
-}t_plaits;
+}t_bd;
 
 extern "C"{
-    t_int *plaits_perform(t_int *w);
-    t_int *plaits_perform_midi(t_int *w);
-    void  *plaits_new(t_symbol *s, int ac, t_atom *av);
-    void   plaits_dsp(t_plaits *x, t_signal **sp);
-    void   plaits_free(t_plaits *x);
     void   bassdrum_tilde_setup(void);
-    void   plaits_harmonics(t_plaits *x, t_floatarg f);
-    void   plaits_freq(t_plaits *x, t_floatarg f);
-    void   plaits_level(t_plaits *x, t_floatarg f);
-    void   plaits_mode(t_plaits *x, t_floatarg f);
-    void   plaits_timbre(t_plaits *x, t_floatarg f);
-    void   plaits_morph(t_plaits *x, t_floatarg f);
-    void   plaits_list(t_plaits *x, t_symbol *s, int ac, t_atom *av);
+    t_int *bd_perform(t_int *w);
+    t_int *bd_perform_midi(t_int *w);
+    void  *bd_new(t_symbol *s, int ac, t_atom *av);
+    void   bd_dsp(t_bd *x, t_signal **sp);
+    void   bd_free(t_bd *x);
+    void   bd_punch(t_bd *x, t_floatarg f);
+    void   bd_freq(t_bd *x, t_floatarg f);
+    void   bd_level(t_bd *x, t_floatarg f);
+    void   bd_mode(t_bd *x, t_floatarg f);
+    void   bd_tone(t_bd *x, t_floatarg f);
+    void   bd_decay(t_bd *x, t_floatarg f);
+    void   bd_list(t_bd *x, t_symbol *s, int ac, t_atom *av);
 }
 
-void plaits_freq(t_plaits *x, t_floatarg f){
+void bd_freq(t_bd *x, t_floatarg f){
     x->x_pitch = log2f((f < 0 ? f * -1 : f)/440) + 0.75;
 }
 
-void plaits_bang(t_plaits *x){
+void bd_bang(t_bd *x){
     x->x_k_trig = 1;
 }
 
-void plaits_level(t_plaits *x, t_floatarg f){
+void bd_level(t_bd *x, t_floatarg f){
     x->x_modulations.level = f;
 }
 
-void plaits_mode(t_plaits *x, t_floatarg f){
+void bd_mode(t_bd *x, t_floatarg f){
     x->x_mode = f != 0;
 }
 
-void plaits_harmonics(t_plaits *x, t_floatarg f){
-    x->x_harmonics = f < 0 ? 0 : f > 1 ? 1 : f;
+void bd_punch(t_bd *x, t_floatarg f){
+    x->x_punch = f < 0 ? 0 : f > 1 ? 1 : f;
 }
 
-void plaits_timbre(t_plaits *x, t_floatarg f){
-    x->x_timbre = f < 0 ? 0 : f > 1 ? 1 : f;
+void bd_tone(t_bd *x, t_floatarg f){
+    x->x_tone = f < 0 ? 0 : f > 1 ? 1 : f;
 }
 
-void plaits_morph(t_plaits *x, t_floatarg f){
-    x->x_morph = f < 0 ? 0 : f > 1 ? 1 : f;
+void bd_decay(t_bd *x, t_floatarg f){
+    x->x_decay = f < 0 ? 0 : f > 1 ? 1 : f;
 }
 
-t_int *plaits_perform(t_int *w){
-    t_plaits *x    = (t_plaits *)(w[1]);
+t_int *bd_perform(t_int *w){
+    t_bd *x    = (t_bd *)(w[1]);
     t_sample *trig = (t_sample *)(w[2]);  // trigger
     t_sample *out  = (t_sample *)(w[3]);  // out
     int n = x->x_n; // block size
@@ -104,9 +104,9 @@ t_int *plaits_perform(t_int *w){
     }
     else
         x->x_last_engine_perform++;*/
-    x->x_patch.harmonics = x->x_harmonics;
-    x->x_patch.timbre = x->x_timbre;
-    x->x_patch.morph = x->x_morph;
+    x->x_patch.harmonics = x->x_punch;
+    x->x_patch.timbre = x->x_tone;
+    x->x_patch.morph = x->x_decay;
     for(int j = 0; j < x->x_block_count; j++){
         float trigger_v = trig[nsize*j];
         int trigger = (trigger_v != 0);
@@ -130,53 +130,71 @@ t_int *plaits_perform(t_int *w){
     return(w+4);
 }
 
-void plaits_dsp(t_plaits *x, t_signal **sp){
+void bd_dsp(t_bd *x, t_signal **sp){
     x->x_pitch_correction = log2f(48000.f / sys_getsr());
     x->x_n = sp[0]->s_n;
-    dsp_add(plaits_perform, 3, x, sp[0]->s_vec, sp[1]->s_vec);
+    dsp_add(bd_perform, 3, x, sp[0]->s_vec, sp[1]->s_vec);
 }
 
-void plaits_free(t_plaits *x){
+void bd_free(t_bd *x){
     x->x_voice.FreeEngines();
 }
 
-void *plaits_new(t_symbol *s, int ac, t_atom *av){
+void *bd_new(t_symbol *s, int ac, t_atom *av){
     (void)s;
-    t_plaits *x = (t_plaits *)pd_new(plaits_class);
+    t_bd *x = (t_bd *)pd_new(bd_class);
     stmlib::BufferAllocator allocator(x->x_shared_buffer, sizeof(x->x_shared_buffer));
     x->x_voice.Init(&allocator);
-    int floatarg = 0;
+    int arg = 0;
     x->x_pitch_correction = log2f(48000.f / sys_getsr());
-    x->x_harmonics = x->x_timbre = x->x_morph = 0.5f;
-    x->x_last_engine = x->x_last_engine_perform = 0;
-    x->x_last_n = 0;
-    float pitch = 60;
+    x->x_punch = x->x_tone = x->x_decay = 0.5f;
+    float pitch = 50;
     float lvl = 0.5f;
+    int mode = 0;
     while(ac){
-        if((av)->a_type == A_SYMBOL)
-            goto errstate;
-        else{
-            floatarg = 1;
-            pitch = atom_getfloat(av); // pitch
-            ac--, av++;
-            if(ac && (av)->a_type == A_FLOAT){ // level
-                lvl = atom_getfloat(av);
+        if((av)->a_type == A_SYMBOL){
+            if(arg)
+                goto errstate;
+            else if(atom_getsymbol(av) == gensym("-mode")){
                 ac--, av++;
-                if(ac && (av)->a_type == A_FLOAT){ // harmonics
-                    x->x_harmonics = atom_getfloat(av);
+                if((av)->a_type == A_FLOAT){
+                    x->x_mode = atom_getint(av) != 0;
                     ac--, av++;
-                    if(ac && (av)->a_type == A_FLOAT){ // timbre
-                        x->x_timbre = atom_getfloat(av);
+                }
+                else
+                    goto errstate;
+            }
+            else
+                goto errstate;
+            arg = 1;
+        }
+        else{
+            arg = 1;
+            pitch = atom_getfloat(av); // freq
+            ac--, av++;
+            if(ac && (av)->a_type == A_FLOAT){ // punch (harmonics)
+                x->x_punch = atom_getfloat(av);
+                ac--, av++;
+                if(ac && (av)->a_type == A_FLOAT){ // tone (timbre)
+                    x->x_tone = atom_getfloat(av);
+                    ac--, av++;
+                    if(ac && (av)->a_type == A_FLOAT){ // decay (morph)
+                        x->x_decay = atom_getfloat(av);
                         ac--, av++;
-                        if(ac && (av)->a_type == A_FLOAT){ // morph
-                            x->x_morph = atom_getfloat(av);
+                        if(ac && (av)->a_type == A_FLOAT){ // level
+                            lvl = atom_getfloat(av);
                             ac--, av++;
                         }
                     }
                 }
             }
+            
         }
     }
+    bd_freq(x, pitch);
+    x->x_modulations.level = lvl;
+    x->x_last_n = 0;
+    x->x_last_engine = x->x_last_engine_perform = 0;
     x->x_patch.timbre_modulation_amount = 0.0f;
     x->x_patch.frequency_modulation_amount = 0.0f;
     x->x_patch.morph_modulation_amount = 0.0f;
@@ -189,8 +207,6 @@ void *plaits_new(t_symbol *s, int ac, t_atom *av){
     x->x_modulations.frequency = 0.f;
     x->x_modulations.morph = 0.f;
     x->x_modulations.harmonics = 0.f;
-    x->x_modulations.level = lvl;
-    plaits_freq(x, pitch);
     outlet_new(&x->x_obj, &s_signal);
     return(void *)x;
 errstate:
@@ -199,15 +215,15 @@ errstate:
 }
 
 void bassdrum_tilde_setup(void){
-    plaits_class = class_new(gensym("bassdrum~"), (t_newmethod)plaits_new,
-        (t_method)plaits_free, sizeof(t_plaits), 0, A_GIMME, 0);
-    class_addmethod(plaits_class, (t_method)plaits_dsp, gensym("dsp"), A_CANT, 0);
-    class_addmethod(plaits_class, nullfn, gensym("signal"), A_NULL);
-    class_addbang(plaits_class, plaits_bang);
-    class_addmethod(plaits_class, (t_method)plaits_mode, gensym("mode"), A_FLOAT, 0);
-    class_addmethod(plaits_class, (t_method)plaits_level, gensym("level"), A_FLOAT, 0);
-    class_addmethod(plaits_class, (t_method)plaits_freq, gensym("freq"), A_FLOAT, 0);
-    class_addmethod(plaits_class, (t_method)plaits_harmonics, gensym("punch"), A_FLOAT, 0);
-    class_addmethod(plaits_class, (t_method)plaits_timbre, gensym("tone"), A_FLOAT, 0);
-    class_addmethod(plaits_class, (t_method)plaits_morph, gensym("decay"), A_FLOAT, 0);
+    bd_class = class_new(gensym("bassdrum~"), (t_newmethod)bd_new,
+        (t_method)bd_free, sizeof(t_bd), 0, A_GIMME, 0);
+    class_addmethod(bd_class, (t_method)bd_dsp, gensym("dsp"), A_CANT, 0);
+    class_addmethod(bd_class, nullfn, gensym("signal"), A_NULL);
+    class_addbang(bd_class, bd_bang);
+    class_addmethod(bd_class, (t_method)bd_mode, gensym("mode"), A_FLOAT, 0);
+    class_addmethod(bd_class, (t_method)bd_freq, gensym("freq"), A_FLOAT, 0);
+    class_addmethod(bd_class, (t_method)bd_level, gensym("level"), A_FLOAT, 0);
+    class_addmethod(bd_class, (t_method)bd_punch, gensym("punch"), A_FLOAT, 0);
+    class_addmethod(bd_class, (t_method)bd_tone, gensym("tone"), A_FLOAT, 0);
+    class_addmethod(bd_class, (t_method)bd_decay, gensym("decay"), A_FLOAT, 0);
 }
