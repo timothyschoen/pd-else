@@ -32,7 +32,7 @@ extern "C"{
 }
 
 void bd_freq(t_bd *x, t_floatarg f){
-    x->x_patch.note = 60 + (log2f((f < 0 ? f * -1 : f)/440) + 0.75) * 12.f;
+    x->x_patch.note = 69 + log2f(fabsf(f) / 440.f) * 12.f;
 }
 
 void bd_bang(t_bd *x){
