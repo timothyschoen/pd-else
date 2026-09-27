@@ -19,7 +19,6 @@ typedef struct _plaits{
     t_int               x_n;
     t_int               x_model;
     t_int               x_pitch_mode;
-    t_float             x_pitch_correction;
     t_float             x_harmonics;
     t_float             x_timbre;
     t_float             x_morph;
@@ -339,7 +338,7 @@ t_int *plaits_perform(t_int *w){
                 x->x_modulations.trigger = (trig[x->x_block_size * j] != 0);
             x->x_modulations.level = level[x->x_block_size * j];
         }
-        x->x_patch.note = x->x_transp + (pitch + x->x_pitch_correction) * 12.f;
+        x->x_patch.note = x->x_transp + pitch * 12.f;
         x->x_modulations.timbre = tmod[x->x_block_size * j] * 0.5;
         x->x_modulations.frequency = fmod[x->x_block_size * j] * 60.f;
         x->x_modulations.morph = mmod[x->x_block_size * j] * 0.5;
@@ -355,7 +354,8 @@ t_int *plaits_perform(t_int *w){
 }
 
 void plaits_dsp(t_plaits *x, t_signal **sp){
-    x->x_pitch_correction = log2f(48000.f / sys_getsr());
+    plaits::kSampleRate = (float)sp[0]->s_sr;
+    plaits::a0 = 55.f / plaits::kSampleRate;
     x->x_n = sp[0]->s_n;
     dsp_add(plaits_perform, 10, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec,
         sp[4]->s_vec, sp[5]->s_vec, sp[6]->s_vec, sp[7]->s_vec, sp[8]->s_vec);
@@ -373,7 +373,6 @@ void *plaits_new(t_symbol *s, int ac, t_atom *av){
     x->x_voice.Init(&allocator);
     int floatarg = 0;
     x->x_model = x->x_pitch_mode = x->x_midi_mode = 0;
-    x->x_pitch_correction = log2f(48000.f / sys_getsr());
     x->x_harmonics = x->x_timbre = x->x_morph = x->x_lpg_cutoff = x->x_decay = 0.5f;
     x->x_mod_timbre = x->x_mod_fm = x->x_mod_morph = 0;
     x->x_frequency_active = x->x_timbre_active = false;
