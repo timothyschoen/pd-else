@@ -9,8 +9,6 @@ typedef struct _bd{
     t_object            x_obj;
     t_int               x_mode;
     t_int               x_k_trig;
-    t_float             x_pitch_correction;
-    t_float             x_pitch;
     t_int               x_block_size;
     t_int               x_block_count;
     t_int               x_last_n;
@@ -34,8 +32,7 @@ extern "C"{
 }
 
 void bd_freq(t_bd *x, t_floatarg f){
-    x->x_pitch = log2f((f < 0 ? f * -1 : f)/440) + 0.75;
-    x->x_patch.note = 60 + (x->x_pitch + x->x_pitch_correction) * 12.f;
+    x->x_patch.note = 60 + (log2f((f < 0 ? f * -1 : f)/440) + 0.75) * 12.f;
 }
 
 void bd_bang(t_bd *x){
@@ -105,8 +102,8 @@ t_int *bd_perform(t_int *w){
 }
 
 void bd_dsp(t_bd *x, t_signal **sp){
-    x->x_pitch_correction = log2f(48000.f / sys_getsr());
-    x->x_patch.note = 60 + (x->x_pitch + x->x_pitch_correction) * 12.f;
+    plaits::kSampleRate = (float)sp[0]->s_sr;
+    plaits::a0 = 55.0f / plaits::kSampleRate;
     dsp_add(bd_perform, 4, x, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
 }
 
@@ -116,7 +113,6 @@ void *bd_new(t_symbol *s, int ac, t_atom *av){
     stmlib::BufferAllocator allocator(x->x_shared_buffer, sizeof(x->x_shared_buffer));
     x->x_voice.Init(&allocator);
     int arg = 0;
-    x->x_pitch_correction = log2f(48000.f / sys_getsr());
     float punch = 0.5f, tone = 0.5f, decay = 0.5f, lvl = 0.5f;
     float pitch = 50;
     x->x_mode = 0;

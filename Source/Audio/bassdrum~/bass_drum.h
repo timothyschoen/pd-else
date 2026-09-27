@@ -11,7 +11,8 @@
 
 namespace plaits {
 
-static const float kSampleRate = 48000.0f;
+float kSampleRate = 48000.0f;
+float a0 = 55.f / 48000.0f;
 
 const size_t kMaxBlockSize = 24;
 const size_t kBlockSize = 12;
@@ -19,8 +20,6 @@ const size_t kBlockSize = 12;
 inline float SemitonesToRatio(float semitones) {
   return pow(2, semitones / 12.f);
 }
-
-const float a0 = 55.f / kSampleRate;// it used to divide by 47872.34f ("kCorrectedSampleRate")
 
 inline float NoteToFrequency(float midi_note) {
   midi_note -= 9.0f;
