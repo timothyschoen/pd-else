@@ -145,6 +145,27 @@ function else_gui.setup(class, defs, flags)
     for k, v in pairs(auto_flags) do all_flags[k] = v end
     for k, v in pairs(flags)      do all_flags[k] = v end
 
+    -- ── "$0" handling for symbol fields (opts.dollar) ─────────────────────────
+    -- Pd expands "$0" in object box arguments and in message boxes, so a send,
+    -- receive or array name often reaches us already expanded ("1003-foo").
+    -- Saving that would bake in an id that is different the next time the patch
+    -- is opened, so keep the raw "$0-foo" form in the arguments and expand it
+    -- only where the symbol is actually used.
+    class.raw_symbol = function(self, sym)
+        if type(sym) ~= "string" then return sym end
+        local dz = self:canvas_realizedollar("$0")
+        if dz and dz ~= "" and #sym > #dz and sym:sub(1, #dz) == dz
+           and not sym:sub(#dz + 1, #dz + 1):match("%d") then
+            return "$0" .. sym:sub(#dz + 1)
+        end
+        return sym
+    end
+
+    class.realize_symbol = function(self, sym)
+        if type(sym) ~= "string" or sym == "" or sym == "empty" then return sym end
+        return self:canvas_realizedollar(sym)
+    end
+
     class.init_args = function(self, atoms)
         -- first pass: defaults
         for _, def in ipairs(defs) do
@@ -176,6 +197,12 @@ function else_gui.setup(class, defs, flags)
             local raw = atoms_read(def, positional, slot, self)
             if raw ~= nil then self[def[1]] = raw end
             slot = slot + slot_count(def, self)
+        end
+
+        for _, def in ipairs(defs) do
+            if (def[6] or {}).dollar then
+                self[def[1]] = self:raw_symbol(self[def[1]])
+            end
         end
 
         if self.key then
@@ -304,6 +331,8 @@ function else_gui.setup(class, defs, flags)
                     self[varname] = { v[1], v[2], v[3] }
                 elseif ptype == "combo" then
                     self[varname] = v - 1
+                elseif opts.dollar then
+                    self[varname] = self:raw_symbol(v)
                 else
                     self[varname] = v
                 end
@@ -315,7 +344,8 @@ function else_gui.setup(class, defs, flags)
         -- in_1_<msg> — auto-generated inlet setter, skipped when:
         --   • no type is known (3-field state-only entries)
         --   • the method already exists (user-defined custom handler)
-        if ptype then
+        --   • opts.nomsg is set (the class takes every message itself)
+        if ptype and not opts.nomsg then
             local key = "in_1_" .. msgname
             if not class[key] then
                 class[key] = function(self, atoms)
@@ -330,6 +360,7 @@ function else_gui.setup(class, defs, flags)
                         newval = { tonumber(atoms[1]) or 0, tonumber(atoms[2]) or 0 }
                     else
                         newval = coerce(def, atoms[1])
+                        if opts.dollar then newval = self:raw_symbol(newval) end
                     end
                     self[varname] = newval
                     self:save_args()
