@@ -401,7 +401,7 @@ class BassDrumEngine {
       float* out,
       float* aux,
       size_t size) {
-    const float f0 = NoteToFrequency(parameters.note);
+    const float f0 = parameters.note / kSampleRate;
 
     const float attack_fm_amount = std::min(parameters.harmonics * 4.0f, 1.0f);
     const float self_fm_amount = std::max(
@@ -581,8 +581,8 @@ class Voice {
         internal_envelope_amplitude * \
         decay_envelope_.value() * decay_envelope_.value() * 48.0f,
         1.0f,
-        -119.0f,
-        120.0f);
+        0.f,
+        500.0f);
 
     p.timbre = ApplyModulations(patch.timbre,
         0.0f,
