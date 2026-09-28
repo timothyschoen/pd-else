@@ -429,8 +429,15 @@ void buffer_validate(t_buffer *c, int complain){
             int ch;
             for (ch = 0; ch < c->c_numchans ; ch++){
                 int vsz = c->c_npts;  /* ignore missing arrays */
-                // only complain if can't find first channel (ch = 0)
-                c->c_vectors[ch] = buffer_get(c, c->c_channames[ch], &vsz, 1, !ch && complain);
+                c->c_vectors[ch] = buffer_get(c, c->c_channames[ch], &vsz, 1, 0);
+                if(!ch && !c->c_vectors[ch]){ // check for bufname if 0-bufname isn't
+                    vsz = c->c_npts;          // found, a single channel buffer has no prefix
+                    c->c_vectors[ch] = buffer_get(c, c->c_bufname, &vsz, 1, 0);
+                    //if neither found, post about it if complain
+                    if(!c->c_vectors[ch] && complain)
+                        pd_error(c->c_owner, "no such array '%s' (or '0-%s')",
+                                 c->c_bufname->s_name, c->c_bufname->s_name);
+                };
                 if(vsz < c->c_npts)
                     c->c_npts = vsz;
             };
