@@ -5,9 +5,13 @@
 #ifndef PLAITS_DSP_ENGINE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_ENGINE_H_
 
+<<<<<<<< HEAD:Source/Audio/bassdrum~/plaits/dsp/engine/engine.h
 #include "plaits/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/buffer_allocator.h"
+========
+#include "plaits/stmlib.h"
+>>>>>>>> 7d500343bd5fd6ac2679d68480b5235849abde3b:not yet or removed/plaits-drum/plaits/engine/engine.h
 
 namespace plaits {
 
