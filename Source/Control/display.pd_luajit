@@ -31,7 +31,7 @@ else_gui.setup(display, {
     { "refresh_ms",  100,          nil,         "Refresh (ms)", "int",   {min=10, max=5000, flag="refresh", nomsg=true} },
     { "noflash",     0,            nil,         "No Flash",     "check", {flag="noflash", nomsg=true} },
     { "bgcolor",     pd.bg_color,  "repaint",   "Background",   "color", {frame="Appearance", flag="bgcolor", nomsg=true} },
-    { "flashcolor",  {220,220,255},"repaint",   "Flash",        "color", {frame="Appearance", flag="flashcolor", nomsg=true} },
+    { "flashcolor",  pd.sel_color,"repaint",   "Flash",        "color", {frame="Appearance", flag="flashcolor", nomsg=true} },
     { "fgcolor",     pd.fg_color,  "repaint",   "Text",         "color", {frame="Appearance", flag="fgcolor", nomsg=true} },
 }, {
     ["-noflash"] = function(self, atoms, i)
