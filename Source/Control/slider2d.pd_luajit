@@ -2,35 +2,38 @@ local else_gui = require("else_gui")
 local slider2d = pd.Class:new():register("slider2d")
 
 else_gui.setup(slider2d, {
-    { "width",       127,           "resize",     "Width",        "int",   {frame="Dimensions", min=10, max=4096} },
-    { "height",      127,           "resize",     "Height",       "int",   {frame="Dimensions", min=10, max=4096} },
-    { "xrange",      {-1, 1},       "repaint",    "X Range",      "range", {frame="General", flag="xrange"} },
-    { "yrange",      {-1, 1},       "repaint",    "Y Range",      "range", {frame="General", flag="yrange"} },
+    { "width",       127,           "resize",     "Width",        "int",   {frame="Dimensions", min=10, max=4096, flag="width"} },
+    { "height",      127,           "resize",     "Height",       "int",   {frame="Dimensions", min=10, max=4096, flag="height"} },
+    { "xrange",      {0, 127},      "repaint",    "X Range",      "range", {frame="General", flag="xrange"} },
+    { "yrange",      {0, 127},      "repaint",    "Y Range",      "range", {frame="General", flag="yrange"} },
     { "line",        1,             "repaint",    "Crosshair",    "check", {frame="Appearance", order=4, flag="line"} },
     { "bgcolor",     pd.bg_color,   "repaint",    "Background",   "color", {frame="Appearance", order=1, flag="bgcolor"} },
     { "fgcolor",     pd.fg_color,   "repaint",    "Foreground",   "color", {frame="Appearance", order=2, flag="fgcolor"} },
     { "grid",        0,             "repaint",    "Show grid",    "check", {frame="Appearance", order=2, flag="grid"} },
     { "jump",        0,             nil,          "Jump on Click","check", {frame="General", flag="jump"} },
     { "savestate",   0,             nil,          "Save State",   "check", {frame="General", flag="savestate"} },
+    -- the saved position, in output units like the old abstraction saved it
     { "init_x",      0,             nil,          nil,            "float" },
     { "init_y",      0,             nil,          nil,            "float" },
-    { "send",        "empty",       nil,          "Send",         "text",  {frame="General", flag="send"} },
-    { "receive",     "empty",       "on_receive", "Receive",      "text",  {frame="General", flag="receive"} }
+    { "send",        "empty",       nil,          "Send",         "text",  {frame="General", flag="send", dollar=true} },
+    { "receive",     "empty",       "on_receive", "Receive",      "text",  {frame="General", flag="receive", dollar=true} }
 }, {
+-- these take only the numbers given: what's left out keeps its value
 ["-range"] = function(self, atoms, i)
-        self.xrange[1], self.yrange[1] = tonumber(atoms[i]),   tonumber(atoms[i])
-        self.xrange[2], self.yrange[2] = tonumber(atoms[i+1]), tonumber(atoms[i+1])
-        return 2
+        local v = else_gui.numbers(atoms, i, 2)
+        self.xrange = { v[1] or self.xrange[1], v[2] or self.xrange[2] }
+        self.yrange = { v[1] or self.yrange[1], v[2] or self.yrange[2] }
+        return #v
     end,
 ["-dim"] = function(self, atoms, i)
-        self.width = tonumber(atoms[i])
-        self.height = tonumber(atoms[i+1])
-        return 2
+        local v = else_gui.numbers(atoms, i, 2)
+        self.width, self.height = v[1] or self.width, v[2] or self.height
+        return #v
     end,
 ["-size"] = function(self, atoms, i)
-        self.width = tonumber(atoms[i])
-        self.height = tonumber(atoms[i])
-        return 1
+        local v = else_gui.numbers(atoms, i, 1)
+        self.width, self.height = v[1] or self.width, v[1] or self.height
+        return #v
     end}
 )
 
@@ -42,8 +45,12 @@ function slider2d:initialize(sel, atoms)
 
     self:init_args(atoms)
 
-    self.val_x = (self.savestate == 1) and self.init_x or 0.5
-    self.val_y = (self.savestate == 1) and self.init_y or 0.5
+    self.val_x, self.val_y = 0.5, 0.5
+    if self.savestate ~= 0 then
+        self.val_x = self:to_norm_x(self.init_x)
+        self.val_y = self:to_norm_y(self.init_y)
+        self:clamp()
+    end
 
     self:setup_receive(self.receive)
     self:set_size(self.width, self.height)
@@ -53,24 +60,44 @@ end
 function slider2d:in_1_list(atoms)
     if atoms[1] then self.val_x = self:to_norm_x(tonumber(atoms[1]) or 0) end
     if atoms[2] then self.val_y = self:to_norm_y(tonumber(atoms[2]) or 0) end
-    self:clamp(); self:repaint(); self:output()
+    self:clamp(); self:save_state(); self:repaint(); self:output()
 end
 
 function slider2d:in_1_set(atoms)
     if atoms[1] then self.val_x = self:to_norm_x(tonumber(atoms[1]) or 0) end
     if atoms[2] then self.val_y = self:to_norm_y(tonumber(atoms[2]) or 0) end
-    self:clamp(); self:repaint()
+    self:clamp(); self:save_state(); self:repaint()
+end
+
+local _base_save_args = slider2d.save_args
+
+-- In save state mode the saved position is the current one. It is taken
+-- here, on every save, so that a save for any reason (a new range, a
+-- property) stores it in the units in effect then.
+function slider2d:save_args()
+    if self.savestate ~= 0 and self.val_x then
+        self.init_x = self:from_norm_x(self.val_x)
+        self.init_y = self:from_norm_y(self.val_y)
+    end
+    _base_save_args(self)
+end
+
+-- a new position only changes the arguments in save state mode
+function slider2d:save_state()
+    if self.savestate ~= 0 then self:save_args() end
 end
 
 -- output: denormalize on the way out
+-- While we output, what comes back in through the receive name is dropped,
+-- and an answer to [retrieve] isn't sent (see receive_cb in else_gui).
 function slider2d:output()
-    if self._outputting then return end
+    local outer = self._outputting
     self._outputting = true
     self:outlet(1, "list", { self:from_norm_x(self.val_x), self:from_norm_y(self.val_y) })
-    if self.send ~= "" and self.send ~= "empty" then
-        pd.send(self.send, "list", { self:from_norm_x(self.val_x), self:from_norm_y(self.val_y) })
+    if self.send ~= "" and self.send ~= "empty" and not self._retrieving then
+        pd.send(self:realize_symbol(self.send), "list", { self:from_norm_x(self.val_x), self:from_norm_y(self.val_y) })
     end
-    self._outputting = false
+    self._outputting = outer   -- outputs can nest, so restore
 end
 
 function slider2d:to_norm_x(v)
@@ -114,7 +141,7 @@ function slider2d:in_1_range(atoms)
 end
 
 function slider2d:key(down, name)
-    if name == "Shift_L" then
+    if name == "Shift_L" or name == "Shift_R" then
         if self.dragging then
             local hx, hy = self:val_to_px(self.val_x, self.val_y)
             local scale = (down ~= 0) and 10 or 1
@@ -125,26 +152,23 @@ function slider2d:key(down, name)
     end
 end
 
-function slider2d:setup_receive(sym)
-    self.recv = nil
-    if sym ~= "" and sym ~= "empty" then
-        self.recv = pd.Receive:new():register(self, sym, "receive_cb")
-    end
+function slider2d:finalize()
+    if self.recv then self.recv:destruct() end
 end
 
 function slider2d:on_receive(sym)
     self:setup_receive(sym)
 end
 
-function slider2d:receive_cb(sel, atoms)
-    if     sel == "bang" then self:in_1_bang()
-    elseif sel == "list" then self:in_1_list(atoms)
-    elseif sel == "set"  then self:in_1_set(atoms)
-    end
-end
-
 function slider2d:in_1_bang()
     self:output()
+end
+
+-- "dim <w> <h>" sets both axes at once, like the -dim flag
+function slider2d:in_1_dim(atoms)
+    if atoms[1] then self.width  = math.max(10, math.floor(tonumber(atoms[1]) or self.width))  end
+    if atoms[2] then self.height = math.max(10, math.floor(tonumber(atoms[2]) or self.height)) end
+    self:set_size(self.width, self.height); self:save_args(); self:repaint()
 end
 
 -- "size <f>" sets both axes uniformly
@@ -180,10 +204,7 @@ end
 
 function slider2d:mouse_up()
     self.dragging = false
-    if self.savestate == 1 then
-        self.init_x, self.init_y = self.val_x, self.val_y
-        self:save_args()
-    end
+    self:save_state()
 end
 
 function slider2d:paint(g)

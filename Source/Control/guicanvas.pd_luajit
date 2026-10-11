@@ -17,6 +17,7 @@ function guicanvas:initialize(sel, atoms)
 
     -- drawing state
     self.drawings     = { [0] = {} }   -- layer 0 = base paint
+    self.cleared      = {}             -- layers cleared since the last commit
     self.current_layer = 0
     self.stroke_width  = 2
     self.text_align    = 0             -- TOP_LEFT default
@@ -31,14 +32,27 @@ end
 
 -- ─── Layer management ─────────────────────────────────────────────────────────
 
+-- every layer up to the one asked for is made (see ensure_layer), so a
+-- layer number is kept to this
+local MAX_LAYER = 63
+
+-- pd.lua paints the base layer through `paint` and scans for paint_layer_N
+-- starting at N = 2, so our layer n lives in paint_layer_(n + 1).
+local function layer_method(n)
+    return "paint_layer_" .. (n + 1)
+end
+
+-- A full repaint in pd.lua stops at the first paint_layer_N that is missing,
+-- so every layer below n is created too, or n would never be repainted.
 function guicanvas:ensure_layer(n)
-    if not self.drawings[n] then
-        self.drawings[n] = {}
-    end
-    -- layers >= 1 need a paint_layer_N method
-    if n >= 1 and not self["paint_layer_" .. n] then
-        self["paint_layer_" .. n] = function(obj, g)
-            obj:render_layer(g, n)
+    for i = 0, n do
+        if not self.drawings[i] then
+            self.drawings[i] = {}
+        end
+        if i >= 1 and not self[layer_method(i)] then
+            self[layer_method(i)] = function(obj, g)
+                obj:render_layer(g, i)
+            end
         end
     end
 end
@@ -54,29 +68,29 @@ function guicanvas:in_1(sel, atoms)
     -- layer selection
     if sel == "layer" and #atoms >= 1 then
         local n = math.floor(tonumber(atoms[1]) or 0)
-        self.current_layer = math.max(0, n)
+        self.current_layer = math.max(0, math.min(MAX_LAYER, n))
         self:ensure_layer(self.current_layer)
         return
     end
 
-    -- commit: repaint the current layer
+    -- commit: repaint the current layer, and any layer cleared since the
+    -- last commit so that it goes blank on screen too
     if sel == "end" or sel == "bang" then
-        if self.current_layer == 0 then
-            self:repaint()
-        else
-            self:repaint(self.current_layer)
+        self.cleared[self.current_layer] = true
+        for n in pairs(self.cleared) do
+            self:repaint(n + 1)      -- pd.lua counts the base layer as 1
         end
+        self.cleared = {}
         return
     end
 
     -- clear
     if sel == "clear" then
-        if #atoms >= 1 then
-            local n = math.floor(tonumber(atoms[1]) or 0)
-            self.drawings[n] = {}
-        else
-            self.drawings[self.current_layer] = {}
-        end
+        local n = self.current_layer
+        if #atoms >= 1 then n = math.floor(tonumber(atoms[1]) or 0) end
+        if n < 0 or n > MAX_LAYER then return end
+        self.drawings[n] = {}
+        self.cleared[n] = true
         return
     end
 
@@ -84,14 +98,15 @@ function guicanvas:in_1(sel, atoms)
     if sel == "clearall" then
         for k in pairs(self.drawings) do
             self.drawings[k] = {}
+            self.cleared[k] = true
         end
         return
     end
 
     -- size
     if sel == "size" and #atoms >= 2 then
-        self.width  = math.max(10, math.floor(tonumber(atoms[1]) or self.width))
-        self.height = math.max(10, math.floor(tonumber(atoms[2]) or self.height))
+        self.width  = self:limited("width",  math.floor(tonumber(atoms[1]) or self.width))
+        self.height = self:limited("height", math.floor(tonumber(atoms[2]) or self.height))
         self:set_size(self.width, self.height)
         self:save_args(); self:repaint()
         return
@@ -182,6 +197,34 @@ function guicanvas:in_1(sel, atoms)
         return
     end
 
+    -- arc x y w h start end [style]
+    -- Angles are in degrees, 0 at the top, increasing clockwise.
+    -- 'stroke' draws the arc itself, 'fill' fills the pie slice.
+    -- The arc is drawn in steps, so it is kept to one full turn, which
+    -- is all there is to draw: an endless one would never finish.
+    if sel == "arc" and #atoms >= 6 then
+        local from = tonumber(atoms[5]) or 0
+        local to   = tonumber(atoms[6]) or 0
+        if from ~= from or math.abs(from) == math.huge or to ~= to then return end
+        self:push({ type = "arc",
+            x = tonumber(atoms[1]) or 0, y = tonumber(atoms[2]) or 0,
+            w = tonumber(atoms[3]) or 0, h = tonumber(atoms[4]) or 0,
+            from = from, to = from + math.max(-360, math.min(360, to - from)),
+            style = tostring(atoms[7] or "stroke"), lw = self.stroke_width })
+        return
+    end
+
+    -- quad x1 y1 cx cy x2 y2  (quadratic bezier)
+    if sel == "quad" and #atoms >= 6 then
+        self:push({ type = "quad", lw = self.stroke_width,
+            points = {
+                { tonumber(atoms[1]) or 0, tonumber(atoms[2]) or 0 },
+                { tonumber(atoms[3]) or 0, tonumber(atoms[4]) or 0 },
+                { tonumber(atoms[5]) or 0, tonumber(atoms[6]) or 0 },
+            }})
+        return
+    end
+
     -- curve x1 y1 cx1 cy1 cx2 cy2 x2 y2  (cubic bezier)
     if sel == "curve" and #atoms >= 8 then
         self:push({ type = "curve", lw = self.stroke_width,
@@ -197,7 +240,7 @@ function guicanvas:in_1(sel, atoms)
     -- text <string> x y fontsize [align]
     if sel == "text" and #atoms >= 4 then
         self:push({ type = "text",
-            text = tostring(atoms[1]),
+            text = else_gui.text(atoms[1]),   -- a number as Pd shows it
             x = tonumber(atoms[2]) or 0,
             y = tonumber(atoms[3]) or 0,
             size = tonumber(atoms[4]) or 12,
@@ -215,12 +258,17 @@ function guicanvas:in_1(sel, atoms)
     end
 
     -- svg <filepath_or_markup> x y
+    -- pdlua's draw_svg takes the SVG text itself, so a file is read here.
     -- Note: Pd atoms cannot contain spaces, so complex inline SVG
     -- must be loaded from a file path.
     if sel == "svg" and #atoms >= 3 then
-        pd.post(tostring(atoms[1]))
+        local data = tostring(atoms[1])
+        if data:sub(1, 1) ~= "<" then
+            data = self:read_file(data)
+            if not data then return end
+        end
         self:push({ type = "svg",
-            data = tostring(atoms[1]),
+            data = data,
             x = tonumber(atoms[2]) or 0,
             y = tonumber(atoms[3]) or 0})
         return
@@ -245,6 +293,22 @@ function guicanvas:in_1(sel, atoms)
         self:push({ type = "reset" })
         return
     end
+end
+
+-- A path relative to the patch, or an absolute one.
+function guicanvas:read_file(path)
+    local full = path
+    if not (path:match("^/") or path:match("^%a:[/\\]")) then
+        full = self._canvaspath .. path
+    end
+    local f = io.open(full, "rb")
+    if not f then
+        self:error("guicanvas: can't open '" .. path .. "'")
+        return nil
+    end
+    local text = f:read("*a")
+    f:close()
+    return text
 end
 
 -- ─── Mouse callbacks ──────────────────────────────────────────────────────────
@@ -286,6 +350,13 @@ function guicanvas:paint(g)
 end
 
 function guicanvas:render_layer(g, layer)
+    -- Every layer draws something, if only an empty rectangle: in Pd
+    -- vanilla, pdlua stacks a layer by raising it above the one under it,
+    -- or the base layer below the one over it, and that fails with a Tcl
+    -- error when the other layer has nothing on the canvas. The base layer
+    -- would then cover the others.
+    g:fill_rect(0, 0, 0, 0)
+
     local cmds = self.drawings[layer]
     if not cmds then return end
 
@@ -330,11 +401,46 @@ function guicanvas:render_layer(g, layer)
                 p:line_to(d.points[i][1], d.points[i][2])
             end
             if d.style == "fill" then
-                p:close_path()
+                p:close()
                 g:fill_path(p)
             else
                 g:stroke_path(p, d.lw)
             end
+
+        elseif t == "arc" then
+            local cx, cy = d.x + d.w / 2, d.y + d.h / 2
+            local rx, ry = d.w / 2, d.h / 2
+            -- degrees clockwise from 12 o'clock -> radians for a y-down canvas
+            local a0 = math.rad(d.from - 90)
+            local a1 = math.rad(d.to   - 90)
+            local steps = math.max(2, math.ceil(math.abs(a1 - a0) / (math.pi / 36)))
+            local function point(i)
+                local a = a0 + (a1 - a0) * i / steps
+                return cx + math.cos(a) * rx, cy + math.sin(a) * ry
+            end
+            local x0, y0 = point(0)
+            local p
+            if d.style == "fill" then
+                p = Path(cx, cy)      -- pie slices start at the centre
+                p:line_to(x0, y0)
+            else
+                p = Path(x0, y0)
+            end
+            for i = 1, steps do
+                p:line_to(point(i))
+            end
+            if d.style == "fill" then
+                p:close()
+                g:fill_path(p)
+            else
+                g:stroke_path(p, d.lw)
+            end
+
+        elseif t == "quad" then
+            local p = Path(d.points[1][1], d.points[1][2])
+            p:quad_to(d.points[2][1], d.points[2][2],
+                      d.points[3][1], d.points[3][2])
+            g:stroke_path(p, d.lw)
 
         elseif t == "curve" then
             local p = Path(d.points[1][1], d.points[1][2])
@@ -351,7 +457,6 @@ function guicanvas:render_layer(g, layer)
             g:draw_image(d.path, d.x, d.y)
 
         elseif t == "svg" then
-            pd.post("DRAW_SVG:" .. d.data)
             g:draw_svg(d.data, d.x, d.y)
 
         elseif t == "translate" then

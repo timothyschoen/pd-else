@@ -2,10 +2,10 @@ local else_gui = require("else_gui")
 local drum_seq  = pd.Class:new():register("drum.seq")
 
 else_gui.setup(drum_seq, {
-    { "tracks",     2,             "on_tracks",   "Tracks",        "int",   {frame="Dimensions", min=1, max=64,  flag="tracks"} },
-    { "slots",      4,             "on_slots",    "Slots",         "int",   {frame="Dimensions", min=1, max=256, flag="slots"}  },
+    { "tracks",     2,             "on_grid",     "Tracks",        "int",   {frame="Dimensions", min=1, max=64,  flag="tracks"} },
+    { "slots",      8,             "on_grid",     "Slots",         "int",   {frame="Dimensions", min=1, max=256, flag="slots"}  },
     { "cell_size",  20,            "on_resize",   "Cell Size",     "int",   {frame="Dimensions", min=4, max=128, flag="size"}   },
-    { "embed",      0,             nil,           "Embed",         "check", {frame="Dimensions", flag="embed" }                 },
+    { "embed",      0,             "save_state",  "Embed",         "check", {frame="Dimensions", flag="embed" }                 },
     -- 11 dummy positional placeholders to match the original arg layout
     { "_d1", 0 }, { "_d2", 0 }, { "_d3", 0 }, { "_d4", 0 }, { "_d5", 0 },
     { "_d6", 0 }, { "_d7", 0 }, { "_d8", 0 }, { "_d9", 0 }, { "_d10", 0 }, { "_d11", 0 },
@@ -25,7 +25,8 @@ else_gui.setup(drum_seq, {
 function drum_seq:initialize(sel, atoms)
     self.inlets   = 1
     self.outlets  = 2
-    self.cur_slot = 0
+    self.cur_slot  = 0   -- the slot the cursor shows: the last one played
+    self.next_slot = 1   -- the slot the next bang plays
 
     -- paint state
     self.paint_val        = nil
@@ -35,12 +36,14 @@ function drum_seq:initialize(sel, atoms)
     self:init_args(atoms)
     self:alloc_grid(self.tracks, self.slots)
 
+    -- The saved grid is laid out by the slot count it was saved with, which
+    -- an old patch may have above our limit: read it by that and crop it,
+    -- rather than let each track run on into the next.
     if self.embed ~= 0 and #self.content > 0 then
-        local n = 1
+        local stride = math.floor((self._unclamped or {}).slots or self.slots)
         for t = 1, self.tracks do
             for s = 1, self.slots do
-                self.grid[t][s] = (self.content[n] or 0) ~= 0 and 1 or 0
-                n = n + 1
+                self.grid[t][s] = (self.content[(t - 1) * stride + s] or 0) ~= 0 and 1 or 0
             end
         end
     end
@@ -72,13 +75,30 @@ function drum_seq:in_1_track(atoms)
     self:save_state(); self:repaint()
 end
 
+-- import <list>: one track after another, separated by "||". The layout of
+-- the message sets the number of tracks and slots.
 function drum_seq:in_1_import(atoms)
-    local n = 1
-    for t = 1, self.tracks do
-        for s = 1, self.slots do
-            self.grid[t][s] = (tonumber(atoms[n]) or 0) ~= 0 and 1 or 0
-            n = n + 1
+    local rows, cur = {}, {}
+    for _, a in ipairs(atoms) do
+        if tostring(a) == "||" then
+            rows[#rows + 1] = cur
+            cur = {}
+        else
+            cur[#cur + 1] = (tonumber(a) or 0) ~= 0 and 1 or 0
         end
+    end
+    if #cur > 0 then rows[#rows + 1] = cur end
+    if #rows == 0 then return end
+
+    local slots = 0
+    for _, r in ipairs(rows) do slots = math.max(slots, #r) end
+    if slots == 0 then return end
+
+    self.tracks = #rows
+    self.slots  = slots
+    self:resize_grid()
+    for t, r in ipairs(rows) do
+        for s = 1, self.slots do self.grid[t][s] = r[s] or 0 end
     end
     self:save_state(); self:repaint()
 end
@@ -91,6 +111,8 @@ function drum_seq:save_state()
                 self.content[#self.content + 1] = self.grid[t][s]
             end
         end
+    else
+        self.content = {}
     end
     self:save_args()
 end
@@ -103,15 +125,19 @@ function drum_seq:alloc_grid(t, s)
     end
 end
 
-function drum_seq:on_tracks()
+-- A new number of tracks or slots starts again with an empty grid.
+function drum_seq:resize_grid()
+    self.cur_slot  = math.min(self.cur_slot, self.slots)
+    self.next_slot = math.min(self.next_slot, self.slots)
     self:alloc_grid(self.tracks, self.slots)
     self:set_size(self.slots * self.cell_size, self.tracks * self.cell_size)
-    self:save_state(); self:repaint()
 end
 
-function drum_seq:on_slots()
-    self:alloc_grid(self.tracks, self.slots)
-    self:set_size(self.slots * self.cell_size, self.tracks * self.cell_size)
+-- The properties dialog sets every field on OK, and a tracks or slots message
+-- may repeat the size it already has: only a new size clears the grid.
+function drum_seq:on_grid()
+    if #self.grid == self.tracks and #self.grid[1] == self.slots then return end
+    self:resize_grid()
     self:save_state(); self:repaint()
 end
 
@@ -138,12 +164,19 @@ function drum_seq:output_slot()
     end
 end
 
--- Advance cur_slot, output bang on wrap.
-function drum_seq:advance()
-    self.cur_slot = self.cur_slot + 1
-    if self.cur_slot > self.slots then
-        self.cur_slot = 1
+-- Output a slot and make the one after it next. Playing the last slot is
+-- the end of the sequence, reported with a bang right after its values.
+-- The bang goes out the right outlet on its own, and out the left one
+-- alongside the track values, which is where the older [drum.seq]
+-- abstraction sent it. Drop the second outlet line below to keep only the
+-- dedicated outlet.
+function drum_seq:play(s)
+    self.cur_slot  = s
+    self.next_slot = s % self.slots + 1
+    self:output_slot()
+    if s == self.slots then
         self:outlet(2, "bang", {})
+        self:outlet(1, "bang", {})
     end
     self:repaint()
 end
@@ -166,24 +199,21 @@ function drum_seq:mouse_drag(x, y)
     self:save_state(); self:repaint()
 end
 
--- bang: output current slot values then advance
+-- bang: output the current slot's values, then move on to the next slot
 function drum_seq:in_1_bang()
-    self:advance()
-    self:output_slot()
+    self:play(self.next_slot)
 end
 
--- float: set slot and output
+-- float: output that slot, the next bang plays the one after it
 function drum_seq:in_1_float(val)
-    local s = math.max(1, math.min(self.slots, math.floor(tonumber(val) or 1)))
-    self.cur_slot = s
-    self:output_slot()
-    self:repaint()
+    self:play(math.max(1, math.min(self.slots, math.floor(tonumber(val) or 1))))
 end
 
--- goto: set slot without output
+-- goto: the next bang plays this slot; no output
 function drum_seq:in_1_goto(atoms)
     local s = math.max(1, math.min(self.slots, math.floor(tonumber(atoms[1]) or 1)))
-    self.cur_slot = s
+    self.cur_slot  = s
+    self.next_slot = s
     self:repaint()
 end
 
@@ -192,40 +222,36 @@ function drum_seq:in_1_clear()
     self:save_state(); self:repaint()
 end
 
--- export <track>: export one track as list; no arg = export all flat
+-- export <track>: one track as a list; with no argument every track, each
+-- one followed by "||". Both go out with an "export" selector.
 function drum_seq:in_1_export(atoms)
     local t = atoms[1] and math.floor(tonumber(atoms[1]) or 0)
     if t and t >= 1 and t <= self.tracks then
         local out = {}
         for s = 1, self.slots do out[s] = self.grid[t][s] end
-        self:outlet(1, "list", out)
+        self:outlet(1, "export", out)
     else
-        -- export all as flat row-major list
         local out = {}
         for tr = 1, self.tracks do
             for s = 1, self.slots do out[#out + 1] = self.grid[tr][s] end
+            out[#out + 1] = "||"
         end
-        self:outlet(1, "list", out)
+        self:outlet(1, "export", out)
     end
 end
 
 function drum_seq:in_1_tracks(atoms)
-    self.tracks = math.max(1, math.floor(tonumber(atoms[1]) or self.tracks))
-    self:alloc_grid(self.tracks, self.slots)
-    self:set_size(self.slots * self.cell_size, self.tracks * self.cell_size)
-    self:save_state(); self:repaint()
+    self.tracks = self:limited("tracks", math.floor(tonumber(atoms[1]) or self.tracks))
+    self:on_grid()
 end
 
 function drum_seq:in_1_slots(atoms)
-    self.slots = math.max(1, math.floor(tonumber(atoms[1]) or self.slots))
-    self.cur_slot = math.min(self.cur_slot, self.slots)
-    self:alloc_grid(self.tracks, self.slots)
-    self:set_size(self.slots * self.cell_size, self.tracks * self.cell_size)
-    self:save_state(); self:repaint()
+    self.slots = self:limited("slots", math.floor(tonumber(atoms[1]) or self.slots))
+    self:on_grid()
 end
 
 function drum_seq:in_1_size(atoms)
-    self.cell_size = math.max(4, math.floor(tonumber(atoms[1]) or self.cell_size))
+    self.cell_size = self:limited("cell_size", math.floor(tonumber(atoms[1]) or self.cell_size))
     self:set_size(self.slots * self.cell_size, self.tracks * self.cell_size)
     self:save_state(); self:repaint()
 end

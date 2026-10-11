@@ -10,24 +10,19 @@ else_gui.setup(zbiplot, {
     { "zerocolor", {40,40,220},  "repaint",   "Zeros",      "color", {frame="Appearance", flag="zerocolor"} },
 })
 
-local _base_save_args = zbiplot.save_args
-
-function zbiplot:save_args()
-    _base_save_args(self)
-    if self.savestate ~= 0 then
-        local args = self:get_args()
-        -- format: np p1_re p1_im ... nz z1_re z1_im ...
-        args[#args + 1] = #self.poles
-        for _, p in ipairs(self.poles) do
-            args[#args + 1] = p[1]; args[#args + 1] = p[2]
-        end
-        args[#args + 1] = #self.zeros
-        for _, z in ipairs(self.zeros) do
-            args[#args + 1] = z[1]; args[#args + 1] = z[2]
-        end
-        args[#args + 1] = self.gain
-        self:set_args(args)
+-- in save state mode the roots are saved after the declared arguments:
+-- np p1_re p1_im ... nz z1_re z1_im ... gain
+function zbiplot:extra_args(out)
+    if self.savestate == 0 or not self.poles then return end
+    out[#out + 1] = #self.poles
+    for _, p in ipairs(self.poles) do
+        out[#out + 1] = p[1]; out[#out + 1] = p[2]
     end
+    out[#out + 1] = #self.zeros
+    for _, z in ipairs(self.zeros) do
+        out[#out + 1] = z[1]; out[#out + 1] = z[2]
+    end
+    out[#out + 1] = self.gain
 end
 
 local HIT_RADIUS = 8
@@ -45,18 +40,19 @@ function zbiplot:initialize(sel, atoms)
     self.dragging    = false
     self.drag_points = nil
     self.drag_index  = nil
+    self.drag_mirrored = false
     self.shift       = false
     self.last_x      = 0
     self.last_y      = 0
 
-    self:init_args(atoms)
+    local positional, first = self:init_args(atoms)
 
     if self.savestate ~= 0 then
-        self:restore_state(atoms)
+        self:restore_state(positional, first)
     else
         -- two real poles and two real zeros at the origin
-        self.poles = { {0, 0} }
-        self.zeros = { {0, 0} }
+        self.poles = { {0, 0}, {0, 0} }
+        self.zeros = { {0, 0}, {0, 0} }
         self.gain  = 1
     end
 
@@ -64,14 +60,9 @@ function zbiplot:initialize(sel, atoms)
     return true
 end
 
-function zbiplot:restore_state(atoms)
-    -- Strip flags to get the positional tail where embedded data lives.
-    -- The base ARGS consume: size(1) savestate(1) bgcolor(3) fgcolor(3)
-    --                        polecolor(3) zerocolor(3) = 14 positional slots
-    local HEADER = 14
-    local pos = self:extract_positional(atoms)
-
-    local i = HEADER + 1
+-- pos: the positional arguments, as init_args parsed them; the saved roots
+-- start at pos[i], just after the ones it reads
+function zbiplot:restore_state(pos, i)
     local np = math.floor(tonumber(pos[i]) or 0); i = i + 1
     self.poles = {}
     for _ = 1, np do
@@ -94,26 +85,6 @@ function zbiplot:restore_state(atoms)
     -- If nothing was restored, fall back to defaults.
     if #self.poles == 0 then self.poles = { {0, 0}, {0, 0} } end
     if #self.zeros == 0 then self.zeros = { {0, 0}, {0, 0} } end
-end
-
-function zbiplot:extract_positional(atoms)
-    local known_flags = {
-        ["-size"]=1, ["-savestate"]=1,
-        ["-bgcolor"]=3, ["-fgcolor"]=3, ["-polecolor"]=3, ["-zerocolor"]=3,
-    }
-    local pos = {}
-    local i = 1
-    while i <= #atoms do
-        local a = tostring(atoms[i])
-        local consume = known_flags[a]
-        if consume then
-            i = i + 1 + consume
-        else
-            pos[#pos + 1] = atoms[i]
-            i = i + 1
-        end
-    end
-    return pos
 end
 
 function zbiplot:on_resize()
@@ -139,9 +110,14 @@ function zbiplot:canonicalize(points)
     for _, pt in ipairs(points) do
         local re, im = pt[1], math.abs(pt[2])
         local dup = false
-        for _, c in ipairs(canon) do
-            if math.abs(c[1] - re) < CONJ_TOL and math.abs(c[2] - im) < CONJ_TOL then
-                dup = true; break
+        -- a complex pair is stored once, as the root with the positive
+        -- imaginary part. Real roots are never merged: a repeated real root
+        -- is still two roots and has to stay countable as two.
+        if im > CONJ_TOL then
+            for _, c in ipairs(canon) do
+                if math.abs(c[1] - re) < CONJ_TOL and math.abs(c[2] - im) < CONJ_TOL then
+                    dup = true; break
+                end
             end
         end
         if not dup then
@@ -170,12 +146,14 @@ function zbiplot:root_count(canonical)
     return n
 end
 
+-- Coefficients are in [biquad~] order: fb1 fb2 ff1 ff2 ff3, the same order
+-- [else/bicoeff2] emits and [else/biplot] expects.
 function zbiplot:in_1_coeff(atoms)
-    local b0 = tonumber(atoms[1]) or 0
-    local b1 = tonumber(atoms[2]) or 0
-    local b2 = tonumber(atoms[3]) or 0
-    local a1 = tonumber(atoms[4]) or 0
-    local a2 = tonumber(atoms[5]) or 0
+    local a1 = tonumber(atoms[1]) or 0
+    local a2 = tonumber(atoms[2]) or 0
+    local b0 = tonumber(atoms[3]) or 0
+    local b1 = tonumber(atoms[4]) or 0
+    local b2 = tonumber(atoms[5]) or 0
 
     self.gain  = b0
     self.zeros = self:canonicalize(self:quadratic_roots(b0, b1, b2))
@@ -183,14 +161,20 @@ function zbiplot:in_1_coeff(atoms)
     self:save_state(); self:repaint()
 end
 
+-- list: pole coordinates as re/im pairs. Past four values, as the old
+-- [zbiplot] took them, the first four are the poles and the rest the zeros.
 function zbiplot:in_1_list(atoms)
-    self.poles = self:canonicalize(self:parse_pairs(atoms))
+    if #atoms > 4 then
+        self.poles = self:canonicalize(self:parse_pairs({ atoms[1], atoms[2], atoms[3], atoms[4] }))
+        self.zeros = self:canonicalize(self:parse_pairs({ select(5, (table.unpack or unpack)(atoms)) }))
+    else
+        self.poles = self:canonicalize(self:parse_pairs(atoms))
+    end
     self:save_state(); self:repaint()
 end
 
 function zbiplot:in_1_set(atoms)
-    self.poles = self:canonicalize(self:parse_pairs(atoms))
-    self:save_state(); self:repaint()
+    self:in_1_list(atoms)
 end
 
 function zbiplot:in_2_list(atoms)
@@ -233,7 +217,7 @@ end
 
 function zbiplot:find_nearest(px, py)
     local best_dist = HIT_RADIUS
-    local best_coll, best_idx = nil, nil
+    local best_coll, best_idx, best_mirrored = nil, nil, false
 
     for _, entry in ipairs({{ self.poles, "poles" }, { self.zeros, "zeros" }}) do
         local coll = entry[1]
@@ -241,30 +225,32 @@ function zbiplot:find_nearest(px, py)
             local x1, y1 = self:z_to_px(pt[1], pt[2])
             local d1 = math.sqrt((px - x1)^2 + (py - y1)^2)
             if d1 < best_dist then
-                best_dist = d1; best_coll = coll; best_idx = i
+                best_dist = d1; best_coll = coll; best_idx = i; best_mirrored = false
             end
             if pt[2] > CONJ_TOL then
                 local x2, y2 = self:z_to_px(pt[1], -pt[2])
                 local d2 = math.sqrt((px - x2)^2 + (py - y2)^2)
                 if d2 < best_dist then
-                    best_dist = d2; best_coll = coll; best_idx = i
+                    best_dist = d2; best_coll = coll; best_idx = i; best_mirrored = true
                 end
             end
         end
     end
 
-    return best_coll, best_idx
+    -- mirrored: the lower marker of a pair, the conjugate of the stored root
+    return best_coll, best_idx, best_mirrored
 end
 
 function zbiplot:mouse_down(x, y)
-    local coll, idx = self:find_nearest(x, y)
+    local coll, idx, mirrored = self:find_nearest(x, y)
     if not coll then return end
 
-    self.dragging    = true
-    self.drag_points = coll
-    self.drag_index  = idx
-    self.last_x      = x
-    self.last_y      = y
+    self.dragging      = true
+    self.drag_points   = coll
+    self.drag_index    = idx
+    self.drag_mirrored = mirrored
+    self.last_x        = x
+    self.last_y        = y
 end
 
 function zbiplot:mouse_drag(x, y)
@@ -276,10 +262,38 @@ function zbiplot:mouse_drag(x, y)
 
     local dre =  (x - self.last_x) / scale / div
     local dim = -(y - self.last_y) / scale / div
+    -- the lower marker is the conjugate, so it moves the stored root the
+    -- other way
+    if self.drag_mirrored then dim = -dim end
 
-    local pt = self.drag_points[self.drag_index]
+    local pts = self.drag_points
+    local pt  = pts[self.drag_index]
+    local was_pair = pt[2] > CONJ_TOL
     pt[1] = pt[1] + dre
     pt[2] = math.max(0, pt[2] + dim)
+    local is_pair = pt[2] > CONJ_TOL
+
+    -- keep the number of roots the same: a real root pulled off the axis
+    -- becomes a pair, which takes the place of the nearest other real root
+    -- (with no other real root it stays on the axis), and a pair pushed onto
+    -- the axis becomes two coincident real roots
+    if is_pair and not was_pair then
+        local other, dist = nil, math.huge
+        for i, q in ipairs(pts) do
+            if i ~= self.drag_index and q[2] <= CONJ_TOL and math.abs(q[1] - pt[1]) < dist then
+                other, dist = i, math.abs(q[1] - pt[1])
+            end
+        end
+        if other then
+            table.remove(pts, other)
+            if other < self.drag_index then self.drag_index = self.drag_index - 1 end
+        else
+            pt[2] = 0
+        end
+    elseif was_pair and not is_pair then
+        pt[2] = 0
+        table.insert(pts, self.drag_index + 1, { pt[1], 0 })
+    end
 
     self.last_x = x
     self.last_y = y
@@ -325,7 +339,7 @@ function zbiplot:output_coeff()
     local a1 =  p_sum_re
     local a2 = -p_prod_re
 
-    self:outlet(1, "list", { b0, b1, b2, a1, a2 })
+    self:outlet(1, "list", { a1, a2, b0, b1, b2 })
 end
 
 function zbiplot:paint(g)

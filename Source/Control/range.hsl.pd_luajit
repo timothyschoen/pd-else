@@ -4,12 +4,16 @@ local range_hsl  = pd.Class:new():register("range.hsl")
 else_gui.setup(range_hsl, {
     { "width",     127,           "resize",     "Width",      "int",   {frame="Dimensions", min=10, max=4096, flag="width"}   },
     { "height",    20,            "resize",     "Height",     "int",   {frame="Dimensions", min=4,  max=256,  flag="height"}  },
-    { "range",     {0, 127},      nil,          "Range",      "range", {frame="General",    flag="range"}                     },
+    { "range",     {0, 127},      "on_range",   "Range",      "range", {frame="General",    flag="range"}                     },
     { "mode",      0,             nil,          "Base Mode",  "combo", {frame="General",    flag="mode", items={"Move","Select","Extend","Expand"}}},
     { "bgcolor",   pd.bg_color,   "repaint",    "Background", "color", {frame="Appearance", flag="bgcolor"}                   },
     { "fgcolor",   pd.fg_color,   "repaint",    "Range Fill", "color", {frame="Appearance", flag="fgcolor"}                   },
-    { "send",      "empty",        nil,         "Send",       "text",  {frame="General",    flag="send"}                      },
-    { "receive",   "empty",       "on_receive", "Receive",    "text",  {frame="General",    flag="receive"}                   }
+    { "send",      "empty",        nil,         "Send",       "text",  {frame="General",    flag="send", dollar=true}                      },
+    { "receive",   "empty",       "on_receive", "Receive",    "text",  {frame="General",    flag="receive", dollar=true}                   },
+    -- appended so that the positional argument order above never changes
+    { "savestate", 0,             "save_state", "Save State", "check", {frame="General",    flag="savestate"}                 },
+    { "init_lo",   0,             nil,          nil,          "float"                                                        },
+    { "init_hi",   0,             nil,          nil,          "float"                                                        }
 })
 
 function range_hsl:initialize(sel, atoms)
@@ -24,13 +28,26 @@ function range_hsl:initialize(sel, atoms)
 
     self:init_args(atoms)
 
-    local span = self.range[2] - self.range[1]
-    self.val_lo = self.range[1] + span / 3
-    self.val_hi = self.range[1] + 2 * span / 3
+    if self.savestate ~= 0 then
+        self.val_lo, self.val_hi = self.init_lo, self.init_hi
+        self:clamp_values()
+    else
+        local span = self.range[2] - self.range[1]
+        self.val_lo = self.range[1] + span / 3
+        self.val_hi = self.range[1] + 2 * span / 3
+    end
 
     self:setup_receive(self.receive)
     self:set_size(self.width, self.height)
     return true
+end
+
+-- remember the current span when in save state mode, then save
+function range_hsl:save_state()
+    if self.savestate ~= 0 then
+        self.init_lo, self.init_hi = self.val_lo, self.val_hi
+    end
+    self:save_args()
 end
 
 function range_hsl:in_1_range(atoms)
@@ -39,40 +56,55 @@ function range_hsl:in_1_range(atoms)
         tonumber(atoms[2]) or self.range[2],
     }
     self:clamp_values()
-    self:save_args(); self:repaint()
+    self:save_state(); self:repaint()
 end
 
 function range_hsl:in_1_list(atoms)
     self.val_lo = tonumber(atoms[1]) or self.val_lo
     self.val_hi = tonumber(atoms[2]) or self.val_hi
     self:clamp_values()
-    self:save_args(); self:repaint(); self:output()
+    self:save_state(); self:repaint(); self:output()
 end
 
 function range_hsl:in_1_set(atoms)
     self.val_lo = tonumber(atoms[1]) or self.val_lo
     self.val_hi = tonumber(atoms[2]) or self.val_hi
     self:clamp_values()
-    self:save_args(); self:repaint()
+    self:save_state(); self:repaint()
 end
 
 function range_hsl:on_receive(sym)
     self:setup_receive(sym)
 end
 
+-- a new range from the properties: keep the values inside it
+function range_hsl:on_range()
+    self:clamp_values()
+    self:save_state(); self:repaint()
+end
+
+-- The range in increasing order. The left end is always range[1], so the
+-- range can run backwards; it can also have no width at all.
+function range_hsl:bounds()
+    return math.min(self.range[1], self.range[2]), math.max(self.range[1], self.range[2])
+end
+
 function range_hsl:val_to_px(v)
     local w = select(1, self:get_size())
-    return (v - self.range[1]) / (self.range[2] - self.range[1]) * w
+    local span = self.range[2] - self.range[1]
+    if span == 0 then return 0 end
+    return (v - self.range[1]) / span * w
 end
 
 function range_hsl:px_to_val(x)
     local w = select(1, self:get_size())
     local v = self.range[1] + (x / w) * (self.range[2] - self.range[1])
-    return math.max(self.range[1], math.min(self.range[2], v))
+    local lo, hi = self:bounds()
+    return math.max(lo, math.min(hi, v))
 end
 
 function range_hsl:clamp_values()
-    local lo, hi = self.range[1], self.range[2]
+    local lo, hi = self:bounds()
     self.val_lo = math.max(lo, math.min(hi, self.val_lo))
     self.val_hi = math.max(lo, math.min(hi, self.val_hi))
     if self.val_lo > self.val_hi then
@@ -80,21 +112,20 @@ function range_hsl:clamp_values()
     end
 end
 
+-- While we output, what comes back in through the receive name is dropped,
+-- and an answer to [retrieve] isn't sent (see receive_cb in else_gui).
 function range_hsl:output()
-    if self._outputting then return end
+    local outer = self._outputting
     self._outputting = true
     self:outlet(1, "list", { self.val_lo, self.val_hi })
-    if self.send ~= "empty" and self.send ~= "" then
-        pd.send(self.send, "list", { self.val_lo, self.val_hi })
+    if self.send ~= "empty" and self.send ~= "" and not self._retrieving then
+        pd.send(self:realize_symbol(self.send), "list", { self.val_lo, self.val_hi })
     end
-    self._outputting = false
+    self._outputting = outer   -- outputs can nest, so restore
 end
 
-function range_hsl:setup_receive(sym)
-    self.recv = nil
-    if sym ~= "empty" and sym ~= "" then
-        self.recv = pd.Receive:new():register(self, sym, "receive_cb")
-    end
+function range_hsl:finalize()
+    if self.recv then self.recv:destruct() end
 end
 
 function range_hsl:active_mode()
@@ -115,7 +146,10 @@ end
 
 function range_hsl:mouse_down(x, y)
     self.dragging = true
-    local m = self:active_mode()
+    -- the mode is fixed for the whole drag: each mode sets up its own drag
+    -- state here, which the other modes don't have
+    self.drag_mode = self:active_mode()
+    local m = self.drag_mode
 
     if m == 0 then
         -- Move: record anchor in value space
@@ -146,7 +180,7 @@ end
 
 function range_hsl:mouse_drag(x, y)
     if not self.dragging then return end
-    local m = self:active_mode()
+    local m = self.drag_mode
     local w, h = self:get_size()
     local span_val = self.range[2] - self.range[1]
 
@@ -154,9 +188,8 @@ function range_hsl:mouse_drag(x, y)
         -- Move: translate both endpoints by the pixel delta in value space
         local dx_val = (x - self.drag_down_x) / w * span_val
         local rng_w  = self.drag_down_hi - self.drag_down_lo
-        local new_lo = math.max(self.range[1],
-                        math.min(self.range[2] - rng_w,
-                                 self.drag_down_lo + dx_val))
+        local lo, hi = self:bounds()
+        local new_lo = math.max(lo, math.min(hi - rng_w, self.drag_down_lo + dx_val))
         self.val_lo = new_lo
         self.val_hi = new_lo + rng_w
 
@@ -178,11 +211,12 @@ function range_hsl:mouse_drag(x, y)
     elseif m == 3 then
         -- Expand: drag up = wider, drag down = narrower, centre stays fixed
         local dy       = (y - self.drag_down_y) / 8
-        local scale    = span_val / h
+        local scale    = math.abs(span_val) / h
         local new_half = math.max(0, self.drag_down_half - dy * scale)
         local center   = self.drag_down_center
-        self.val_lo    = math.max(self.range[1], center - new_half)
-        self.val_hi    = math.min(self.range[2], center + new_half)
+        local lo, hi   = self:bounds()
+        self.val_lo    = math.max(lo, center - new_half)
+        self.val_hi    = math.min(hi, center + new_half)
     end
 
     self:clamp_values()
@@ -191,13 +225,7 @@ end
 
 function range_hsl:mouse_up()
     self.dragging = false
-end
-
-function range_hsl:receive_cb(sel, atoms)
-    if     sel == "bang" then self:in_1_bang()
-    elseif sel == "list" then self:in_1_list(atoms)
-    elseif sel == "set"  then self:in_1_set(atoms)
-    end
+    self:save_state()
 end
 
 function range_hsl:in_1_bang()
@@ -208,8 +236,9 @@ function range_hsl:paint(g)
     local w, h  = self:get_size()
     local bg    = self.bgcolor
     local fg    = self.fgcolor
-    local px_lo = self:val_to_px(self.val_lo)
-    local px_hi = self:val_to_px(self.val_hi)
+    -- with a backwards range the low value is the right end
+    local px_lo = math.min(self:val_to_px(self.val_lo), self:val_to_px(self.val_hi))
+    local px_hi = math.max(self:val_to_px(self.val_lo), self:val_to_px(self.val_hi))
 
     -- background
     g:set_color(bg[1], bg[2], bg[3])
