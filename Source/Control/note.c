@@ -154,7 +154,7 @@ static void note_theme_off(t_note *x){
     }
 }
 
-static void note_initialize(t_note *x){
+void note_initialize(t_note *x) {
 //    post("initialize");
     t_binbuf *bb = x->x_obj.te_binbuf;
     int n_args = binbuf_getnatom(bb) - 1; // number of arguments

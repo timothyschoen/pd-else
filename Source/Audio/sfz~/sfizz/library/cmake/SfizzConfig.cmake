@@ -52,7 +52,7 @@ if(WIN32)
 endif()
 
 # Set macOS compatibility level
-if(APPLE)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
 endif()
 
@@ -98,7 +98,7 @@ endif()
 # Add required flags for the builds
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     gw_warn(-Wall -Wextra -Wno-multichar -Werror=return-type -Wno-missing-template-arg-list-after-template-kw)
-    if(PROJECT_SYSTEM_PROCESSOR MATCHES "(i.86|x86_64)")
+    if(PROJECT_SYSTEM_PROCESSOR MATCHES "(i.86|x86_64)" AND NOT PROJECT_SYSTEM_PROCESSOR MATCHES "(arm.*)")
         add_compile_options(-msse2)
     elseif(PROJECT_SYSTEM_PROCESSOR MATCHES "(arm.*)")
         #add_compile_options(-mfpu=neon)
