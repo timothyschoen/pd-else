@@ -6,20 +6,33 @@ set(FFMPEG_LIBS
     "${FFMPEG_OUT_DIR}/libavcodec/libavcodec.a"
     "${FFMPEG_OUT_DIR}/libavutil/libavutil.a"
     "${FFMPEG_OUT_DIR}/libswresample/libswresample.a"
+    "${FFMPEG_OUT_DIR}/libswscale/libswscale.a"
 )
 
 message(STATUS "Configuring ffmpeg")
 file(MAKE_DIRECTORY ${FFMPEG_OUT_DIR})
-string(REGEX REPLACE "^([A-Za-z]):" "/\\1" FFMPEG_TAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-7.0.1.tar.bz2")
-execute_process(
-    COMMAND tar xjf ${FFMPEG_TAR_PATH} -C ${CMAKE_CURRENT_BINARY_DIR}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+set(FFMPEG_TAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ffmpeg-7.0.1.tar.bz2")
+file(ARCHIVE_EXTRACT INPUT "${FFMPEG_TAR_PATH}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 file(REMOVE ${FFMPEG_OUT_DIR}/VERSION) # Causes problems, because there is some header somewhere named just <version>
+
+set(_GENERATOR_PLATFORM "${CMAKE_GENERATOR_PLATFORM}")
+if(NOT _GENERATOR_PLATFORM)
+    set(_GENERATOR_PLATFORM "none")
+endif()
+
+set(_CC_LAUNCHER "${CMAKE_C_COMPILER_LAUNCHER}")
+if(NOT _CC_LAUNCHER)
+    set(_CC_LAUNCHER "none")
+endif()
+
+set(_OSX_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+if(NOT _OSX_DEPLOYMENT_TARGET)
+    set(_OSX_DEPLOYMENT_TARGET "none")
+endif()
 
 add_custom_command(
     OUTPUT ${FFMPEG_LIBS}
-    COMMAND bash -c "${CMAKE_CURRENT_SOURCE_DIR}/build_ffmpeg.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_C_COMPILER_LAUNCHER}"
+    COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/build_ffmpeg.sh" "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_SYSTEM_NAME}" "${_GENERATOR_PLATFORM}" "${_CC_LAUNCHER}" "${_OSX_DEPLOYMENT_TARGET}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Building FFmpeg libraries..."
     VERBATIM
@@ -32,14 +45,18 @@ add_custom_target(
     DEPENDS ${FFMPEG_LIBS}
 )
 
-add_library(ffmpeg INTERFACE)
-target_link_libraries(ffmpeg INTERFACE ${FFMPEG_LIBS} z)
+if(UNIX)
+list(APPEND FFMPEG_LIBS z)
+endif()
+
+file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/null.c)
+add_library(ffmpeg STATIC ${CMAKE_CURRENT_BINARY_DIR}/null.c)
+target_link_libraries(ffmpeg PUBLIC ${FFMPEG_LIBS})
 target_include_directories(ffmpeg INTERFACE ${FFMPEG_OUT_DIR})
 add_dependencies(ffmpeg ffmpeg_deps)
 
 if(WIN32)
-    target_link_libraries(ffmpeg INTERFACE bcrypt ws2_32 secur32)
-    target_link_libraries(ffmpeg INTERFACE -Wl,-Bstatic -lwinpthread -lz -Wl,-Bdynamic)
+    target_link_libraries(ffmpeg PUBLIC bcrypt ws2_32 secur32)
 endif()
 
 # Clean up

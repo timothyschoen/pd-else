@@ -171,7 +171,7 @@ static int knob_vis_check(t_knob *x){
     return(glist_isvisible(x->x_glist) && gobj_shouldvis((t_gobj *)x, x->x_glist));
 }
 
-static void knob_get_snd(t_knob* x){
+void knob_get_snd(t_knob* x){
     if(!x->x_snd_set){ // no send set, search arguments
         t_binbuf *bb = x->x_obj.te_binbuf;
         int n_args = binbuf_getnatom(bb) - 1; // number of arguments
@@ -229,7 +229,7 @@ static void knob_get_snd(t_knob* x){
         x->x_snd_raw = gensym("empty");
 }
 
-static void knob_get_rcv(t_knob* x){
+void knob_get_rcv(t_knob* x){
     if(!x->x_rcv_set){ // no receive set, search arguments
         t_binbuf *bb = x->x_obj.te_binbuf;
         int n_args = binbuf_getnatom(bb) - 1; // number of arguments
@@ -375,7 +375,7 @@ static void knob_update_number(t_knob *x){
 }
 
 // get value from motion/position
-static t_float knob_getfval(t_knob *x){
+t_float knob_getfval(t_knob *x){
     double fval;
     double pos = x->x_pos;
     if(x->x_discrete){ // later just 1 tick case
@@ -2772,6 +2772,7 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_default, gensym("default"), A_GIMME, 0);
     class_addmethod(knob_class, (t_method)knob_arcstart, gensym("arcstart"), A_GIMME, 0);
     class_addmethod(knob_class, (t_method)knob_set, gensym("set"), A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_set, gensym("_set"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_size, gensym("size"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_circular, gensym("circular"), A_FLOAT, 0);
     class_addmethod(knob_class, (t_method)knob_dirty, gensym("dirty"), 0);

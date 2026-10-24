@@ -37,26 +37,95 @@ set(BASEFLAGS
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
     "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+    "-DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}"
+    "-DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}"
+    "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
+    "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+    "-G${CMAKE_GENERATOR}"
     # Add ARM-specific flags
-    "-DSFIZZ_USE_X86_OPTIMIZATIONS=OFF"
-    "-DSFIZZ_DISABLE_X86_OPTIMIZATIONS=ON"
-    "-DSFIZZ_SSE_LEVEL=0"
     "-DSFIZZ_USE_ARM_OPTIMIZATIONS=ON"
     "-DSFIZZ_USE_NEON=ON"
-    "-DSFIZZ_VST_ARCH=arm64"
-    # Pass through the toolchain file
-    "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}"
 )
+
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(MSVC_TARGET_ARCH "-A x64")
+else()
+    set(MSVC_TARGET_ARCH "-A Win32")
+endif()
+endif()
 
 message(STATUS "Configuring sfizz")
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build")
-execute_process(COMMAND ${CMAKE_COMMAND} .. -G${CMAKE_GENERATOR} ${BASEFLAGS} ${MSVC_TARGET_ARCH} OUTPUT_QUIET ERROR_QUIET
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build")
+execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library ${BASEFLAGS} ${MSVC_TARGET_ARCH} ERROR_QUIET OUTPUT_QUIET
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build
 )
 
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(isMultiConfig)
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build/library/lib/$<CONFIG>)
+else()
+set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build/library/lib)
+endif()
 
-set(SFIZZ_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build/library/lib)
-
+if(MSVC)
+set(SFIZZ_LIBS
+    ${SFIZZ_LIB_DIR}/sfizz_static.lib
+    ${SFIZZ_LIB_DIR}/sfizz_internal.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cephes.lib
+    ${SFIZZ_LIB_DIR}/sfizz_filesystem_impl.lib
+    ${SFIZZ_LIB_DIR}/sfizz_fmidi.lib
+    ${SFIZZ_LIB_DIR}/sfizz_hiir_polyphase_iir2designer.lib
+    ${SFIZZ_LIB_DIR}/sfizz_import.lib
+    ${SFIZZ_LIB_DIR}/sfizz_kissfft.lib
+    ${SFIZZ_LIB_DIR}/sfizz_messaging.lib
+    ${SFIZZ_LIB_DIR}/sfizz_parser.lib
+    ${SFIZZ_LIB_DIR}/sfizz_pugixml.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spin_mutex.lib
+    ${SFIZZ_LIB_DIR}/sfizz_spline.lib
+    ${SFIZZ_LIB_DIR}/sfizz_tunings.lib
+    ${SFIZZ_LIB_DIR}/sfizz_cpuid.lib
+    ${SFIZZ_LIB_DIR}/absl_hash.lib
+    ${SFIZZ_LIB_DIR}/absl_strings.lib
+    ${SFIZZ_LIB_DIR}/absl_bad_optional_access.lib
+    ${SFIZZ_LIB_DIR}/absl_bad_variant_access.lib
+    ${SFIZZ_LIB_DIR}/absl_base.lib
+    ${SFIZZ_LIB_DIR}/absl_city.lib
+    ${SFIZZ_LIB_DIR}/absl_civil_time.lib
+    ${SFIZZ_LIB_DIR}/absl_cord.lib
+    ${SFIZZ_LIB_DIR}/absl_cord_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_functions.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_handle.lib
+    ${SFIZZ_LIB_DIR}/absl_cordz_info.lib
+    ${SFIZZ_LIB_DIR}/absl_crc32c.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_cord_state.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_cpu_detect.lib
+    ${SFIZZ_LIB_DIR}/absl_crc_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_debugging_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_demangle_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_exponential_biased.lib
+    ${SFIZZ_LIB_DIR}/absl_graphcycles_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_hashtablez_sampler.lib
+    ${SFIZZ_LIB_DIR}/absl_int128.lib
+    ${SFIZZ_LIB_DIR}/absl_log_severity.lib
+    ${SFIZZ_LIB_DIR}/absl_low_level_hash.lib
+    ${SFIZZ_LIB_DIR}/absl_malloc_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_raw_hash_set.lib
+    ${SFIZZ_LIB_DIR}/absl_raw_logging_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_spinlock_wait.lib
+    ${SFIZZ_LIB_DIR}/absl_stacktrace.lib
+    ${SFIZZ_LIB_DIR}/absl_strings_internal.lib
+    ${SFIZZ_LIB_DIR}/absl_symbolize.lib
+    ${SFIZZ_LIB_DIR}/absl_synchronization.lib
+    ${SFIZZ_LIB_DIR}/absl_throw_delegate.lib
+    ${SFIZZ_LIB_DIR}/absl_time.lib
+    ${SFIZZ_LIB_DIR}/absl_time_zone.lib
+    ${SFIZZ_LIB_DIR}/st_audiofile.lib
+    ${SFIZZ_LIB_DIR}/st_audiofile_formats.lib
+    ${SFIZZ_LIB_DIR}/aiff.lib
+)
+else()
 set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/libsfizz.a
     ${SFIZZ_LIB_DIR}/libsfizz_internal.a
@@ -112,34 +181,22 @@ set(SFIZZ_LIBS
     ${SFIZZ_LIB_DIR}/libst_audiofile_formats.a
     ${SFIZZ_LIB_DIR}/libaiff.a
 )
+endif()
 
 add_custom_target(
-    sfizz
+    sfizz_deps
     ALL
     DEPENDS ${SFIZZ_LIBS}
 )
 
 add_custom_command(
     OUTPUT ${SFIZZ_LIBS}
-    COMMAND ${CMAKE_COMMAND} --build .
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/build
+    COMMAND ${CMAKE_COMMAND} --build . --config $<CONFIG>
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sfizz/library/build
     VERBATIM
 )
 
-add_custom_target(sfizz_build
-    DEPENDS ${SFIZZ_LIBS}
-)
-
-pd_add_external(sfz~ sfz~.c)
-target_link_libraries(sfz_tilde PRIVATE ${SFIZZ_LIBS} else_shared stdc++)
-target_include_directories(sfz_tilde PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
-target_compile_definitions(sfz_tilde PRIVATE MIDI_CC_COUNT=127 SFIZZ_VERSION="1.2.2")
-add_dependencies(sfz_tilde sfizz)
-
-if(UNIX AND NOT APPLE)
-    target_link_libraries(sfz_tilde PUBLIC m)
-endif()
-if(WIN32)
-    target_link_options(sfz_tilde PUBLIC -static-libgcc -static-libstdc++ -static)
-    target_link_libraries(sfz_tilde PUBLIC "ws2_32;iphlpapi;")
-endif()
+add_library(sfizz STATIC ${CMAKE_CURRENT_SOURCE_DIR}/null.cpp)
+target_link_libraries(sfizz PUBLIC ${SFIZZ_LIBS})
+target_include_directories(sfizz INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/sfizz/library/src)
+add_dependencies(sfizz sfizz_deps)
