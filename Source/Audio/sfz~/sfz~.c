@@ -9,6 +9,9 @@ __declspec(dllexport)
 __attribute__((visibility("default")))
 #endif
 
+#define MIDI_CC_COUNT 512
+#define SFIZZ_VERSION "1.2.2"
+
 #include <m_pd.h>
 #include <elsefile.h>
 #include <sfizz.h>

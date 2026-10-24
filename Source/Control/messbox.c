@@ -47,6 +47,7 @@ typedef struct _messbox{
 //    char            *handle_id;
     char            *window_tag;
     char            *all_tag;
+    t_binbuf        *x_state;
 }t_messbox;
 
 static t_class *messbox_class;
@@ -203,33 +204,56 @@ static void messbox_vis(t_gobj *z, t_glist *gl, int vis){
 
 /////////// METHODS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 static void messbox_list(t_messbox* x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    if(!ac){ // bang
-        sys_vgui("pdsend \"%s [string map {\\$0 %s} [%s get 0.0 end]]\"\n",
-            x->x_proxy->x_bind_sym->s_name, x->x_dollzero->s_name, x->text_id);
-        return;
+    s = NULL;
+    
+    t_atom* binbuf_atoms = binbuf_getvec(x->x_state);
+    int binbuf_size = binbuf_getnatom(x->x_state);
+    t_atom* realized_atoms = getbytes(sizeof(t_atom) * binbuf_size);
+    
+    for(int at = 0; at < binbuf_size; at++)
+    {
+        if(binbuf_atoms[at].a_type == A_DOLLAR)
+        {
+            int index = binbuf_atoms[at].a_w.w_index;
+            if(index == 0)
+            {
+                SETSYMBOL(realized_atoms + at, x->x_dollzero);
+            }
+            else {
+                char dollbuf[32] = {'\0'};
+                snprintf(dollbuf, 32, "$%i", index);
+                
+                t_symbol* oldsym = gensym(dollbuf);
+                t_symbol* newsym = binbuf_realizedollsym(oldsym, ac, av, 0);
+                SETSYMBOL(realized_atoms + at, newsym ? newsym : oldsym);
+            }
+        }
+        else if(binbuf_atoms[at].a_type == A_DOLLSYM)
+        {
+            t_symbol* sym = atom_getsymbol(binbuf_atoms + at);
+            if(sym == gensym("$0"))
+            {
+                SETSYMBOL(realized_atoms + at, x->x_dollzero);
+            }
+            else {
+                t_symbol* newsym = binbuf_realizedollsym(sym, ac, av, 0);
+                SETSYMBOL(realized_atoms + at, newsym);
+            }
+        }
+        else {
+            realized_atoms[at] = binbuf_atoms[at];
+        }
     }
-    char buf[MAXPDSTRING];
-    sprintf(buf, "\\$0 %s", x->x_dollzero->s_name);
-    char symbuf[32]; // should be enough?
-    size_t length = MAXPDSTRING - 1, tmplength;
-    length -= strlen(buf);
-    for(int i = 0; i < ac; i++) {
-        sprintf(symbuf, " \\$%i ", i+1);
-        tmplength = strlen(symbuf);
-        length -= tmplength;
-        if(length <= 0)
-            break;
-        strncat(buf, symbuf, tmplength);
-        atom_string(av + i, symbuf, 32);
-        tmplength = strlen(symbuf);
-        length -= tmplength;
-        if(length <= 0)
-            break;
-        strncat(buf, symbuf, tmplength);
+    
+    if(ac && av[0].a_type == A_SYMBOL)
+    {
+        outlet_anything(x->x_obj.ob_outlet, atom_getsymbol(av), binbuf_size == 0 ? 0 : binbuf_size - 1, realized_atoms + 1);
     }
-    sys_vgui("pdsend \"%s [string map {%s} [%s get 0.0 end]]\"\n",
-        x->x_proxy->x_bind_sym->s_name, buf, x->text_id);
+    else {
+        outlet_anything(x->x_obj.ob_outlet, gensym("list"), binbuf_size, realized_atoms);
+    }
+    
+    freebytes(realized_atoms, sizeof(t_atom) * ac);
 }
 
 static void messbox_proxy_anything(t_messbox_proxy* x, t_symbol *s, int ac,
@@ -242,6 +266,7 @@ static void messbox_append(t_messbox* x,  t_symbol *s, int ac, t_atom *av){
     char buf[40];
     size_t length;
     sys_vgui("%s configure -state normal\n", x->text_id);
+    binbuf_add(x->x_state, ac, av);
     if(ac){
         size_t pos;
         for(int i = 0; i < ac; i++){
@@ -283,6 +308,8 @@ static void messbox_set(t_messbox *x, t_symbol *s, int ac, t_atom *av){
         sys_vgui("%s configure -state normal\n", x->text_id);
         sys_vgui("%s delete 0.0 end \n", x->text_id);
     }
+    binbuf_clear(x->x_state);
+    binbuf_restore(x->x_state, ac, av);
     if(ac){
         int i;
         size_t pos;
@@ -475,6 +502,7 @@ static void *messbox_new(t_symbol *s, int ac, t_atom *av){
     x->all_tag = getbytes(strlen(buf)+1); // Tk ID for ALL
     strcpy(x->all_tag, buf);
     
+    x->x_state = binbuf_new();
     sprintf(buf, "messbox%lx", (long unsigned int)x);
     x->tcl_namespace = getbytes(strlen(buf)+1);
     strcpy(x->tcl_namespace, buf);
