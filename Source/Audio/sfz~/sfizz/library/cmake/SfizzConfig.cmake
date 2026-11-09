@@ -52,7 +52,7 @@ if(WIN32)
 endif()
 
 # Set macOS compatibility level
-if(APPLE)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9")
 endif()
 
