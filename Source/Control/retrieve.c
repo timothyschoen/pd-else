@@ -11,8 +11,8 @@ struct _outlet{
     t_symbol        *o_sym;
 };
 
-t_outconnect *outlet_connections(t_outlet *o){ // obj_starttraverseoutlet() replacement
-    return(o ? o->o_connections : 0); // magic
+t_outconnect *outlet_connections(t_outlet *o){
+    return(o ? o->o_connections : 0);
 }
 
 t_outconnect *outlet_nextconnection(t_outconnect *last, t_object **destp, int *innop){
@@ -99,8 +99,8 @@ static int retrieve_prep(t_retrieve *x, t_object *obj){
 	if(x->x_receiver && (x->x_receiver->te_g.g_pd->c_name != gensym("receive")
     && x->x_receiver->te_g.g_pd->c_name != gensym("receiver")))
 		ncons = 1;
-	else{ // not a [receive] object, retrieve connections
-        if(!(x->x_to_retr_con = ocp = outlet_connections(op)))
+	else{ // a [receive] object: traverse past any tracing wrapper
+        if(!(x->x_to_retr_con = ocp = obj_starttraverseoutlet(obj, &op, 0)))
             return(0);
         for(ncons = 0; ocp; ++ncons)
             ocp = outlet_nextconnection(ocp, &dummy, &inno);
@@ -245,7 +245,8 @@ nextremote:
     (x->x_receiver->te_g.g_pd->c_name != gensym("receive") &&
     x->x_receiver->te_g.g_pd->c_name != gensym("receiver"))){
 		*retrievedp = x->x_receiver; // store the receiver itself in the object buffer
-		*retrieveconsp = obj_starttraverseoutlet(x->x_receiver, &goutp, 0);
+		obj_starttraverseoutlet(x->x_receiver, &goutp, 0);
+		*retrieveconsp = outlet_connections(goutp);
 		/* now, we connect the outlet to whatever [retrieve] is connected to
 		   instead (see retrieve_lend) */
 		retrieve_lend(x, x->x_receiver);
@@ -279,7 +280,8 @@ nextremote:
 					/* store the number of outlets (pd has to traverse the outlet list
 					   in order to do this, which is costly for a lot of outlets).*/
 					/* now we get the connection lists for the outlet */
-                    *retrieveconsp++ = obj_starttraverseoutlet(gr, &goutp, 0);
+                    obj_starttraverseoutlet(gr, &goutp, 0);
+                    *retrieveconsp++ = outlet_connections(goutp);
                     /* now connect its outlet to whatever [retrieve]'s outlet is
                     connected to instead (see retrieve_lend) */
                     retrieve_lend(x, gr);
