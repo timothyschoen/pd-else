@@ -379,6 +379,7 @@ static t_int *streamin_perform(t_int *w){
     int n = (int)(w[2]);
     int samples_filled = 0;
     if(x->x_play && x->x_open){
+        int restarted = 0; // set when looping back to the start, cleared once audio arrives
         while (samples_filled < n) {
             if (x->x_out_buffer_index >= x->x_out_buffer_size) {
                 // Need to read and convert more data
@@ -408,6 +409,11 @@ static t_int *streamin_perform(t_int *w){
                         outlet_bang(x->x_o_meta);
                     }
                     if(x->x_loop){
+                        // A stream that has no audio even from the start, like a dropped
+                        // connection, would loop here forever: stop instead
+                        if(restarted)
+                            goto silence;
+                        restarted = 1;
                         if(x->x_play_next){
                             streamin_open(x, gensym("open"), 1, &(t_atom){.a_type = A_SYMBOL, .a_w = { .w_symbol = x->x_play_next }});
                             x->x_play_next = NULL;
@@ -427,6 +433,8 @@ static t_int *streamin_perform(t_int *w){
                         goto silence;
                     }
                 }
+                else
+                    restarted = 0;
             }
             // Fill the output buffer
             while(samples_filled < n && x->x_out_buffer_index < x->x_out_buffer_size){

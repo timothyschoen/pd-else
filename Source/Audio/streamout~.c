@@ -814,6 +814,21 @@ void streamout_banana( void){
 #define streamout_cond_signal(a) 
 #endif
 
+/* Clocks belong to the scheduler thread, so the worker asks that thread to
+   set them. 'obj' is NULL when the object was freed before the message ran. */
+static void streamout_doclockdelay(t_pd *obj, void *clock){
+    if(obj)
+        clock_delay((t_clock *)clock, 0);
+}
+
+static void streamout_child_clockdelay(t_streamout *x, t_clock *clock){
+#ifdef PDINSTANCE
+    pd_queue_mess(x->x_pdinstance, &x->x_obj.ob_pd, clock, streamout_doclockdelay);
+#else
+    pd_queue_mess(pd_this, &x->x_obj.ob_pd, clock, streamout_doclockdelay);
+#endif
+}
+
 static void *streamout_child_main(void *zz){
     t_streamout *x = zz;
 #ifdef PDINSTANCE
@@ -862,12 +877,12 @@ static void *streamout_child_main(void *zz){
     			pute("5\n");
     	    		/* copy back into the instance structure. */
 				x->x_connectstate = 1;
-				clock_delay(x->x_clock_connect, 0);
+				streamout_child_clockdelay(x, x->x_clock_connect);
 				x->x_fd = fd;
 				if(fd < 0){
     	    		x->x_connecterror = fd;
 					x->x_connectstate = 0;
-					clock_delay(x->x_clock_connect, 0);
+					streamout_child_clockdelay(x, x->x_clock_connect);
     	    		pute("connect failed\n");
 					goto lost;
 				}
@@ -875,7 +890,7 @@ static void *streamout_child_main(void *zz){
 					now = time(NULL);
 					x->x_bcdate = pdogg_strdup(ctime(&now)); /*--moo*/
 					x->x_pages = 0;
-					clock_delay(x->x_clock_pages, 0);
+					streamout_child_clockdelay(x, x->x_clock_pages);
 						/* initialise the encoder */
 					if(streamout_start_ogg_encoding(x) == 0){
                         if(0) // verbose
@@ -889,7 +904,7 @@ static void *streamout_child_main(void *zz){
 						post("[streamout~]: connection closed due to initialisation error");
 						x->x_fd = -1;
 						x->x_connectstate = 0;
-						clock_delay(x->x_clock_connect, 0);
+						streamout_child_clockdelay(x, x->x_clock_connect);
     	    			pute("[streamout~]: initialisation failed\n");
 						goto lost;
 					} 
@@ -990,7 +1005,7 @@ lost:
 			if(x->x_requestcode == REQUEST_BUSY)	/* disconnect due to error */
 	    		x->x_requestcode = REQUEST_NOTHING;
 			x->x_connectstate = 0;
-			clock_delay(x->x_clock_connect, 0);
+			streamout_child_clockdelay(x, x->x_clock_connect);
 			x->x_eos = 1;
 			streamout_cond_signal(&x->x_answercondition);
 		}
@@ -1006,7 +1021,7 @@ lost:
 				x->x_fd = -1;
 			}
 			x->x_connectstate = 0;
-			clock_delay(x->x_clock_connect, 0);
+			streamout_child_clockdelay(x, x->x_clock_connect);
 			x->x_requestcode = REQUEST_NOTHING;
 			streamout_cond_signal(&x->x_answercondition);
 			break;
@@ -1359,6 +1374,8 @@ static void streamout_free(t_streamout *x){
     pthread_mutex_unlock(&x->x_mutex);
     if(pthread_join(x->x_childthread, &threadrtn))
         pd_error(x, "streamout_free: join failed");
+    // The worker can't queue anything now; drop what it queued before we free the clocks
+    pd_queue_cancel(&x->x_obj.ob_pd);
     if(0) // verbose
         post("... done.");
     pthread_cond_destroy(&x->x_requestcondition);
