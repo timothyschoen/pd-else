@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <m_pd.h>
+#include "else_color.h"
 #include <g_canvas.h>
 #include <magic.h>
 
@@ -597,9 +598,12 @@ static void scope_linewidth(t_scope *x, t_floatarg f){
     }
 }
 
-static void scope_validate(t_scope *x, t_floatarg v, t_symbol *color, t_floatarg t){
-    int valid = (int)v;
-    int type = (int)t;
+static void scope_validate(t_scope *x, t_symbol *s, int ac, t_atom *av){
+    (void)s;
+    int valid, type;
+    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &type);
+    if(!color)
+        return;
     switch(type){
         case 0:
             if(valid){
@@ -1480,8 +1484,7 @@ void scope_tilde_setup(void){
     class_addmethod(scope_class, (t_method)scope_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(scope_class, (t_method)scope_transparent, gensym("transparent"), A_FLOAT, 0);
     class_addmethod(scope_class, (t_method)scope_receive, gensym("receive"), A_SYMBOL, 0);
-    class_addmethod(scope_class, (t_method)scope_validate, gensym("_validate"),
-        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
+    class_addmethod(scope_class, (t_method)scope_validate, gensym("_validate"), A_GIMME, 0);
     class_addmethod(scope_class, (t_method)scope_ok, gensym("dialog"), A_GIMME, 0);
     class_addmethod(scope_class, (t_method)scope_click, gensym("click"),
         A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, 0);

@@ -2,6 +2,7 @@
 // Primarily based on the knob proposal for Vanilla by Ant1, Porres and others
 
 #include <m_pd.h>
+#include "else_color.h"
 #include <g_canvas.h>
 #include <math.h>
 #include <string.h>
@@ -1265,9 +1266,12 @@ static t_symbol *knob_getcolor(int ac, t_atom *av){
     }
 }
 
-static void knob_validate(t_knob *x, t_floatarg v, t_symbol *color, t_floatarg t){
-    int valid = (int)v;
-    int type = (int)t;
+static void knob_validate(t_knob *x, t_symbol *s, int ac, t_atom *av){
+    (void)s;
+    int valid, type;
+    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &type);
+    if(!color)
+        return;
     switch (type) {
         case 0:
             if (valid){
@@ -2804,8 +2808,7 @@ void knob_setup(void){
     class_addmethod(knob_class, (t_method)knob_reset, gensym("reset"), 0);
     class_addmethod(knob_class, (t_method)knob_learn, gensym("learn"), 0);
     class_addmethod(knob_class, (t_method)knob_forget, gensym("forget"), 0);
-    class_addmethod(knob_class, (t_method)knob_validate, gensym("_validate"),
-        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
+    class_addmethod(knob_class, (t_method)knob_validate, gensym("_validate"), A_GIMME, 0);
     class_addmethod(knob_class, (t_method)knob_mouse_enter, gensym("_mouse_enter"), 0);
     class_addmethod(knob_class, (t_method)knob_mouse_leave, gensym("_mouse_leave"), 0);
     class_addmethod(knob_class, (t_method)knob_dowheel, gensym("_wheel"), A_FLOAT, A_FLOAT, 0);

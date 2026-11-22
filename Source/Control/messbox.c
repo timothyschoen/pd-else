@@ -1,6 +1,7 @@
 // based on entry
 
 #include <m_pd.h>
+#include "else_color.h"
 #include <g_canvas.h>
 #include <string.h>
 #include <stdlib.h>
@@ -533,12 +534,17 @@ static void messbox_send_color_validate(t_messbox *x, const char *color, int whi
     pdgui_vmess(buf, NULL);
 }
 
-static void messbox_validate(t_messbox *x, t_floatarg v, t_symbol *color, t_floatarg which){
-    if(!(int)v){
+static void messbox_validate(t_messbox *x, t_symbol *s, int ac, t_atom *av){
+    (void)s;
+    int valid, which;
+    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &which);
+    if(!color)
+        return;
+    if(!valid){
         pd_error(0, "[messbox] invalid color '%s'", color->s_name);
         return;
     }
-    if((int)which == 0){
+    if(which == 0){
         messbox_parse_hex(x->x_bg, color->s_name);
         sprintf(x->x_bgcolor, "#%2.2x%2.2x%2.2x", x->x_bg[0], x->x_bg[1], x->x_bg[2]);
         if(box_vis_check(x)){
@@ -1050,8 +1056,7 @@ void messbox_setup(void){
     class_addmethod(messbox_class, (t_method)messbox_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, 0);
     class_addmethod(messbox_class, (t_method)messbox_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(messbox_class, (t_method)messbox_apply, gensym("dialog"), A_GIMME, 0);
-    class_addmethod(messbox_class, (t_method)messbox_validate, gensym("_validate"),
-        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
+    class_addmethod(messbox_class, (t_method)messbox_validate, gensym("_validate"), A_GIMME, 0);
     class_addmethod(messbox_class, (t_method)messbox_click, gensym("click"),
         A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, 0);
     class_addmethod(messbox_class, (t_method)messbox_zoom, gensym("zoom"), A_CANT, 0);

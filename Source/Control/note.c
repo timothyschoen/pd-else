@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <m_pd.h>
+#include "else_color.h"
 #include <g_canvas.h>
 #include "s_elseutf8.h"
 #include "else_alloca.h"
@@ -1169,9 +1170,12 @@ static void note_send_color_validate(t_note *x, const char *color, int which){
     pdgui_vmess(buf, NULL);
 }
 
-static void note_validate(t_note *x, t_floatarg v, t_symbol *color, t_floatarg t){
-    int valid = (int)v;
-    int type = (int)t;
+static void note_validate(t_note *x, t_symbol *s, int ac, t_atom *av){
+    (void)s;
+    int valid, type;
+    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &type);
+    if(!color)
+        return;
     if(!valid){
         if(type == 0)
             pd_error(0, "[note] invalid background color '%s'", color->s_name);
@@ -1830,8 +1834,7 @@ void note_setup(void){
     class_addmethod(note_class, (t_method)note_textcolor, gensym("textcolor"), A_GIMME, 0);
     class_addmethod(note_class, (t_method)note_textcolor, gensym("color"), A_GIMME, 0); // old
     class_addmethod(note_class, (t_method)note_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, 0);
-    class_addmethod(note_class, (t_method)note_validate, gensym("_validate"),
-        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
+    class_addmethod(note_class, (t_method)note_validate, gensym("_validate"), A_GIMME, 0);
     class_addmethod(note_class, (t_method)note_transp, gensym("transparent"), A_FLOAT, 0);
     class_addmethod(note_class, (t_method)note_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(note_class, (t_method)note_ok, gensym("ok"), A_GIMME, 0);
