@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <m_pd.h>
-#include "else_color.h"
 #include <m_imp.h>
 #include <g_canvas.h>
 
@@ -740,12 +739,9 @@ static void bicoeff_send_color_validate(t_bicoeff *x, const char *color, int whi
     pdgui_vmess(buf, NULL);
 }
 
-static void bicoeff_validate(t_bicoeff *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid, type;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &type);
-    if(!color)
-        return;
+static void bicoeff_validate(t_bicoeff *x, t_symbol *color, t_floatarg v, t_floatarg t){
+    int valid = (int)v;
+    int type = (int)t;
     switch(type){
         case 0:
             if(valid){
@@ -1404,7 +1400,8 @@ void bicoeff_setup(void){
         A_SYMBOL, A_SYMBOL, A_SYMBOL, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_transparent, gensym("transparent"), A_FLOAT, 0);
-    class_addmethod(bicoeff_class, (t_method)bicoeff_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(bicoeff_class, (t_method)bicoeff_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
     class_addmethod(bicoeff_class, (t_method)bicoeff_apply, gensym("dialog"), A_GIMME, 0);
     bicoeff_widgetbehavior.w_getrectfn  = bicoeff_getrect;
     bicoeff_widgetbehavior.w_displacefn = bicoeff_displace;

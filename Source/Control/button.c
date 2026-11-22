@@ -1,7 +1,6 @@
 // porres 2020-2025
 
 #include <m_pd.h>
-#include "else_color.h"
 #include <g_canvas.h>
 
 static t_class *button_class, *handle_class, *edit_proxy_class;
@@ -156,17 +155,12 @@ static void button_send_color_validate(t_button *x, const char *color, int which
     pdgui_vmess(buf, NULL);
 }
 
-static void button_validate(t_button *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid, which;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &which);
-    if(!color)
-        return;
-    if(!valid){
+static void button_validate(t_button *x, t_symbol *color, t_floatarg v, t_floatarg which){
+    if(!(int)v){
         pd_error(0, "[button] invalid color '%s'", color->s_name);
         return;
     }
-    if(which == 0){ // background
+    if((int)which == 0){ // background
         x->x_bg = color;
         if(!x->x_state && button_vis_check(x))
             button_setbg(x);
@@ -1217,7 +1211,8 @@ void button_setup(void){
     class_addmethod(button_class, (t_method)button_setbgcolor, gensym("bgcolor"), A_GIMME, 0);
     class_addmethod(button_class, (t_method)button_setfgcolor, gensym("fgcolor"), A_GIMME, 0);
     class_addmethod(button_class, (t_method)button_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, 0);
-    class_addmethod(button_class, (t_method)button_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(button_class, (t_method)button_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
     class_addmethod(button_class, (t_method)button_readonly, gensym("readonly"), A_FLOAT, 0);
     class_addmethod(button_class, (t_method)button_oval, gensym("oval"), A_FLOAT, 0);
     class_addmethod(button_class, (t_method)button_transparent, gensym("transparent"), A_FLOAT, 0);

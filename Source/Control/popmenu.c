@@ -1,7 +1,6 @@
 // porres 2025
 
 #include <m_pd.h>
-#include "else_color.h"
 #include <g_canvas.h>
 #include <string.h>
 #include <stdlib.h>
@@ -557,17 +556,12 @@ static void menu_send_color_validate(t_menu *x, const char *color, int which){
     pdgui_vmess(buf, NULL);
 }
 
-static void menu_validate(t_menu *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid, which;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &which);
-    if(!color)
-        return;
-    if(!valid){
+static void menu_validate(t_menu *x, t_symbol *color, t_floatarg v, t_floatarg which){
+    if(!(int)v){
         pd_error(0, "[popmenu] invalid color '%s'", color->s_name);
         return;
     }
-    if(which == 0){ // bg
+    if((int)which == 0){ // bg
         if(x->x_bg != color){
             x->x_bg = color;
             if(vis(x))
@@ -1293,7 +1287,8 @@ void popmenu_setup(void){
     class_addmethod(menu_class, (t_method)menu_savestate, gensym("savestate"), A_FLOAT, 0);
     class_addmethod(menu_class, (t_method)menu_loadbang, gensym("loadbang"), A_DEFFLOAT, 0);
     class_addmethod(menu_class, (t_method)menu_output, gensym("_callback"), A_DEFFLOAT, 0);
-    class_addmethod(menu_class, (t_method)menu_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(menu_class, (t_method)menu_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
     class_addmethod(menu_class, (t_method)menu_apply, gensym("dialog"), A_GIMME, 0);
     class_setpropertiesfn(menu_class, menu_properties);
     edit_proxy_class = class_new(0, 0, 0, sizeof(t_edit_proxy), CLASS_NOINLET | CLASS_PD, 0);

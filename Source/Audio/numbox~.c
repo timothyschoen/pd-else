@@ -1,7 +1,6 @@
 // By Porres and Tim Schoen
 
 #include <m_pd.h>
-#include "else_color.h"
 #include "magic.h"
 #include <g_canvas.h>
 #include <stdlib.h>
@@ -264,17 +263,12 @@ static void numbox_list(t_numbox *x, t_symbol *sym, int ac, t_atom *av){ // get 
         numbox_float(x, numbox_clip(x, x->x_out_val - x->x_inc));
 }
 
-static void numbox_validate(t_numbox *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid, which;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &which);
-    if(!color)
-        return;
-    if(!valid){
+static void numbox_validate(t_numbox *x, t_symbol *color, t_floatarg v, t_floatarg which){
+    if(!(int)v){
         pd_error(0, "[numbox~] invalid color '%s'", color->s_name);
         return;
     }
-    if(which == 0){ // bg
+    if((int)which == 0){ // bg
         if(x->x_bg != color){
             x->x_bg = color;
             numbox_config_bg(x);
@@ -759,7 +753,8 @@ void numbox_tilde_setup(void){
     class_addmethod(numbox_class, (t_method)numbox_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, 0);
     class_addmethod(numbox_class, (t_method)numbox_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(numbox_class, (t_method)numbox_transparent, gensym("transparent"), A_FLOAT, 0);
-    class_addmethod(numbox_class, (t_method)numbox_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(numbox_class, (t_method)numbox_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
     class_addmethod(numbox_class, (t_method)numbox_dialog, gensym("dialog"), A_GIMME, 0);
     numbox_widgetbehavior.w_getrectfn  = numbox_getrect;
     numbox_widgetbehavior.w_displacefn = numbox_displace;
