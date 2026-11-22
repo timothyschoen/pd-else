@@ -1,7 +1,6 @@
 // porres 2020-2026
 
 #include <m_pd.h>
-#include "else_color.h"
 #include <g_canvas.h>
 #include <string.h>
 #include <stdlib.h>
@@ -358,13 +357,8 @@ static void pad_send_color_validate(t_pad *x, const char *color){
     pdgui_vmess(buf, NULL);
 }
 
-static void pad_validate(t_pad *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, NULL);
-    if(!color)
-        return;
-    if(valid){
+static void pad_validate(t_pad *x, t_symbol *color, t_floatarg v){
+    if((int)v){
         x->x_bg = color;
         pad_parse_hex(x, color->s_name);
         pad_setbg(x);
@@ -655,7 +649,7 @@ void pad_setup(void){
     class_addmethod(pad_class, (t_method)pad_width, gensym("width"), A_FLOAT, 0);
     class_addmethod(pad_class, (t_method)pad_height, gensym("height"), A_FLOAT, 0);
     class_addmethod(pad_class, (t_method)pad_color, gensym("color"), A_GIMME, 0);
-    class_addmethod(pad_class, (t_method)pad_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(pad_class, (t_method)pad_validate, gensym("_validate"), A_FLOAT, A_SYMBOL, 0);
     class_addmethod(pad_class, (t_method)pad_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(pad_class, (t_method)pad_transparent, gensym("transparent"), A_FLOAT, 0);
     class_addmethod(pad_class, (t_method)pad_mouserelease, gensym("_mouserelease"), 0);

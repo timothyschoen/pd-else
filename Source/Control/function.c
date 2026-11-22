@@ -3,7 +3,6 @@
 #define MAX_SIZE 1024
 
 #include <m_pd.h>
-#include "else_color.h"
 #include <g_canvas.h>
 #include <buffer.h>
 #include <else_alloca.h>
@@ -840,17 +839,12 @@ static void function_send_color_validate(t_function *x, const char *color, int w
     pdgui_vmess(buf, NULL);
 }
 
-static void function_validate(t_function *x, t_symbol *s, int ac, t_atom *av){
-    (void)s;
-    int valid, which;
-    t_symbol *color = else_parse_color_reply(&x->x_obj.ob_pd, ac, av, &valid, &which);
-    if(!color)
-        return;
-    if(!valid){
+static void function_validate(t_function *x, t_symbol *color, t_floatarg v, t_floatarg which){
+    if(!(int)v){
         pd_error(0, "[function] invalid color '%s'", color->s_name);
         return;
     }
-    if(which == 0){ // bg
+    if((int)which == 0){ // bg
         function_parse_hex(x->x_bgcolor, color->s_name);
         if(function_vis_check(x) && !x->x_transparent){
             t_canvas *cv = glist_getcanvas(x->x_glist);
@@ -1536,7 +1530,8 @@ void function_setup(void){
     class_addmethod(function_class, (t_method)function_colors, gensym("colors"), A_SYMBOL, A_SYMBOL, 0);
     class_addmethod(function_class, (t_method)function_theme, gensym("theme"), A_FLOAT, 0);
     class_addmethod(function_class, (t_method)function_transparent, gensym("transparent"), A_FLOAT, 0);
-    class_addmethod(function_class, (t_method)function_validate, gensym("_validate"), A_GIMME, 0);
+    class_addmethod(function_class, (t_method)function_validate, gensym("_validate"),
+        A_FLOAT, A_SYMBOL, A_FLOAT, 0);
     class_addmethod(function_class, (t_method)function_motion, gensym("motion"), A_FLOAT, A_FLOAT, 0);
     class_addmethod(function_class, (t_method)function_key, gensym("key"), A_FLOAT, 0);
     edit_proxy_class = class_new(0, 0, 0, sizeof(t_edit_proxy), CLASS_NOINLET | CLASS_PD, 0);
