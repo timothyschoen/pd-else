@@ -37,11 +37,8 @@ typedef struct _gaussian{
 static t_class *gaussian_class;
 
 double gaussian_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *gaussian_perform(t_int *w){

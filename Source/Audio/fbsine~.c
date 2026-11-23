@@ -31,11 +31,8 @@ static void fbsine_filter(t_fbsine *x, t_floatarg f){
 }
 
 double fbsine_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *fbsine_perform(t_int *w){

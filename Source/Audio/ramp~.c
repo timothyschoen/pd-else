@@ -105,13 +105,11 @@ static t_int *ramp_perform(t_int *w){
                     x->x_clip = 0;
                     if(phase <= min || phase >= max){
                         if(phase <= min && phase_step < 0){
-                            while(phase <= min)
-                                phase += range;
+                            phase = range > 0 ? phase + range * (floor((min - phase) / range) + 1) : min;
                             clock_delay(x->x_clock, 0); // outlet bang
                         }
                         else if(phase >= max && phase_step > 0){
-                            while(phase >= max)
-                                phase -= range;
+                            phase = range > 0 ? phase - range * (floor((phase - max) / range) + 1) : max;
                             clock_delay(x->x_clock, 0); // outlet bang
                         }
                     }

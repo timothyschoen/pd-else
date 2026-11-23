@@ -73,7 +73,7 @@ static t_int *xmod2_perform(t_int *w){
 static void xmod2_dsp(t_xmod2 *x, t_signal **sp){
     x->x_scale = TWOPI / sp[0]->s_sr;
     int chs = sp[0]->s_nchans;
-    int ch2 = sp[1]->s_nchans, ch3 = sp[2]->s_nchans, ch4 = sp[3]->s_nchans;
+    int ch2 = x->x_ch2 = sp[1]->s_nchans, ch3 = x->x_ch3 = sp[2]->s_nchans, ch4 = x->x_ch4 = sp[3]->s_nchans;
     x->x_n = sp[0]->s_n;
     if(x->x_nchans != chs){
         x->x_x1 = (t_float *)resizebytes(x->x_x1,

@@ -662,7 +662,7 @@ static void messbox_theme(t_messbox *x, t_floatarg f){
 
 static void messbox_bold(t_messbox *x, t_symbol *s, int ac, t_atom *av){
     (void)s;
-    if(av[0].a_type == A_FLOAT){
+    if(ac && av[0].a_type == A_FLOAT){
         float bold = atom_getfloatarg(0, ac, av);
         x->x_font_weight = (int)(bold != 0) ? gensym("bold") : gensym("normal");
         if(box_vis_check(x)){
@@ -676,7 +676,7 @@ static void messbox_bold(t_messbox *x, t_symbol *s, int ac, t_atom *av){
 
 static void messbox_fontsize(t_messbox *x, t_symbol *s, int ac, t_atom *av){
     (void)s;
-    if(av[0].a_type == A_FLOAT){
+    if(ac && av[0].a_type == A_FLOAT){
         float font_size = atom_getfloatarg(0, ac, av);
         x->x_font_size = font_size < 8 ? 8 : (int)font_size;
         if(box_vis_check(x)){

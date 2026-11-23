@@ -59,7 +59,7 @@ static void resonator2_dsp(t_resonator2 *x, t_signal **sp){
     x->x_srkhz = sr * 0.001;
     x->x_convert = TWO_PI / sr;
     int chs = sp[0]->s_nchans;
-    int ch2 = sp[1]->s_nchans, ch3 = sp[2]->s_nchans;
+    int ch2 = x->x_ch2 = sp[1]->s_nchans, ch3 = x->x_ch3 = sp[2]->s_nchans;
     if(x->x_nchans != chs){
         x->x_y1 = (double *)resizebytes(x->x_y1,
             x->x_nchans * sizeof(double), chs * sizeof(double));

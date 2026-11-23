@@ -36,11 +36,8 @@ typedef struct _bltri{
 static t_class *bltri_class;
 
 double bltri_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *bltri_perform(t_int *w){

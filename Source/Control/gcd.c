@@ -24,7 +24,7 @@ float gcd_calculate(float f1, float f2){
 
 static void gcd_list(t_gcd *x, t_symbol *s, int ac, t_atom *av){
     s = NULL;
-    float a = atom_getfloat(av), b = 0;
+    float a = atom_getfloatarg(0, ac, av), b = 0;
     if(!ac) // bang
         outlet_float(x->x_outlet, (t_float)x->x_output);
     else if(ac == 1) // float

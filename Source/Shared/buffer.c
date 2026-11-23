@@ -227,11 +227,8 @@ double read_pantab(double phase){
 double wrap_bufphase(double phase){
     if(!isfinite(phase) || isnan(phase))
         phase = 0;
-    while(phase >= 1)
-        phase -= 1;
-    while(phase < 0)
-        phase += 1;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0);
 }
 
 double read_gausstab(double x){

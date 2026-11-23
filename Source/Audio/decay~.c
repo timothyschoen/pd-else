@@ -91,6 +91,7 @@ static void decay_dsp(t_decay *x, t_signal **sp){
     if((ch2 > 1 && ch2 != x->x_nchans)){
         dsp_add_zero(sp[2]->s_vec, chs*x->x_nblock);
         pd_error(x, "[decay~]: channel sizes mismatch");
+        return;
     }
     dsp_add(decay_perform, 5, x, ch2, sp[0]->s_vec,
         sp[1]->s_vec, sp[2]->s_vec);

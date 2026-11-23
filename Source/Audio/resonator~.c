@@ -120,7 +120,7 @@ static void resonator_dsp(t_resonator *x, t_signal **sp){
     t_float nyq = sp[0]->s_sr / 2;
     x->x_n = sp[0]->s_n;
     int chs = sp[0]->s_nchans;
-    int ch2 = sp[1]->s_nchans, ch3 = sp[2]->s_nchans;
+    int ch2 = x->x_ch2 = sp[1]->s_nchans, ch3 = x->x_ch3 = sp[2]->s_nchans;
     if(x->x_nchans != chs){
         x->x_xnm1 = (double *)resizebytes(x->x_xnm1,
             x->x_nchans * sizeof(double), chs * sizeof(double));

@@ -98,6 +98,7 @@ static void panstereo_dsp(t_panstereo *x, t_signal **sp){
         dsp_add_zero(sp[3]->s_vec, x->x_nchans*x->x_nblock);
         dsp_add_zero(sp[4]->s_vec, x->x_nchans*x->x_nblock);
         pd_error(x, "[pan.stereo~]: channel sizes mismatch");
+        return;
     }
     dsp_add(panstereo_perform, 7, x, ch3, sp[0]->s_vec, sp[1]->s_vec,
         sp[2]->s_vec, sp[3]->s_vec, sp[4]->s_vec);

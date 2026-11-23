@@ -2,6 +2,7 @@
 
 #include <m_pd.h>
 #include <random.h>
+#include <math.h>
 
 typedef struct _velvet{
     t_object    x_obj;
@@ -81,8 +82,9 @@ static t_int *velvet_perform(t_int *w){
             if(phase[j] >= 1.){
                 x->x_1st[j] = 1;
                 x->x_rand[j] = velvet_random(x) * (1 - reg);
-                while(phase[j] >= 1.)
-                    phase[j] -= 1; // wrap phase
+                phase[j] -= floor(phase[j]); // wrap phase
+                if(!(phase[j] < 1)) // inf
+                    phase[j] = 0;
             }
             lastphase[j] = phase[j];
             phase[j] += step;

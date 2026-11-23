@@ -39,11 +39,8 @@ typedef struct _blvsaw{
 static t_class *blvsaw_class;
 
 double blvsaw_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *blvsaw_perform(t_int *w){

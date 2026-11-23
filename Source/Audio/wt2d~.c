@@ -81,11 +81,8 @@ static double wt2d_read(t_wt2d *x, double xpos, int frame, int size, t_word *vp)
 }
 
 double wt2d_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *wt2d_perform(t_int *w){

@@ -301,11 +301,8 @@ static void pm4_idx(t_pm4 *x, t_symbol *s, int ac, t_atom *av){
 }
 
 double pm4_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *pm4_perform(t_int *w){

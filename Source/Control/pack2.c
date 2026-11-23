@@ -88,7 +88,8 @@ static void pack2_inlet_list(t_pack2_inlet *x, t_symbol* s, int ac, t_atom* av){
 
 static void pack2_inlet_set(t_pack2_inlet *x, t_symbol* s, int ac, t_atom* av){
     x->x_ignore = s;
-    pack2_copy(x->x_max, x->x_atoms, ac = 1, av);
+    if(ac)
+        pack2_copy(x->x_max, x->x_atoms, 1, av);
 }
 
 static void *pack2_new(t_symbol *s, int ac, t_atom *av){

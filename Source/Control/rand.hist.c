@@ -87,7 +87,7 @@ static void rand_hist_list(t_rand_hist *x, t_symbol*s, int ac, t_atom *av){
         x->x_probs = (int*)getbytes(x->x_size*sizeof(int));
         x->x_ovalues = (int*)getbytes(x->x_size*sizeof(int));
         for(int i = 0; i < x->x_size; i++){
-            int v = (int)av[i].a_w.w_float;
+            int v = (int)atom_getfloat(av+i);
             *(x->x_probs + i) = v < 0 ? 0 : v;
         }
         memset(x->x_ovalues, 0x0, x->x_size*sizeof(int));
@@ -226,16 +226,19 @@ static t_rand_hist *rand_hist_new(t_symbol *s, int ac, t_atom *av){
     }
     if(ac && av[0].a_type == A_FLOAT)
         x->x_size = ac;
+    if(x->x_size < 1)
+        x->x_size = 1;
     x->x_probs = (int*)getbytes(x->x_size*sizeof(int));
     x->x_ovalues = (int*)getbytes(x->x_size*sizeof(int));
     memset(x->x_ovalues, 0x0, x->x_size*sizeof(int));
     for(int i = 0; i < x->x_size; i++){
         if(ac){
-            *(x->x_probs+i) = (int)av[i].a_w.w_float;
+            int v = (int)atom_getfloat(av+i);
+            *(x->x_probs+i) = v < 0 ? 0 : v;
             ac--;
         }
         else
-            *(x->x_probs+i) = eq;
+            *(x->x_probs+i) = eq < 0 ? 0 : eq;
     }
     if(!x->x_u_mode)
         update_candidates(x);

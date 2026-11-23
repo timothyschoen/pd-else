@@ -87,6 +87,7 @@ static void pan2_dsp(t_pan2 *x, t_signal **sp){
         dsp_add_zero(sp[2]->s_vec, x->x_nchans*x->x_nblock);
         dsp_add_zero(sp[3]->s_vec, x->x_nchans*x->x_nblock);
         pd_error(x, "[pan2~]: channel sizes mismatch");
+        return;
     }
     dsp_add(pan2_perform, 6, x, ch2, sp[0]->s_vec,
         sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec);

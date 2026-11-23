@@ -79,10 +79,12 @@ static t_int *pan_perform(t_int *w){
                 pos = angle/TWO_PI;
                 g = amp;
             }
-            while(pos < 0)
-                pos += 1;
-            while(pos > 1)
-                pos -= 1;
+            if(pos < 0)
+                pos -= floor(pos);
+            else if(pos > 1)
+                pos -= ceil(pos) - 1;
+            if(!(pos <= 1)) // inf and NaN
+                pos = 0;
             pos -= x->x_offset;
             if(spread < 0.1)
                 spread = 0.1;

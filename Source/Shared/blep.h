@@ -207,11 +207,8 @@ static void elliptic_blep_step_samples(t_elliptic_blep *blep, t_float samples) {
 }
 
 static t_float phasewrap(t_float phase){
-    while(phase < 0.0)
-        phase += 1.0;
-    while(phase >= 1.0)
-        phase -= 1.0;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1.0 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_float saw(t_float phase, t_float increment)

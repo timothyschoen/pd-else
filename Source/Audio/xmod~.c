@@ -26,11 +26,8 @@ typedef struct _xmod{
 }t_xmod;
 
 double xmod_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 void xmod_pm(t_xmod *x){
@@ -89,7 +86,7 @@ static t_int *xmod_perform(t_int *w){
 static void xmod_dsp(t_xmod *x, t_signal **sp){
     x->x_sr_rec = 1.0 / (double)sp[0]->s_sr;
     int chs = sp[0]->s_nchans;
-    int ch2 = sp[1]->s_nchans, ch3 = sp[2]->s_nchans, ch4 = sp[3]->s_nchans;
+    int ch2 = x->x_ch2 = sp[1]->s_nchans, ch3 = x->x_ch3 = sp[2]->s_nchans, ch4 = x->x_ch4 = sp[3]->s_nchans;
     x->x_n = sp[0]->s_n;
     if(x->x_nchans != chs){
         x->x_phase1 = (double *)resizebytes(x->x_phase1,

@@ -79,6 +79,10 @@ static void openfile_activate(t_gobj *z, t_glist *glist, int state){
     x->x_rtextactive = state;
 }
 
+static void openfile_delete(t_gobj *z, t_glist *glist){
+    canvas_deletelinesfor(glist, (t_text *)z);
+}
+
 static void openfile_vis(t_gobj *z, t_glist *glist, int vis){
     t_openfile *x = (t_openfile *)z;
     t_rtext *y = glist_getrtext(glist, (t_text *)x, 1);
@@ -130,7 +134,7 @@ static t_widgetbehavior openfile_widgetbehavior ={
     openfile_displace,
     openfile_select,
     openfile_activate,
-    0,
+    openfile_delete,
     openfile_vis,
     openfile_wbclick,
 };
@@ -255,7 +259,7 @@ static void *openfile_new(t_symbol *s, int ac, t_atom *av){
     }
     return(x);
 errstate:
-    pd_error(x, "[openfile]: improper args");
+    pd_error(NULL, "[openfile]: improper args");
     return(NULL);
 }
 

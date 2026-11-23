@@ -163,8 +163,7 @@ static t_int *susloop_perform(t_int *w){
                 else{
                     if(phase < loop_start && phase_step < 0){ // loop
                         float range = loop_end - loop_start;
-                        while(phase < loop_start)
-                            phase += range;
+                        phase = range > 0 ? phase + range * ceil((loop_start - phase) / range) : loop_start;
                     }
                     else if(phase > loop_end && phase_step > 0){ // loop
                         float range = loop_end - loop_start;

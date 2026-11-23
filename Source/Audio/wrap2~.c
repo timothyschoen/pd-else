@@ -37,11 +37,8 @@ static t_int *wrap2_perform(t_int *w){
             if(low == high)
                 output = low;
             else{
-                if(input < low){
-                    output = input;
-                    while(output < low)
-                        output += range;
-                }
+                if(input < low)
+                    output = input - range * floor((input - low) / range);
                 else
                     output = fmod(input - low, range) + low;
             }

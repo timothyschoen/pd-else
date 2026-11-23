@@ -1037,6 +1037,8 @@ static void coll_name(t_messcoll *x, t_symbol *name){
     if(name == &s_)
         post("[messcoll]: empty name to set to");
     t_messcollcommon *cc = (t_messcollcommon *)pd_findbyclass(name, messcollcommon_class);
+    if(cc == x->x_common) // unbinding could free it
+        return;
     if(cc){
         coll_unbind(x, 1);
         x->x_common = cc;

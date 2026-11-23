@@ -38,11 +38,8 @@ typedef struct _pimp{
 static t_class *pimp_class;
 
 double pimp_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *pimp_perform(t_int *w){

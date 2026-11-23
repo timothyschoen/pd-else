@@ -8,6 +8,7 @@ static t_class *canvas_name_class;
 typedef struct canvas_name{
     t_object    x_obj;
     t_symbol   *x_name;
+    t_canvas   *x_canvas;
     t_int       x_env;
 }t_canvas_name;
 
@@ -18,12 +19,12 @@ static void canvas_name_bang(t_canvas_name *x){
 static void canvas_name_depth(t_canvas_name *x, t_floatarg depth){
     t_canvas *canvas;
     if(x->x_env){
-        canvas = canvas_getrootfor(canvas_getcurrent());
+        canvas = canvas_getrootfor(x->x_canvas);
         while(depth-- && canvas->gl_owner)
             canvas = canvas_getrootfor(canvas->gl_owner);
     }
     else{
-        canvas = canvas_getcurrent();
+        canvas = x->x_canvas;
         while(depth-- && canvas && canvas->gl_owner)
             canvas = canvas->gl_owner;
     }
@@ -36,6 +37,7 @@ static void *canvas_name_new(t_symbol *s, int ac, t_atom *av){
     s = NULL;
     t_canvas_name *x = (t_canvas_name *)pd_new(canvas_name_class);
     x->x_env = 0;
+    x->x_canvas = canvas_getcurrent();
     int depth = 0;
     while(ac && av->a_type == A_SYMBOL){
         t_symbol *cursym = atom_getsymbolarg(0, ac, av);

@@ -15,11 +15,8 @@ static t_int *sin_perform(t_int *w){
     t_float *out = (t_float *)(w[3]);
     while(n--){
         double phase = *in++;
-        while(phase >= 1)
-            phase -= 1.;
-        while(phase < 0)
-            phase += 1.;
-        *out++ = read_sintab(phase);
+        phase -= floor(phase);
+        *out++ = read_sintab(phase < 1 ? phase : 0); // 0 for inf and NaN
     }
     return(w+4);
 }

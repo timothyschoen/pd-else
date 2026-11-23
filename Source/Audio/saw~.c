@@ -35,11 +35,8 @@ typedef struct _saw{
 static t_class *saw_class;
 
 double saw_wrap_phase(double phase){
-    while(phase >= 1)
-        phase -= 1.;
-    while(phase < 0)
-        phase += 1.;
-    return(phase);
+    phase -= floor(phase);
+    return(phase < 1 ? phase : 0); // 0 for inf and NaN
 }
 
 static t_int *saw_perform(t_int *w){

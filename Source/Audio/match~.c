@@ -81,7 +81,7 @@ t_int *match_perform(t_int *w){
 
 static void *match_list(t_match *x, t_symbol *s, int argc, t_atom *argv){
     s = NULL;
-    for(int i = 0; i < argc || i < x->x_n_outlets - 1; i++)
+    for(int i = 0; i < x->x_n_outlets - 1; i++)
         x->matches[i] = (double)atom_getfloatarg(i, argc, argv);
     return(NULL);
 }

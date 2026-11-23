@@ -37,10 +37,9 @@ static t_int *panmc_perform(t_int *w){
             pos = angle/TWO_PI;
             g = amp;
         }
-        while(pos < 0)
-            pos += 1;
-        while(pos >= 1)
-            pos -= 1;
+        pos -= floor(pos);
+        if(!(pos < 1)) // inf and NaN
+            pos = 0;
         pos -= x->x_offset;
         if(spread < 0.1)
             spread = 0.1;

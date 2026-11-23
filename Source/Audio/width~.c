@@ -83,6 +83,7 @@ static void width_dsp(t_width *x, t_signal **sp){
         dsp_add_zero(sp[3]->s_vec, x->x_nchans*x->x_nblock);
         dsp_add_zero(sp[4]->s_vec, x->x_nchans*x->x_nblock);
         pd_error(x, "[width~]: channel sizes mismatch");
+        return;
     }
     dsp_add(width_perform, 7, x, ch3, sp[0]->s_vec, sp[1]->s_vec,
         sp[2]->s_vec, sp[3]->s_vec, sp[4]->s_vec);

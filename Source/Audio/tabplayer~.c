@@ -262,7 +262,7 @@ static double tabplayer_interp(t_play *x, int ch, double phase){
     double out = 0.;
     t_word **vectable = x->x_buffer->c_vectors; // ??
     t_word *vp = vectable[ch]; // ??
-    if(vp){
+    if(vp && x->x_npts > 3){ // the interpolation reads 4 points
         float f;
         int maxindex = x->x_npts - 3;
         if(phase < 0 || phase > maxindex)

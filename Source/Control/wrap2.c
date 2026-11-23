@@ -29,11 +29,8 @@ static t_float convert(t_float f, t_float min, t_float max){
         result = f; // if f range, = in
     else{ // wrap
         float range = max - min;
-        if(f < min){
-            result = f;
-            while(result < min)
-                result += range;
-        }
+        if(f < min)
+            result = f - range * floor((f - min) / range);
         else
             result = fmod(f - min, range) + min;
     }
