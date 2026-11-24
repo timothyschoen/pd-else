@@ -1328,6 +1328,9 @@ static void *coll_new(t_symbol *s, int ac, t_atom *av){
     return(x);
 	errstate:
 		pd_error(x, "[messcoll]: improper args");
+        // Don't stay bound to #C, or the next embedded object's data comes here
+        elsefile_free(x->x_filehandle);
+        pd_unbind(&x->x_obj.ob_pd, x->x_bindsym);
 		return(NULL);
 }
 
