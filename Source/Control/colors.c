@@ -70,7 +70,7 @@ static void colors_bang(t_colors *x){
     }
 }
 
-static void colors_valid(t_colors *x, t_floatarg v, t_symbol *c){
+static void colors_valid(t_colors *x, t_symbol *c, t_floatarg v){
     int valid = (int)v;
     if(v){
         strncpy(x->x_color, c->s_name, MAXPDSTRING - 1);
