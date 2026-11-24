@@ -54,6 +54,7 @@ void beat_window(t_beat *x, t_floatarg f){ // window size
 void beat_hop(t_beat *x, t_floatarg f){
     x->x_hopsize = f < MIN_BUFFER_SIZE ? MIN_BUFFER_SIZE : (int)f;
     x->x_vec = (fvec_t *)new_fvec(x->x_hopsize);
+    x->x_pos = 0; // the new buffer can be shorter
     x->x_t = new_aubio_tempo(modelLabels[x->x_mode],
         x->x_wsize, x->x_hopsize, x->x_sr);
 }
@@ -120,7 +121,7 @@ static void *beat_new(t_symbol *s, int ac, t_atom *av){
             if(sym == gensym("-mode")){
                 if(ac && (av)->a_type == A_FLOAT){
                     mode = (int)atom_getfloat(av);
-                    mode = mode < 0 ? 0 : mode > 9 ? 9 : (int)mode;
+                    mode = mode < 0 ? 0 : mode > 8 ? 8 : (int)mode;
                     ac--, av++;
                 }
                 else
