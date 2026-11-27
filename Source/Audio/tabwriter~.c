@@ -328,7 +328,7 @@ static void *tabwriter_new(t_symbol *s, int ac, t_atom *av){
         else
             goto errstate;
     };
-    int chn_n = (int)numchan > BUFFER_MAXCHANS ? BUFFER_MAXCHANS : (int)numchan;
+    int chn_n = !(numchan >= 1) ? 1 : numchan > BUFFER_MAXCHANS ? BUFFER_MAXCHANS : (int)numchan;
     if(name != NULL){
         x->x_buffer = buffer_init((t_class *)x, name, chn_n, 0);
         t_buffer *c = x->x_buffer;
