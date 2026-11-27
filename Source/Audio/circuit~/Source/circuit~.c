@@ -24,6 +24,7 @@ typedef struct _circuit_tilde {
     t_float* x_process_buffer[8];
     int x_process_buffer_size;
     int x_oversample_factor;
+    int x_n;
     
     int x_numin;
     int x_numout;
@@ -61,6 +62,12 @@ void circuit_tilde_reset(t_circuit_tilde *x) {
     circuit_tilde_iter(x, x->x_numiter);
 }
 
+static void circuit_tilde_resize(t_circuit_tilde *x, int size) {
+    for(int i = 0; i < 8; i++)
+        x->x_process_buffer[i] = resizebytes(x->x_process_buffer[i], x->x_process_buffer_size * sizeof(float), size * sizeof(float));
+    x->x_process_buffer_size = size;
+}
+
 void circuit_tilde_oversample(t_circuit_tilde *x, t_float factor) {
     
     unsigned int factor_power_of_2 = 1;
@@ -69,20 +76,17 @@ void circuit_tilde_oversample(t_circuit_tilde *x, t_float factor) {
 
     int error = 0;
     
-    int new_oversample_buffer_size = sys_getblksize() * factor_power_of_2;
-    
     for(int i = 0; i < 8; i++)
     {
         x->x_upsamplers[i] = src_new(SRC_SINC_FASTEST, 1, &error);
         x->x_downsamplers[i] = src_new(SRC_SINC_FASTEST, 1, &error);
-        x->x_process_buffer[i] = resizebytes(x->x_process_buffer[i], x->x_process_buffer_size * sizeof(float), new_oversample_buffer_size * sizeof(float));
         
         src_set_ratio(x->x_upsamplers[i], (double)factor_power_of_2);
         src_set_ratio(x->x_downsamplers[i], 1.0 / (double)factor_power_of_2);
     }
     
     x->x_oversample_factor = factor_power_of_2;
-    x->x_process_buffer_size = new_oversample_buffer_size;
+    circuit_tilde_resize(x, x->x_n * factor_power_of_2);
     
     circuit_tilde_reset(x);
 }
@@ -188,6 +192,11 @@ void circuit_tilde_dsp(t_circuit_tilde *x, t_signal **sp)
         circuit_tilde_reset(x);
     }
 
+    if(sp[0]->s_n != x->x_n) { // the process buffers hold one oversampled block
+        x->x_n = sp[0]->s_n;
+        circuit_tilde_resize(x, x->x_n * x->x_oversample_factor);
+    }
+
     x->x_w_size = sizeof(t_int *) * (sum + 2);
     x->x_w[0] = (t_int*)(x);
     x->x_w[1] = (t_int*)(sp[0]->s_n);
@@ -242,6 +251,7 @@ void *circuit_tilde_new(t_symbol *s, int argc, t_atom *argv)
     x->x_enabled = 1;
     x->x_w_size = 0;
     x->x_w = NULL;
+    x->x_n = sys_getblksize();
     
     circuit_tilde_dcblock(x, dcblock);
     circuit_tilde_iter(x, numiter);
