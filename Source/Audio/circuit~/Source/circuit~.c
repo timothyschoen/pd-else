@@ -78,6 +78,8 @@ void circuit_tilde_oversample(t_circuit_tilde *x, t_float factor) {
     
     for(int i = 0; i < 8; i++)
     {
+        src_delete(x->x_upsamplers[i]);
+        src_delete(x->x_downsamplers[i]);
         x->x_upsamplers[i] = src_new(SRC_SINC_FASTEST, 1, &error);
         x->x_downsamplers[i] = src_new(SRC_SINC_FASTEST, 1, &error);
         
@@ -214,6 +216,13 @@ void circuit_tilde_free(t_circuit_tilde *x)
     for(int i = 0; i < x->x_numout; i++)
     {
         outlet_free(x->x_out[i]);
+    }
+
+    for(int i = 0; i < 8; i++)
+    {
+        src_delete(x->x_upsamplers[i]);
+        src_delete(x->x_downsamplers[i]);
+        freebytes(x->x_process_buffer[i], x->x_process_buffer_size * sizeof(float));
     }
 
     simulator_free(x->x_simulator);
