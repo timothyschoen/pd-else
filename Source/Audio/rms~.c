@@ -73,8 +73,11 @@ static void rms_set(t_sigrms *x, t_floatarg f1, t_floatarg f2){
         hop = size / MAXOVERLAP + 1;
     if(hop < x->x_nblock)
         hop = x->x_nblock;
-    if(!(buf = getbytes(sizeof(t_sample) * (size + INITVSTAKEN))))
+    if(!(buf = resizebytes(x->x_hann, sizeof(t_sample) * (x->x_npoints + x->x_allocforvs),
+            sizeof(t_sample) * (size + x->x_allocforvs)))){
         pd_error(x, "[rms~]: couldn't allocate buffer");
+        return;
+    }
     x->x_hann = buf;
     for(int j = 0; j < x->x_nchs; j++)
         x->x_phase[j] = 0;
@@ -90,7 +93,7 @@ static void rms_set(t_sigrms *x, t_floatarg f1, t_floatarg f2){
         x->x_sumbuf[i] = 0;
     for(i = 0; i < size; i++)
         buf[i] = (1. - cos((2 * 3.14159 * i) / size))/size;
-    for(; i < size+INITVSTAKEN; i++)
+    for(; i < size + x->x_allocforvs; i++)
         buf[i] = 0;
 }
 
