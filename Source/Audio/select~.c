@@ -67,7 +67,7 @@ static void *select_new(t_symbol *s, int ac, t_atom *av){
     if(x->x_n < 1)
         x->x_n = 1;
     if(x->x_sel < 0)
-        x->x_n = 0;
+        x->x_sel = 0;
     x->x_chs = (int *)getbytes(x->x_n * sizeof(*x->x_chs));
     x->x_ins = (t_sample **)getbytes(x->x_n * sizeof(*x->x_ins));
     for(int i = 1; i < x->x_n; i++)
