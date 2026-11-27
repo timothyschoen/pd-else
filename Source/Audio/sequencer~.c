@@ -41,7 +41,7 @@ static void sequencer_set(t_sequencer *x, t_symbol *s, int ac, t_atom * av){
 
 static void sequencer_goto(t_sequencer *x, t_floatarg f){
     int i = (int)f - 1;
-    x->x_index = i < 0 ? 0 : i;
+    x->x_index = i < 0 ? 0 : i < x->x_length ? i : x->x_length - 1;
 }
 
 static t_int *sequencer_perform(t_int *w){
