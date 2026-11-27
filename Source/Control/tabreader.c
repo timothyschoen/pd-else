@@ -69,7 +69,7 @@ static void tabreader_float(t_tabreader *x, t_float f){
         if(ndx == npts && x->x_loop)
             ndx = 0;
         int ndx1 = ndx + 1;
-        if(ndx1 == npts)
+        if(ndx1 >= npts)
             ndx1 = x->x_loop ? 0 : npts;
         int ndxm1 = 0, ndx2 = 0;
         if(x->x_i_mode){
