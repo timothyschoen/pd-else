@@ -547,7 +547,7 @@ static void function_float(t_function *x, t_floatarg f){
     if(f <= 0){
         val = x->x_points[0];
         outlet_float(x->x_obj.ob_outlet, val);
-        if(x->x_send != &s_)
+        if(x->x_send != &s_ && x->x_send->s_thing)
             pd_float(x->x_send->s_thing, f);
         return;
     }
@@ -577,14 +577,14 @@ static void function_i(t_function *x, t_floatarg f){
     if(f <= 0){
         val = x->x_points[0];
         outlet_float(x->x_obj.ob_outlet, val);
-        if(x->x_send != &s_)
+        if(x->x_send != &s_ && x->x_send->s_thing)
             pd_float(x->x_send->s_thing, f);
         return;
     }
     if(f >= x->x_dur[x->x_n_states]){
         val = x->x_points[x->x_n_states];
         outlet_float(x->x_obj.ob_outlet, val);
-        if(x->x_send != &s_)
+        if(x->x_send != &s_ && x->x_send->s_thing)
             pd_float(x->x_send->s_thing, f);
         return;
     }
@@ -600,7 +600,7 @@ static void function_i(t_function *x, t_floatarg f){
     float dur = x->x_dur[x->x_state];
     float frac = (f-dur_m1)/(dur-dur_m1);
     val = interp_lin(frac, b, c);
-    if(x->x_send != &s_)
+    if(x->x_send != &s_ && x->x_send->s_thing)
         pd_float(x->x_send->s_thing, val);
     outlet_float(x->x_obj.ob_outlet, val);
 }
