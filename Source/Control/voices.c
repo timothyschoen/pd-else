@@ -210,9 +210,9 @@ static void voices_list(t_voices *x, t_symbol *s, int ac, t_atom *av){
 static void voices_anything(t_voices *x, t_symbol *s, int ac, t_atom *av){ // custom
     float pitch = 0;
     t_symbol *pitchsym = NULL;
-    if(av->a_type == A_FLOAT)
+    if(ac && av->a_type == A_FLOAT)
         pitch = atom_getfloat(av);
-    else if(av->a_type == A_SYMBOL)
+    else if(ac && av->a_type == A_SYMBOL)
        pitchsym = atom_getsymbol(av);
     t_voice *prev = 0;
     unsigned int prev_idx = 0;
