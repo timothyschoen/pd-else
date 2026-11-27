@@ -50,6 +50,11 @@ static inline float flush(float s){
     return PD_BIGORSMALL(s) ? 0.0f : s;
 }
 
+// The engines index lookup tables with these, so keep out NaN and infinity
+static inline float sanitize(float f){
+    return f > 1e6f ? 1e6f : f < -1e6f ? -1e6f : f == f ? f : 0.0f;
+}
+
 static const char* modelLabels[24] = {
     "Pair of classic waveforms",
     "Waveshaping oscillator",
@@ -310,21 +315,21 @@ static t_int *plaits_perform(t_int *w){
             }
             int sample_at = base + (trigger_at > 0 ? trigger_at : 0);
             if(x->x_midi_mode){
-                x->x_patch.note = x->x_transp + plaits_get_pitch(x, x->x_midi_pitch) * 12.f;
+                x->x_patch.note = sanitize(x->x_transp + plaits_get_pitch(x, x->x_midi_pitch) * 12.f);
                 if(x->x_mod.trigger_patched)
                     x->x_mod.trigger = x->x_midi_tr;
-                x->x_mod.level = x->x_midi_lvl;
+                x->x_mod.level = sanitize(x->x_midi_lvl);
             }
             else{
-                x->x_patch.note = x->x_transp + plaits_get_pitch(x, fc[sample_at]) * 12.f;
+                x->x_patch.note = sanitize(x->x_transp + plaits_get_pitch(x, fc[sample_at]) * 12.f);
                 if(x->x_mod.trigger_patched)
                     x->x_mod.trigger = (trigger_at >= 0);
-                x->x_mod.level = lc[sample_at];
+                x->x_mod.level = sanitize(lc[sample_at]);
             }
-            x->x_mod.timbre = tmc[sample_at] * 0.5;
-            x->x_mod.frequency = fmc[sample_at] * 60.f;
-            x->x_mod.morph = mmc[sample_at] * 0.5;
-            x->x_mod.harmonics = hmc[sample_at] * 0.5;
+            x->x_mod.timbre = sanitize(tmc[sample_at] * 0.5);
+            x->x_mod.frequency = sanitize(fmc[sample_at] * 60.f);
+            x->x_mod.morph = sanitize(mmc[sample_at] * 0.5);
+            x->x_mod.harmonics = sanitize(hmc[sample_at] * 0.5);
             if(trigger_at > 0){
                 x->x_mod.trigger = 0;
                 x->x_voice[c]->Render(x->x_patch, x->x_mod, output, trigger_at);
