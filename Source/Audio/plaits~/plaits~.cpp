@@ -55,6 +55,10 @@ static inline float sanitize(float f){
     return f > 1e6f ? 1e6f : f < -1e6f ? -1e6f : f == f ? f : 0.0f;
 }
 
+static inline float clamp(float f, float lo, float hi){ // NaN gives lo
+    return f > lo ? f < hi ? f : hi : lo;
+}
+
 static const char* modelLabels[24] = {
     "Pair of classic waveforms",
     "Waveshaping oscillator",
@@ -160,42 +164,42 @@ static void plaits_list(t_plaits *x, t_symbol *s, int ac, t_atom *av){
 }
 
 static void plaits_model(t_plaits *x, t_floatarg f){
-    x->x_model = f < 0 ? 0 : f > 23 ? 23 : (int)f;
+    x->x_model = (int)clamp(f, 0, 23);
     t_atom at[1];
     SETSYMBOL(at, gensym(modelLabels[x->x_model]));
     outlet_anything(x->x_info_out, gensym("name"), 1, at);
 }
 
 static void plaits_harmonics(t_plaits *x, t_floatarg f){
-    x->x_patch.harmonics = f < 0 ? 0 : f > 1 ? 1 : f;
+    x->x_patch.harmonics = clamp(f, 0, 1);
 }
 
 static void plaits_timbre(t_plaits *x, t_floatarg f){
-    x->x_patch.timbre = f < 0 ? 0 : f > 1 ? 1 : f;
+    x->x_patch.timbre = clamp(f, 0, 1);
 }
 
 static void plaits_timbreatt(t_plaits *x, t_floatarg f){
-    x->x_patch.timbre_modulation_amount = f < -1 ? -1 : f > 1 ? 1 : f;
+    x->x_patch.timbre_modulation_amount = clamp(f, -1, 1);
 }
 
 static void plaits_morph(t_plaits *x, t_floatarg f){
-    x->x_patch.morph = f < 0 ? 0 : f > 1 ? 1 : f;
+    x->x_patch.morph = clamp(f, 0, 1);
 }
 
 static void plaits_morphatt(t_plaits *x, t_floatarg f){
-    x->x_patch.morph_modulation_amount = f < -1 ? -1 : f > 1 ? 1 : f;
+    x->x_patch.morph_modulation_amount = clamp(f, -1, 1);
 }
 
 static void plaits_fmatt(t_plaits *x, t_floatarg f){
-    x->x_patch.frequency_modulation_amount = f < -1 ? -1 : f > 1 ? 1 : f;
+    x->x_patch.frequency_modulation_amount = clamp(f, -1, 1);
 }
 
 static void plaits_lpg_cutoff(t_plaits *x, t_floatarg f){
-    x->x_patch.lpg_colour = f < 0 ? 0 : f > 1 ? 1 : f;
+    x->x_patch.lpg_colour = clamp(f, 0, 1);
 }
 
 static void plaits_decay(t_plaits *x, t_floatarg f){
-    x->x_patch.decay = f < 0 ? 0 : f > 1 ? 1 : f;
+    x->x_patch.decay = clamp(f, 0, 1);
 }
 
 static void plaits_transp(t_plaits *x, t_floatarg f){
