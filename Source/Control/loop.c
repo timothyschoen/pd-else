@@ -88,7 +88,7 @@ static void loop_set(t_loop *x, t_symbol *s, int ac, t_atom *av){
         x->x_target = atom_getfloat(av+1);
         if(ac == 3){
             float step = atom_getfloat(av+2);
-            if(step <= 0)
+            if(!(step > 0 && step < INFINITY))
                 pd_error(x, "[loop]: step needs to be > 0");
             else
                 x->x_step = step;
@@ -120,7 +120,7 @@ static void loop_list(t_loop *x, t_symbol *s, int ac, t_atom *av){
     x->x_target = atom_getfloat(av+1);
     if(ac == 3){
         float step = atom_getfloat(av+2);
-        if(step <= 0)
+        if(!(step > 0 && step < INFINITY))
             pd_error(x, "[loop]: step needs to be > 0");
         else
             x->x_step = step;
@@ -145,7 +145,7 @@ static void loop_offset(t_loop *x, t_float f){
 }
 
 static void loop_step(t_loop *x, t_float f){
-    if(f <= 0)
+    if(!(f > 0 && f < INFINITY))
         pd_error(x, "[loop]: step needs to be > 0");
     else
         x->x_step = f;
@@ -202,7 +202,7 @@ static void *loop_new(t_symbol *s, int argc, t_atom *argv){
     };
     ///////////////////////////////////////////////////////////////////////////////////
     x->x_offset = (int)offset;
-    if(step <= 0){
+    if(!(step > 0 && step < INFINITY)){
         step = 1;
         pd_error(x, "[loop]: step needs to be > 0 - set to default (1)");
     }
