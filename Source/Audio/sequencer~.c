@@ -24,6 +24,8 @@ static void sequencer_bang(t_sequencer *x){
 static void sequencer_set(t_sequencer *x, t_symbol *s, int ac, t_atom * av){
     s = NULL;
     x->x_index = 0;
+    if(ac > MAXLEN)
+        ac = MAXLEN;
     if(!ac){
         x->x_sequencer = (float*)malloc(MAXLEN * sizeof(float));
         x->x_length = 1;
@@ -84,6 +86,8 @@ static void *sequencer_free(t_sequencer *x){
 static void *sequencer_new(t_symbol *s, int ac, t_atom *av){
     s = NULL;
     t_sequencer *x = (t_sequencer *)pd_new(sequencer_class);
+    if(ac > MAXLEN)
+        ac = MAXLEN;
     if(!ac){
         x->x_sequencer = (float *) malloc(MAXLEN * sizeof(float));
         x->x_length = 1;
