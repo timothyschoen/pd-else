@@ -71,7 +71,7 @@ static void circuit_tilde_resize(t_circuit_tilde *x, int size) {
 void circuit_tilde_oversample(t_circuit_tilde *x, t_float factor) {
     
     unsigned int factor_power_of_2 = 1;
-    while (factor_power_of_2 < factor)
+    while (factor_power_of_2 < factor && factor_power_of_2 < 256) // libsamplerate's maximum ratio
         factor_power_of_2 <<= 1;
 
     int error = 0;
