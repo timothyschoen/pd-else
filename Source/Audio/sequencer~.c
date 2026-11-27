@@ -27,12 +27,10 @@ static void sequencer_set(t_sequencer *x, t_symbol *s, int ac, t_atom * av){
     if(ac > MAXLEN)
         ac = MAXLEN;
     if(!ac){
-        x->x_sequencer = (float*)malloc(MAXLEN * sizeof(float));
         x->x_length = 1;
         x->x_sequencer[0] = 1;
     }
     else{
-        x->x_sequencer = (float *)malloc(MAXLEN * sizeof(float));
         x->x_length = ac;
         for(int i = 0; i < ac; i++)
             x->x_sequencer[i] = atom_getfloatarg(i, ac, av);
