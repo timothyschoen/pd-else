@@ -94,11 +94,12 @@ static t_int *fbdelay_perform(t_int *w){
     t_float *out = (t_float *)(w[6]);
     unsigned int dnchans = (unsigned int)(w[7]);
     unsigned int anchan = (unsigned int)(w[8]);
+    unsigned int innchans = (unsigned int)(w[9]);
 
     for(unsigned int ch = 0; ch < x->x_nchans; ch++){
-        t_float *in = xin + ch * n;
-        t_float *delin = din + (dnchans > 1 ? ch : 0) * n;
-        t_float *fb = ain + (anchan > 1 ? ch : 0) * n;
+        t_float *in = xin + (ch % innchans) * n;
+        t_float *delin = din + (ch % dnchans) * n;
+        t_float *fb = ain + (ch % anchan) * n;
         t_float *outch = out + ch * n;
         double *ybuf = x->x_ybuf + ch * x->x_sz;
         unsigned int wp = x->x_wp[ch];
@@ -163,7 +164,7 @@ static t_int *fbdelay_perform(t_int *w){
         }
         x->x_wp[ch] = wp;
     }
-    return(w+9);
+    return(w+10);
 }
 
 static void fbdelay_dsp(t_fbdelay *x, t_signal **sp){
@@ -181,9 +182,9 @@ static void fbdelay_dsp(t_fbdelay *x, t_signal **sp){
     fbdelay_nchans(x, nchans);
 
     signal_setmultiout(&sp[3], nchans);
-    dsp_add(fbdelay_perform, 8, x, sp[0]->s_n, sp[0]->s_vec,
+    dsp_add(fbdelay_perform, 9, x, sp[0]->s_n, sp[0]->s_vec,
         sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec,
-        sp[1]->s_nchans, sp[2]->s_nchans);
+        sp[1]->s_nchans, sp[2]->s_nchans, sp[0]->s_nchans);
 }
 
 static void fbdelay_size(t_fbdelay *x, t_floatarg f1){
