@@ -35,28 +35,34 @@ static const char* modelLabels[9] ={
     "mkl",
 };
 
+// keeps the current settings if aubio rejects the new ones
+static void beat_reset(t_beat *x, int mode, int wsize, int hopsize){
+    aubio_tempo_t *t = new_aubio_tempo(modelLabels[mode], wsize, hopsize, x->x_sr);
+    if(!t){
+        pd_error(x, "[beat~]: can't use window size %d with hop size %d", wsize, hopsize);
+        return;
+    }
+    del_aubio_tempo(x->x_t);
+    x->x_t = t;
+    x->x_mode = mode, x->x_wsize = wsize;
+    if(hopsize != x->x_hopsize){
+        del_fvec(x->x_vec);
+        x->x_vec = new_fvec(x->x_hopsize = hopsize);
+        x->x_pos = 0;
+    }
+}
+
 void beat_mode(t_beat *x, t_floatarg f){
-    x->x_mode = f < 0 ? 0 : f > 8 ? 8 : (int)f;
-    x->x_t = new_aubio_tempo(modelLabels[x->x_mode],
-        x->x_wsize, x->x_hopsize, x->x_sr);
+    beat_reset(x, f < 0 ? 0 : f > 8 ? 8 : (int)f, x->x_wsize, x->x_hopsize);
     post("[beat~] mode = %s", modelLabels[x->x_mode]);
 }
 
 void beat_window(t_beat *x, t_floatarg f){ // window size
-    int size = (int)f;
-    if(size < MIN_BUFFER_SIZE)
-        size = MIN_BUFFER_SIZE;
-    x->x_wsize = size;
-    x->x_t = new_aubio_tempo(modelLabels[x->x_mode],
-        x->x_wsize, x->x_hopsize, x->x_sr);
+    beat_reset(x, x->x_mode, f < MIN_BUFFER_SIZE ? MIN_BUFFER_SIZE : (int)f, x->x_hopsize);
 }
 
 void beat_hop(t_beat *x, t_floatarg f){
-    x->x_hopsize = f < MIN_BUFFER_SIZE ? MIN_BUFFER_SIZE : (int)f;
-    x->x_vec = (fvec_t *)new_fvec(x->x_hopsize);
-    x->x_pos = 0; // the new buffer can be shorter
-    x->x_t = new_aubio_tempo(modelLabels[x->x_mode],
-        x->x_wsize, x->x_hopsize, x->x_sr);
+    beat_reset(x, x->x_mode, x->x_wsize, f < MIN_BUFFER_SIZE ? MIN_BUFFER_SIZE : (int)f);
 }
 
 void beat_thresh(t_beat *x, t_floatarg f){
@@ -157,8 +163,10 @@ static void *beat_new(t_symbol *s, int ac, t_atom *av){
             }
         }
     }
+    x->x_mode = mode;
+    x->x_sr = (uint_t)sys_getsr();
     x->x_t = new_aubio_tempo(modelLabels[mode], x->x_wsize,
-        x->x_hopsize, (uint_t)sys_getsr());
+        x->x_hopsize, x->x_sr);
     if(!x->x_t)
         goto errstate;
     aubio_tempo_set_threshold(x->x_t, thresh);
