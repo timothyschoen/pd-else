@@ -44,8 +44,10 @@ static void receiver_proxy_clear(t_receiver_proxy *p){
 }
 
 static void receiver_proxy_learn(t_receiver_proxy *p){
-    p->p_owner->x_learn = 1;
-    pd_bind(&p->p_owner->x_obj.ob_pd, p->p_owner->x_cname);
+    if(!p->p_owner->x_learn){ // binding twice would leave a stale binding after free
+        p->p_owner->x_learn = 1;
+        pd_bind(&p->p_owner->x_obj.ob_pd, p->p_owner->x_cname);
+    }
 }
 
 static void receiver_proxy_deactivate(t_receiver_proxy *p){
